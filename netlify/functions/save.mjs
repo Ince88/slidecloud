@@ -1,6 +1,6 @@
 import { getStore } from '@netlify/blobs';
 
-const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
+const SLUG_RE   = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
 const MAX_SLIDES = 40;
 
 export default async (req) => {
@@ -15,7 +15,7 @@ export default async (req) => {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { slug, slides } = body;
+  const { slug, slides, presenterToken } = body;
 
   if (!slug || typeof slug !== 'string') {
     return Response.json({ error: 'Missing slug' }, { status: 400 });
@@ -46,6 +46,8 @@ export default async (req) => {
         pageNum:    s.pageNum    ?? 1,
         totalPages: s.totalPages ?? 1,
       })),
+      // Store the presenter token so check-presenter.mjs can validate it
+      presenterToken: typeof presenterToken === 'string' ? presenterToken.slice(0, 64) : null,
       createdAt: new Date().toISOString(),
     };
 

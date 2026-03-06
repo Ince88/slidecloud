@@ -4,8 +4,14 @@
 [functions]
   node_bundler = "esbuild"
 
-# Rewrite /s/<slug> to index.html so the SPA can read the path
+# Viewer: /s/<slug>
 [[redirects]]
   from   = "/s/*"
+  to     = "/index.html"
+  status = 200
+
+# Presenter remote: /present/<slug>?token=...
+[[redirects]]
+  from   = "/present/*"
   to     = "/index.html"
   status = 200
