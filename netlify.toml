@@ -1,0 +1,11 @@
+[build]
+  publish = "."
+
+[functions]
+  node_bundler = "esbuild"
+
+# Rewrite /s/<slug> to index.html so the SPA can read the path
+[[redirects]]
+  from   = "/s/*"
+  to     = "/index.html"
+  status = 200

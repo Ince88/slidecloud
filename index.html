@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SlideCloud</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sidebar-w: 290px;
+      --topbar-h: 60px;
+      --bg: #f0f2f5;
+      --surface: #ffffff;
+      --sb-bg: #181825;
+      --sb-border: rgba(255,255,255,0.07);
+      --sb-text: #cdd6f4;
+      --sb-muted: #6c7086;
+      --accent: #89b4fa;
+      --accent2: #b4befe;
+      --danger: #f38ba8;
+      --green: #a6e3a1;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+      --ease: cubic-bezier(0.4,0,0.2,1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* ─── Sidebar ─────────────────────────────────────── */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--sb-bg);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(-100%);
+      transition: transform 0.32s var(--ease);
+      z-index: 110;
+      box-shadow: 6px 0 30px rgba(0,0,0,0.35);
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    .sb-header {
+      padding: 18px 16px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--sb-border);
+      flex-shrink: 0;
+    }
+    .sb-title {
+      color: var(--sb-text);
+      font-size: 14px; font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+    .sb-close {
+      background: none; border: none;
+      color: var(--sb-muted); cursor: pointer;
+      width: 30px; height: 30px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s, background 0.15s;
+    }
+    .sb-close:hover { color: var(--sb-text); background: rgba(255,255,255,0.07); }
+
+    .sb-actions {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--sb-border);
+      flex-shrink: 0;
+    }
+    .btn-add-slide {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 9px 14px;
+      background: var(--accent);
+      color: #1e1e2e;
+      border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-add-slide:hover { background: var(--accent2); }
+    .btn-add-slide:active { transform: scale(0.98); }
+
+    .slides-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 10px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .slides-list::-webkit-scrollbar { width: 4px; }
+    .slides-list::-webkit-scrollbar-track { background: transparent; }
+    .slides-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+    .slide-item {
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.07);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .slide-item:hover { border-color: rgba(137,180,250,0.5); background: rgba(137,180,250,0.06); }
+    .slide-item.active { border-color: var(--accent); background: rgba(137,180,250,0.1); box-shadow: 0 0 0 1px var(--accent) inset; }
+    .slide-item.sortable-ghost { opacity: 0.35; }
+    .slide-item.sortable-chosen { cursor: grabbing; }
+
+    .slide-thumb {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      display: block;
+      background: #11111b;
+      pointer-events: none;
+    }
+    .slide-item-footer {
+      padding: 6px 8px 6px 10px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .slide-num-badge {
+      min-width: 20px; height: 20px;
+      background: rgba(137,180,250,0.18);
+      color: var(--accent);
+      border-radius: 4px;
+      font-size: 10px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .slide-name {
+      color: var(--sb-muted);
+      font-size: 11px;
+      flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .btn-remove {
+      background: none; border: none;
+      color: var(--sb-muted); cursor: pointer;
+      width: 24px; height: 24px;
+      border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: color 0.15s, background 0.15s;
+      margin-left: auto;
+    }
+    .btn-remove:hover { color: var(--danger); background: rgba(243,139,168,0.12); }
+
+    .drag-handle {
+      color: var(--sb-muted);
+      cursor: grab;
+      display: flex; align-items: center;
+      padding: 0 2px;
+      flex-shrink: 0;
+    }
+    .drag-handle:active { cursor: grabbing; }
+
+    .sb-empty {
+      text-align: center;
+      padding: 36px 20px;
+      color: var(--sb-muted);
+      font-size: 12.5px;
+      line-height: 1.7;
+    }
+    .sb-empty svg { opacity: 0.3; margin-bottom: 12px; }
+
+    /* ─── Sidebar backdrop ────────────────────────────── */
+    .sb-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(3px);
+      z-index: 109;
+    }
+    .sb-backdrop.visible { display: block; }
+
+    /* ─── Main area ───────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-width: 0;
+    }
+
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .btn-media {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px;
+      background: #f5f5f7;
+      border: 1.5px solid #e2e2e6;
+      border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      color: #1e1e2e;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .btn-media:hover { background: #ebebef; border-color: #c4c4cc; }
+    .btn-media.active { background: #1e1e2e; color: #fff; border-color: #1e1e2e; }
+
+    .topbar-logo {
+      font-size: 17px; font-weight: 800;
+      color: #1e1e2e;
+      letter-spacing: -0.4px;
+      flex: 1;
+      text-align: center;
+    }
+    .topbar-logo span { color: var(--accent); }
+
+    .topbar-right {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .slide-count-pill {
+      font-size: 12px;
+      color: #888;
+      background: #f0f0f4;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .btn-generate {
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 16px;
+      background: linear-gradient(135deg, #89b4fa 0%, #b4befe 100%);
+      color: #1e1e2e;
+      border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn-generate:hover { opacity: 0.88; }
+    .btn-generate:active { transform: scale(0.98); }
+    .btn-generate:disabled { opacity: 0.38; cursor: not-allowed; }
+
+    .btn-preview {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 16px;
+      background: #1e1e2e;
+      color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn-preview:hover { background: #313149; }
+    .btn-preview:active { transform: scale(0.98); }
+    .btn-preview:disabled { opacity: 0.38; cursor: not-allowed; }
+
+    /* ─── Canvas area ─────────────────────────────────── */
+    .canvas-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 36px 40px;
+      overflow: hidden;
+      position: relative;
+    }
+    .canvas-area.drag-over::after {
+      content: 'Drop PDF, JPG or PNG files here';
+      position: absolute; inset: 0;
+      background: rgba(137,180,250,0.12);
+      border: 2.5px dashed var(--accent);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; color: var(--accent);
+      z-index: 5;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #9ca3af;
+      max-width: 380px;
+    }
+    .empty-state svg { opacity: 0.4; margin-bottom: 20px; }
+    .empty-state h3 { font-size: 22px; font-weight: 700; color: #374151; margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; line-height: 1.65; }
+    .empty-ctas { margin-top: 24px; display: flex; gap: 10px; justify-content: center; }
+    .btn-upload-big {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 22px;
+      background: var(--accent); color: #1e1e2e;
+      border: none; border-radius: 9px;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-upload-big:hover { background: var(--accent2); }
+
+    .preview-wrap {
+      width: 100%; max-width: 900px;
+      aspect-ratio: 16/9;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+      position: relative;
+    }
+    .preview-wrap img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .preview-nav-hint {
+      position: absolute; bottom: 14px;
+      left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.55);
+      color: rgba(255,255,255,0.8);
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* ─── Loading overlay ─────────────────────────────── */
+    .loading-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      z-index: 300;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      color: rgba(255,255,255,0.9);
+      font-size: 14px; font-weight: 500;
+    }
+    .loading-overlay.visible { display: flex; }
+    .spinner {
+      width: 46px; height: 46px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-bar-wrap {
+      width: 220px; height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px; overflow: hidden;
+    }
+    .loading-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+      transition: width 0.25s ease;
+      width: 0%;
+    }
+
+    /* ─── Slideshow ───────────────────────────────────── */
+    .slideshow {
+      display: none;
+      position: fixed; inset: 0;
+      background: #000;
+      z-index: 400;
+      align-items: center;
+      justify-content: center;
+    }
+    .slideshow.active { display: flex; }
+
+    .ss-progress {
+      position: absolute; top: 0; left: 0;
+      height: 3px;
+      background: var(--accent);
+      transition: width 0.35s ease;
+      z-index: 5;
+    }
+
+    .ss-img {
+      max-width: 100%; max-height: 100%;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+      display: block;
+    }
+
+    .ss-nav {
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+      background: rgba(255,255,255,0.08);
+      border: 1.5px solid rgba(255,255,255,0.13);
+      color: #fff;
+      border-radius: 50%;
+      width: 54px; height: 54px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: background 0.15s;
+      z-index: 10;
+    }
+    .ss-nav:hover { background: rgba(255,255,255,0.18); }
+    .ss-nav:disabled { opacity: 0.2; pointer-events: none; }
+    .ss-nav.prev { left: 28px; }
+    .ss-nav.next { right: 28px; }
+
+    .ss-close {
+      position: absolute; top: 20px; right: 20px;
+      background: rgba(255,255,255,0.08);
+      border: 1.5px solid rgba(255,255,255,0.13);
+      color: rgba(255,255,255,0.85);
+      border-radius: 8px;
+      padding: 7px 13px;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 7px;
+      backdrop-filter: blur(10px);
+      transition: background 0.15s;
+      z-index: 10;
+    }
+    .ss-close:hover { background: rgba(255,255,255,0.16); }
+
+    .ss-counter {
+      position: absolute; bottom: 22px;
+      left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.55);
+      font-size: 13px; font-weight: 500;
+      background: rgba(0,0,0,0.4);
+      padding: 5px 16px;
+      border-radius: 20px;
+      backdrop-filter: blur(8px);
+      white-space: nowrap;
+      z-index: 10;
+    }
+
+    .ss-dots {
+      position: absolute; bottom: 56px;
+      left: 50%; transform: translateX(-50%);
+      display: flex; gap: 6px;
+      flex-wrap: wrap; justify-content: center;
+      max-width: 320px;
+      z-index: 10;
+    }
+    .ss-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      cursor: pointer;
+      transition: background 0.18s, transform 0.18s;
+    }
+    .ss-dot.active { background: var(--accent); transform: scale(1.5); }
+
+    .ss-branding {
+      position: absolute; bottom: 20px; right: 20px;
+      color: rgba(255,255,255,0.25);
+      font-size: 11px; font-weight: 600;
+      pointer-events: none;
+      z-index: 10;
+      display: none;
+    }
+    .ss-branding span { color: rgba(137,180,250,0.4); }
+
+    .ss-img.fade-out { animation: fadeOut 0.12s ease forwards; }
+    .ss-img.fade-in  { animation: fadeIn  0.18s ease forwards; }
+    @keyframes fadeOut { to { opacity: 0; } }
+    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ─── Viewer loading screen ───────────────────────── */
+    .viewer-screen {
+      display: none;
+      position: fixed; inset: 0;
+      background: #0a0a10;
+      z-index: 350;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+    }
+    .viewer-screen.visible { display: flex; }
+    .viewer-logo {
+      font-size: 24px; font-weight: 800;
+      color: #cdd6f4; letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .viewer-logo span { color: var(--accent); }
+    .viewer-msg { font-size: 13px; color: rgba(255,255,255,0.45); }
+    .viewer-error {
+      text-align: center;
+      color: rgba(255,255,255,0.8);
+    }
+    .viewer-error h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .viewer-error p  { font-size: 13px; color: rgba(255,255,255,0.45); }
+    .btn-viewer-home {
+      margin-top: 20px;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px;
+      background: var(--accent); color: #1e1e2e;
+      border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-viewer-home:hover { background: var(--accent2); }
+
+    /* ─── Generate modal ──────────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(5px);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      width: 480px;
+      max-width: 100%;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 22px 24px 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .modal-header-text h2 {
+      font-size: 18px; font-weight: 800; color: #1e1e2e;
+    }
+    .modal-header-text p {
+      font-size: 13px; color: #6c7086;
+      margin-top: 3px;
+    }
+    .modal-x {
+      background: none; border: none;
+      color: #9ca3af; cursor: pointer;
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .modal-x:hover { color: #374151; background: #f3f4f6; }
+
+    .modal-body { padding: 20px 24px; }
+    .modal-footer {
+      padding: 4px 24px 22px;
+      display: flex; gap: 8px; justify-content: flex-end;
+    }
+
+    .gen-label {
+      display: block;
+      font-size: 11px; font-weight: 700;
+      color: #374151;
+      margin-bottom: 7px;
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .gen-slug-wrap {
+      display: flex; align-items: center;
+      border: 1.5px solid #e2e2e6;
+      border-radius: 9px;
+      overflow: hidden;
+      background: #f9f9fb;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .gen-slug-wrap:focus-within { border-color: var(--accent); background: #fff; }
+    .gen-slug-wrap:focus-within .gen-prefix { color: var(--accent); }
+    .gen-prefix {
+      padding: 11px 0 11px 13px;
+      font-size: 12px; color: #aaa;
+      white-space: nowrap; pointer-events: none;
+      transition: color 0.15s;
+    }
+    .gen-input {
+      flex: 1;
+      padding: 11px 13px 11px 3px;
+      background: none; border: none; outline: none;
+      font-size: 14px; font-weight: 600; color: #1e1e2e;
+      min-width: 0;
+    }
+    .gen-hint {
+      margin-top: 7px;
+      font-size: 12px; color: #9ca3af;
+      min-height: 18px;
+    }
+    .gen-hint.error { color: #e11d48; }
+    .gen-hint.ok    { color: #059669; }
+
+    /* Upload progress inside modal */
+    .gen-upload-wrap {
+      text-align: center;
+      padding: 10px 0 6px;
+    }
+    .gen-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #f0f2f5;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 16px;
+    }
+    .gen-upload-label {
+      font-size: 13px; color: #6c7086;
+      margin-bottom: 10px;
+    }
+    .gen-bar-wrap {
+      height: 5px;
+      background: #f0f2f5;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .gen-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 5px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    /* Success */
+    .gen-success-icon {
+      width: 52px; height: 52px;
+      background: #d1fae5;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 4px auto 14px;
+    }
+    .gen-success-title {
+      font-size: 16px; font-weight: 700; color: #1e1e2e;
+      text-align: center; margin-bottom: 16px;
+    }
+    .gen-url-row {
+      display: flex; align-items: center;
+      background: #f5f5f8;
+      border: 1.5px solid #e2e2e6;
+      border-radius: 9px;
+      overflow: hidden;
+    }
+    .gen-url-text {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 13px; font-weight: 600; color: #1e1e2e;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .btn-copy {
+      padding: 10px 14px;
+      background: none; border: none;
+      border-left: 1.5px solid #e2e2e6;
+      color: #6c7086; cursor: pointer;
+      font-size: 12px; font-weight: 700;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-copy:hover { background: #ebebef; color: #1e1e2e; }
+    .btn-copy.copied { color: #059669; }
+
+    /* Shared modal buttons */
+    .btn-modal-sec {
+      padding: 9px 16px;
+      background: #f5f5f7;
+      border: 1.5px solid #e2e2e6;
+      border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      color: #6c7086; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-modal-sec:hover { background: #ebebef; }
+    .btn-modal-pri {
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 18px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      color: #1e1e2e; cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-modal-pri:hover { opacity: 0.88; }
+    .btn-modal-pri:active { transform: scale(0.98); }
+    .btn-modal-pri:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-open-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 16px;
+      background: #1e1e2e; color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      transition: background 0.15s;
+    }
+    .btn-open-link:hover { background: #313149; }
+
+    /* gen modal states */
+    .gen-state { display: none; }
+    .gen-state.active { display: block; }
+
+    /* ─── Responsive ──────────────────────────────────── */
+    @media (max-width: 640px) {
+      .topbar-logo { display: none; }
+      .slide-count-pill { display: none; }
+      .canvas-area { padding: 16px; }
+      .ss-nav { width: 42px; height: 42px; }
+      .ss-nav.prev { left: 10px; }
+      .ss-nav.next { right: 10px; }
+      .btn-generate { padding: 9px 12px; }
+      .btn-preview  { padding: 9px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar backdrop ───────────────────────────────── -->
+<div class="sb-backdrop" id="sbBackdrop" onclick="closeSidebar()"></div>
+
+<!-- ── Left Sidebar ───────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-header">
+    <span class="sb-title">Media</span>
+    <button class="sb-close" onclick="closeSidebar()" title="Close panel">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="sb-actions">
+    <button class="btn-add-slide" onclick="triggerFileInput()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M12 5v14M5 12h14"/></svg>
+      Add Slides
+    </button>
+  </div>
+  <div class="slides-list" id="slidesList">
+    <div class="sb-empty" id="sbEmpty">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" display="block" style="margin:0 auto">
+        <rect x="2" y="3" width="20" height="14" rx="2.5"/><path d="M8 21h8M12 17v4"/>
+      </svg>
+      No slides yet.<br>Add PDF, JPG, or PNG files to get started.
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main content ───────────────────────────────────── -->
+<div class="main" id="editorMain">
+  <header class="topbar">
+    <button class="btn-media" id="btnMedia" onclick="toggleSidebar()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <rect x="2" y="3" width="20" height="14" rx="2.5"/><path d="M8 21h8M12 17v4"/>
+      </svg>
+      Media
+    </button>
+
+    <div class="topbar-logo">Slide<span>Cloud</span></div>
+
+    <div class="topbar-right">
+      <span class="slide-count-pill" id="slideCountPill">0 slides</span>
+      <button class="btn-generate" id="btnGenerate" onclick="openGenerateModal()" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        Generate
+      </button>
+      <button class="btn-preview" id="btnPreview" onclick="openSlideshow()" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        Preview
+      </button>
+    </div>
+  </header>
+
+  <div class="canvas-area" id="canvasArea">
+    <div class="empty-state" id="emptyState">
+      <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="display:block;margin:0 auto">
+        <rect x="2" y="3" width="20" height="14" rx="2.5"/>
+        <path d="M8 21h8M12 17v4"/>
+        <path d="M9 10l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h3>No slides added yet</h3>
+      <p>Add PDF, JPG, or PNG files via the <strong>Media</strong> panel,<br>or drop files anywhere on this page.</p>
+      <div class="empty-ctas">
+        <button class="btn-upload-big" onclick="triggerFileInput()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Upload Files
+        </button>
+      </div>
+    </div>
+
+    <div class="preview-wrap" id="previewWrap" style="display:none">
+      <img id="previewImg" src="" alt="Slide preview" />
+      <div class="preview-nav-hint" id="previewHint"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Loading overlay ────────────────────────────────── -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <span id="loadingText">Processing…</span>
+  <div class="loading-bar-wrap"><div class="loading-bar" id="loadingBar"></div></div>
+</div>
+
+<!-- ── Slideshow ─────────────────────────────────────── -->
+<div class="slideshow" id="slideshow">
+  <div class="ss-progress" id="ssProgress"></div>
+
+  <button class="ss-close" id="ssCloseBtn" onclick="handleSsClose()">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    <span id="ssCloseLabel">ESC</span>
+  </button>
+
+  <img class="ss-img" id="ssImg" src="" alt="Slide" />
+
+  <button class="ss-nav prev" id="navPrev" onclick="prevSlide()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <button class="ss-nav next" id="navNext" onclick="nextSlide()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+  </button>
+
+  <div class="ss-dots" id="ssDots"></div>
+  <div class="ss-counter" id="ssCounter">1 / 1</div>
+  <div class="ss-branding" id="ssBranding">Made with Slide<span>Cloud</span></div>
+</div>
+
+<!-- ── Viewer loading / error screen ─────────────────── -->
+<div class="viewer-screen" id="viewerScreen">
+  <div class="viewer-logo">Slide<span>Cloud</span></div>
+  <div class="spinner"></div>
+  <div class="viewer-msg" id="viewerMsg">Loading presentation…</div>
+</div>
+
+<!-- ── Generate modal ────────────────────────────────── -->
+<div class="modal-backdrop" id="genModalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true">
+
+    <div class="modal-header">
+      <div class="modal-header-text">
+        <h2>Generate Share Link</h2>
+        <p>Publish your slides and get a link to share with anyone.</p>
+      </div>
+      <button class="modal-x" onclick="closeGenerateModal()" title="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- ── State: form ── -->
+    <div class="gen-state active" id="genStateForm">
+      <div class="modal-body">
+        <label class="gen-label" for="genSlugInput">Presentation name</label>
+        <div class="gen-slug-wrap">
+          <span class="gen-prefix">slidecloud.netlify.app/s/</span>
+          <input class="gen-input" id="genSlugInput" type="text"
+            placeholder="my-presentation" maxlength="50" autocomplete="off" spellcheck="false"
+            oninput="onSlugInput()" onkeydown="if(event.key==='Enter')doGenerate()" />
+        </div>
+        <div class="gen-hint" id="genHint">Letters, numbers and hyphens — 3 to 50 characters</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-sec" onclick="closeGenerateModal()">Cancel</button>
+        <button class="btn-modal-pri" id="btnGenSubmit" onclick="doGenerate()" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+          Create Link
+        </button>
+      </div>
+    </div>
+
+    <!-- ── State: uploading ── -->
+    <div class="gen-state" id="genStateUploading">
+      <div class="modal-body">
+        <div class="gen-upload-wrap">
+          <div class="gen-spinner"></div>
+          <div class="gen-upload-label" id="genUploadLabel">Compressing slides…</div>
+          <div class="gen-bar-wrap"><div class="gen-bar" id="genBar"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── State: success ── -->
+    <div class="gen-state" id="genStateSuccess">
+      <div class="modal-body">
+        <div class="gen-success-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.8"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <div class="gen-success-title">Your presentation is live!</div>
+        <div class="gen-url-row">
+          <span class="gen-url-text" id="genSuccessUrl"></span>
+          <button class="btn-copy" id="btnCopy" onclick="copyLink()">Copy</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-sec" onclick="closeGenerateModal()">Done</button>
+        <a class="btn-open-link" id="btnOpenLink" href="#" target="_blank" rel="noopener">
+          Open Link
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- ── State: error ── -->
+    <div class="gen-state" id="genStateError">
+      <div class="modal-body">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:6px 0">
+          <div style="width:36px;height:36px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#1e1e2e;margin-bottom:4px">Something went wrong</div>
+            <div style="font-size:13px;color:#6c7086" id="genErrorMsg">Please try again.</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-sec" onclick="closeGenerateModal()">Cancel</button>
+        <button class="btn-modal-pri" onclick="setGenState('form')">Try Again</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Hidden file input -->
+<input type="file" id="fileInput" accept=".pdf,application/pdf,.jpg,.jpeg,image/jpeg,.png,image/png"
+  multiple style="display:none" onchange="handleFiles(this.files)" />
+
+<script>
+  // ── PDF.js ────────────────────────────────────────────
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  // ── State ─────────────────────────────────────────────
+  let slides       = [];
+  let activeIdx    = 0;
+  let sidebarOpen  = false;
+  let ssActive     = false;
+  let ssIdx        = 0;
+  let touchStartX  = 0;
+  let touchStartY  = 0;
+  let isViewerMode = false;
+  let genUrl       = '';
+
+  // ── Viewer mode detection (runs on every page load) ───
+  (async () => {
+    const m = window.location.pathname.match(/^\/s\/([a-z0-9][a-z0-9-]{1,48}[a-z0-9])$/i);
+    if (!m) return;
+
+    isViewerMode = true;
+    const slug = m[1];
+
+    // Hide editor, show viewer loading screen
+    document.getElementById('editorMain').style.display = 'none';
+    document.getElementById('viewerScreen').classList.add('visible');
+    document.getElementById('viewerMsg').textContent = `Loading "${slug}"…`;
+
+    try {
+      const res  = await fetch(`/api/load?slug=${encodeURIComponent(slug)}`);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Not found');
+
+      slides = data.slides.map(s => ({ ...s, id: uid() }));
+      document.getElementById('viewerScreen').classList.remove('visible');
+
+      // Show branding badge, change close button to "Exit"
+      document.getElementById('ssBranding').style.display = '';
+      document.getElementById('ssCloseLabel').textContent  = 'Exit';
+
+      ssIdx = 0;
+      ssActive = true;
+      document.getElementById('slideshow').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      renderDots();
+      updateSS(false);
+    } catch (err) {
+      // Show error in viewer screen
+      document.getElementById('viewerScreen').innerHTML = `
+        <div class="viewer-logo">Slide<span>Cloud</span></div>
+        <div class="viewer-error">
+          <h3>Presentation not found</h3>
+          <p>${err.message || 'This link may have expired or never existed.'}</p>
+          <a class="btn-viewer-home" href="/">Go to SlideCloud</a>
+        </div>`;
+    }
+  })();
+
+  // ── Sidebar ───────────────────────────────────────────
+  function toggleSidebar() { sidebarOpen ? closeSidebar() : openSidebar(); }
+
+  function openSidebar() {
+    sidebarOpen = true;
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sbBackdrop').classList.add('visible');
+    document.getElementById('btnMedia').classList.add('active');
+  }
+
+  function closeSidebar() {
+    sidebarOpen = false;
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sbBackdrop').classList.remove('visible');
+    document.getElementById('btnMedia').classList.remove('active');
+  }
+
+  // ── File handling ─────────────────────────────────────
+  function triggerFileInput() { document.getElementById('fileInput').click(); }
+
+  function isImage(f) { return /^image\/(jpeg|png)$/i.test(f.type) || /\.(jpe?g|png)$/i.test(f.name); }
+  function isPDF(f)   { return f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'); }
+
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList).filter(f => isPDF(f) || isImage(f));
+    if (!files.length) return;
+
+    const total = await countTotalSlides(files);
+    let processed = 0;
+    showLoading('Preparing slides…', 0);
+
+    for (const file of files) {
+      try {
+        if (isImage(file)) {
+          updateLoading(file.name, processed / total * 100);
+          const dataUrl = await readImageFile(file);
+          slides.push({ id: uid(), dataUrl, fileName: file.name, pageNum: 1, totalPages: 1 });
+          processed++;
+          updateLoading(file.name, processed / total * 100);
+        } else {
+          const buf = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+          for (let p = 1; p <= pdf.numPages; p++) {
+            updateLoading(`${file.name} · page ${p} of ${pdf.numPages}`, processed / total * 100);
+            const dataUrl = await renderPage(pdf, p);
+            slides.push({ id: uid(), dataUrl, fileName: file.name, pageNum: p, totalPages: pdf.numPages });
+            processed++;
+            updateLoading(`${file.name} · page ${p} of ${pdf.numPages}`, processed / total * 100);
+          }
+        }
+      } catch (err) { console.error('File error:', file.name, err); }
+    }
+
+    hideLoading();
+    document.getElementById('fileInput').value = '';
+    renderSidebar();
+    updateTopbar();
+    if (slides.length > 0) selectSlide(activeIdx < slides.length ? activeIdx : 0);
+  }
+
+  function readImageFile(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function countTotalSlides(files) {
+    let n = 0;
+    for (const f of files) {
+      if (isImage(f)) { n++; continue; }
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+        n += pdf.numPages;
+      } catch { n++; }
+    }
+    return n || 1;
+  }
+
+  async function renderPage(pdf, pageNum) {
+    const page = await pdf.getPage(pageNum);
+    const vp   = page.getViewport({ scale: 2 });
+    const c    = document.createElement('canvas');
+    c.width  = vp.width;
+    c.height = vp.height;
+    await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+    return c.toDataURL('image/jpeg', 0.92);
+  }
+
+  // ── Sidebar rendering ─────────────────────────────────
+  function renderSidebar() {
+    const list  = document.getElementById('slidesList');
+    const empty = document.getElementById('sbEmpty');
+    list.querySelectorAll('.slide-item').forEach(el => el.remove());
+    if (!slides.length) { empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    slides.forEach((s, i) => list.appendChild(buildSlideItem(s, i)));
+    highlightActive();
+  }
+
+  function buildSlideItem(slide, index) {
+    const item = document.createElement('div');
+    item.className = 'slide-item';
+    item.dataset.id = slide.id;
+
+    const shortName = slide.fileName.length > 20
+      ? slide.fileName.slice(0, 17) + '…' : slide.fileName;
+    const pageTag = slide.totalPages > 1 ? ` p.${slide.pageNum}` : '';
+
+    item.innerHTML = `
+      <img class="slide-thumb" src="${slide.dataUrl}" alt="Slide ${index + 1}" loading="lazy" />
+      <div class="slide-item-footer">
+        <span class="drag-handle" title="Drag to reorder">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="9"  cy="5"  r="1.2" fill="currentColor"/>
+            <circle cx="15" cy="5"  r="1.2" fill="currentColor"/>
+            <circle cx="9"  cy="12" r="1.2" fill="currentColor"/>
+            <circle cx="15" cy="12" r="1.2" fill="currentColor"/>
+            <circle cx="9"  cy="19" r="1.2" fill="currentColor"/>
+            <circle cx="15" cy="19" r="1.2" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="slide-num-badge">${index + 1}</span>
+        <span class="slide-name" title="${slide.fileName}${pageTag}">${shortName}${pageTag}</span>
+        <button class="btn-remove" title="Remove" onclick="removeSlide('${slide.id}',event)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>`;
+
+    item.addEventListener('click', e => {
+      if (e.target.closest('.btn-remove')) return;
+      const idx = slides.findIndex(s => s.id === slide.id);
+      if (idx !== -1) selectSlide(idx);
+    });
+    return item;
+  }
+
+  function reNumberSlides() {
+    document.querySelectorAll('.slide-item .slide-num-badge')
+      .forEach((el, i) => { el.textContent = i + 1; });
+  }
+
+  function highlightActive() {
+    document.querySelectorAll('.slide-item')
+      .forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+  }
+
+  function removeSlide(id, e) {
+    if (e) e.stopPropagation();
+    const idx = slides.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    slides.splice(idx, 1);
+    if (activeIdx >= slides.length) activeIdx = Math.max(0, slides.length - 1);
+    renderSidebar();
+    updateTopbar();
+    if (!slides.length) showEmptyState();
+    else selectSlide(activeIdx);
+  }
+
+  function selectSlide(idx) {
+    activeIdx = idx;
+    const slide = slides[idx];
+    if (!slide) return;
+    document.getElementById('emptyState').style.display  = 'none';
+    document.getElementById('previewWrap').style.display = '';
+    document.getElementById('previewImg').src = slide.dataUrl;
+    document.getElementById('previewHint').textContent =
+      slides.length > 1 ? `Slide ${idx + 1} of ${slides.length}` : '';
+    highlightActive();
+    document.querySelector('.slide-item.active')
+      ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function showEmptyState() {
+    document.getElementById('emptyState').style.display  = '';
+    document.getElementById('previewWrap').style.display = 'none';
+  }
+
+  function updateTopbar() {
+    const n = slides.length;
+    document.getElementById('slideCountPill').textContent = `${n} slide${n !== 1 ? 's' : ''}`;
+    document.getElementById('btnPreview').disabled  = n === 0;
+    document.getElementById('btnGenerate').disabled = n === 0;
+  }
+
+  // ── SortableJS ────────────────────────────────────────
+  Sortable.create(document.getElementById('slidesList'), {
+    animation: 160,
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    handle: '.drag-handle',
+    filter: '.sb-empty',
+    onEnd() {
+      const prevId   = slides[activeIdx]?.id;
+      const newOrder = Array.from(document.querySelectorAll('.slide-item'))
+        .map(el => slides.find(s => s.id === el.dataset.id))
+        .filter(Boolean);
+      slides = newOrder;
+      if (prevId) {
+        const ni = slides.findIndex(s => s.id === prevId);
+        if (ni !== -1) activeIdx = ni;
+      }
+      reNumberSlides();
+      highlightActive();
+    },
+  });
+
+  // ── Slideshow ─────────────────────────────────────────
+  function openSlideshow() {
+    if (!slides.length) return;
+    ssIdx = activeIdx;
+    ssActive = true;
+    document.getElementById('slideshow').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    renderDots();
+    updateSS(false);
+  }
+
+  function handleSsClose() {
+    if (isViewerMode) {
+      window.location.href = '/';
+    } else {
+      closeSlideshow();
+    }
+  }
+
+  function closeSlideshow() {
+    ssActive = false;
+    document.getElementById('slideshow').classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function updateSS(animate = true) {
+    const slide = slides[ssIdx];
+    const img   = document.getElementById('ssImg');
+    if (animate) {
+      img.classList.remove('fade-in');
+      img.classList.add('fade-out');
+      setTimeout(() => {
+        img.src = slide.dataUrl;
+        img.classList.remove('fade-out');
+        img.classList.add('fade-in');
+      }, 120);
+    } else {
+      img.src = slide.dataUrl;
+    }
+    document.getElementById('ssCounter').textContent  = `${ssIdx + 1} / ${slides.length}`;
+    document.getElementById('ssProgress').style.width = `${(ssIdx + 1) / slides.length * 100}%`;
+    document.getElementById('navPrev').disabled        = ssIdx === 0;
+    document.getElementById('navNext').disabled        = ssIdx === slides.length - 1;
+    document.querySelectorAll('.ss-dot').forEach((d, i) => d.classList.toggle('active', i === ssIdx));
+  }
+
+  function renderDots() {
+    const c = document.getElementById('ssDots');
+    c.innerHTML = '';
+    if (slides.length <= 1 || slides.length > 25) return;
+    slides.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = `ss-dot${i === ssIdx ? ' active' : ''}`;
+      d.onclick = () => { ssIdx = i; updateSS(); };
+      c.appendChild(d);
+    });
+  }
+
+  function nextSlide() { if (ssIdx < slides.length - 1) { ssIdx++; updateSS(); } }
+  function prevSlide() { if (ssIdx > 0)                  { ssIdx--; updateSS(); } }
+
+  // ── Keyboard ──────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (!ssActive) return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ':
+        e.preventDefault(); nextSlide(); break;
+      case 'ArrowLeft': case 'ArrowUp':
+        e.preventDefault(); prevSlide(); break;
+      case 'Escape':
+        handleSsClose(); break;
+    }
+  });
+
+  // ── Touch swipe ───────────────────────────────────────
+  const ssEl = document.getElementById('slideshow');
+  ssEl.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  ssEl.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 45) {
+      dx < 0 ? nextSlide() : prevSlide();
+    }
+  }, { passive: true });
+
+  // ── Drag-and-drop ─────────────────────────────────────
+  const canvasArea = document.getElementById('canvasArea');
+  canvasArea.addEventListener('dragover',  e => { e.preventDefault(); canvasArea.classList.add('drag-over'); });
+  canvasArea.addEventListener('dragleave', () => canvasArea.classList.remove('drag-over'));
+  canvasArea.addEventListener('drop', e => {
+    e.preventDefault(); canvasArea.classList.remove('drag-over'); handleFiles(e.dataTransfer.files);
+  });
+  document.addEventListener('dragover', e => e.preventDefault());
+  document.addEventListener('drop', e => {
+    e.preventDefault();
+    if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files);
+  });
+
+  // ── Loading overlay ───────────────────────────────────
+  function showLoading(text, pct = 0) {
+    document.getElementById('loadingText').textContent = text;
+    document.getElementById('loadingBar').style.width  = pct + '%';
+    document.getElementById('loadingOverlay').classList.add('visible');
+  }
+  function updateLoading(text, pct) {
+    document.getElementById('loadingText').textContent = text;
+    document.getElementById('loadingBar').style.width  = pct + '%';
+  }
+  function hideLoading() {
+    document.getElementById('loadingBar').style.width = '100%';
+    setTimeout(() => document.getElementById('loadingOverlay').classList.remove('visible'), 300);
+  }
+
+  // ── Generate modal ────────────────────────────────────
+  function openGenerateModal() {
+    setGenState('form');
+    document.getElementById('genSlugInput').value = '';
+    document.getElementById('genHint').textContent = 'Letters, numbers and hyphens — 3 to 50 characters';
+    document.getElementById('genHint').className   = 'gen-hint';
+    document.getElementById('btnGenSubmit').disabled = true;
+    document.getElementById('genModalBackdrop').classList.add('open');
+    setTimeout(() => document.getElementById('genSlugInput').focus(), 50);
+  }
+
+  function closeGenerateModal() {
+    document.getElementById('genModalBackdrop').classList.remove('open');
+  }
+
+  // Close on backdrop click
+  document.getElementById('genModalBackdrop').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeGenerateModal();
+  });
+
+  function setGenState(name) {
+    ['form', 'uploading', 'success', 'error'].forEach(s => {
+      document.getElementById(`genState${s.charAt(0).toUpperCase() + s.slice(1)}`)
+        .classList.toggle('active', s === name);
+    });
+  }
+
+  function onSlugInput() {
+    const input = document.getElementById('genSlugInput');
+    // Auto-sanitise: lowercase, spaces → hyphens, strip invalid chars
+    let v = input.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    if (v !== input.value) input.value = v;
+
+    const hint = document.getElementById('genHint');
+    const btn  = document.getElementById('btnGenSubmit');
+
+    if (!v) {
+      hint.textContent = 'Letters, numbers and hyphens — 3 to 50 characters';
+      hint.className   = 'gen-hint';
+      btn.disabled     = true;
+      return;
+    }
+    if (v.length < 3) {
+      hint.textContent = 'Too short — minimum 3 characters';
+      hint.className   = 'gen-hint error';
+      btn.disabled     = true;
+      return;
+    }
+    if (v.startsWith('-') || v.endsWith('-')) {
+      hint.textContent = 'Cannot start or end with a hyphen';
+      hint.className   = 'gen-hint error';
+      btn.disabled     = true;
+      return;
+    }
+    hint.textContent = `Your link: slidecloud.netlify.app/s/${v}`;
+    hint.className   = 'gen-hint ok';
+    btn.disabled     = false;
+  }
+
+  async function doGenerate() {
+    const slug = document.getElementById('genSlugInput').value.trim();
+    if (!slug || slug.length < 3) return;
+
+    setGenState('uploading');
+
+    // Step 1 — compress all slides
+    const compressed = [];
+    for (let i = 0; i < slides.length; i++) {
+      setGenUpload(`Compressing slide ${i + 1} of ${slides.length}…`, (i / slides.length) * 55);
+      compressed.push({
+        ...slides[i],
+        dataUrl: await compressSlide(slides[i].dataUrl),
+      });
+    }
+
+    setGenUpload('Uploading to cloud…', 65);
+
+    // Step 2 — save via API
+    try {
+      const res  = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          slides: compressed.map(s => ({
+            dataUrl:    s.dataUrl,
+            fileName:   s.fileName,
+            pageNum:    s.pageNum,
+            totalPages: s.totalPages,
+          })),
+        }),
+      });
+
+      setGenUpload('Finishing…', 95);
+      const json = await res.json();
+
+      if (!res.ok) {
+        setGenState('error');
+        document.getElementById('genErrorMsg').textContent = json.error || 'Upload failed — please try again.';
+        return;
+      }
+
+      setGenUpload('Done!', 100);
+      genUrl = `https://slidecloud.netlify.app/s/${slug}`;
+      document.getElementById('genSuccessUrl').textContent = genUrl;
+      document.getElementById('btnOpenLink').href = genUrl;
+      setGenState('success');
+    } catch (err) {
+      setGenState('error');
+      document.getElementById('genErrorMsg').textContent = 'Network error — check your connection and try again.';
+    }
+  }
+
+  function setGenUpload(label, pct) {
+    document.getElementById('genUploadLabel').textContent = label;
+    document.getElementById('genBar').style.width         = pct + '%';
+  }
+
+  function copyLink() {
+    navigator.clipboard.writeText(genUrl).then(() => {
+      const btn = document.getElementById('btnCopy');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  // ── Slide compression (before upload) ────────────────
+  // Resizes to max 1920×1080 and re-encodes at lower quality
+  function compressSlide(dataUrl, maxW = 1920, maxH = 1080, quality = 0.72) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+        const w = Math.round(img.width  * ratio);
+        const h = Math.round(img.height * ratio);
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(dataUrl); // fallback: keep original
+      img.src = dataUrl;
+    });
+  }
+
+  // ── Utilities ─────────────────────────────────────────
+  function uid() {
+    return 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+</script>
+</body>
+</html>
