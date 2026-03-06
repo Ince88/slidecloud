@@ -1833,20 +1833,26 @@
     return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   }
 
+  // iOS Safari does not support requestFullscreen — detect it so we can skip the prompt.
+  function _isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
   function _tryFullscreen() {
+    if (_isIOS()) return; // not supported on iOS Safari
     try {
       if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
-    } catch { /* iOS Safari doesn't support fullscreen API */ }
+    } catch {}
   }
 
   function _exitFullscreen() {
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch {}
   }
 
-  // Portrait = viewport taller than wide. This is read AFTER the viewport settles.
-  // window.innerWidth/Height is the only reliable cross-browser/cross-Android source.
+  // Portrait = viewport taller than wide. Read AFTER the viewport settles.
   function _isPortrait() {
     return window.innerHeight > window.innerWidth;
   }
@@ -1857,6 +1863,15 @@
     const overlay  = document.getElementById('rotateOverlay');
 
     if (ssOn && _isMobile() && !_rotateSkipped) {
+      if (!portrait) {
+        // Landscape reached — on iOS just dismiss silently (no fullscreen API available).
+        // On Android show the "tap for fullscreen" prompt.
+        if (_isIOS()) {
+          _rotateSkipped = true;
+          overlay.classList.remove('visible', 'landscape');
+          return;
+        }
+      }
       overlay.classList.add('visible');
       overlay.classList.toggle('landscape', !portrait);
     } else {
@@ -1869,7 +1884,6 @@
   let _orientTimer = null;
   function _scheduleOrientCheck() {
     clearTimeout(_orientTimer);
-    // 300 ms is enough for even slow Android devices to finish updating innerWidth/Height
     _orientTimer = setTimeout(checkOrientation, 300);
   }
 
@@ -1880,8 +1894,7 @@
   function dismissRotateOverlay() {
     _rotateSkipped = true;
     document.getElementById('rotateOverlay').classList.remove('visible', 'landscape');
-    // Dismiss tap is a user gesture — use it to request fullscreen too.
-    _tryFullscreen();
+    _tryFullscreen(); // no-op on iOS, works on Android (user gesture)
   }
 
   function enterFullscreenFromOverlay() {
