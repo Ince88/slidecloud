@@ -990,11 +990,9 @@
     checkOrientation();
 
     // Viewer opens without a user gesture, so fullscreen isn't available immediately.
-    // Grant it on the user's first tap anywhere on the slideshow.
+    // Listen on document so the first tap anywhere (including the rotate overlay) works.
     if (_isMobile()) {
-      document.getElementById('slideshow').addEventListener('touchend', () => {
-        _tryFullscreen();
-      }, { once: true, passive: true });
+      document.addEventListener('touchend', _tryFullscreen, { once: true, passive: true });
     }
 
     // Connect to WS once config is available
@@ -1837,16 +1835,25 @@
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch {}
   }
 
+  // matchMedia is evaluated by the CSS engine — same source of truth as @media rules.
+  const _portraitMQ = window.matchMedia('(orientation: portrait)');
+
   function checkOrientation() {
-    const ssOn = document.getElementById('slideshow').classList.contains('active');
-    const show = ssOn && _isMobile() && !_rotateSkipped;
+    const ssOn    = document.getElementById('slideshow').classList.contains('active');
+    const portrait = _portraitMQ.matches;
+    const show    = ssOn && _isMobile() && portrait && !_rotateSkipped;
     document.getElementById('rotateOverlay').classList.toggle('visible', show);
-    // Hiding in landscape is handled by @media (orientation: landscape) in CSS.
   }
+
+  // Re-evaluate immediately when orientation flips — matchMedia fires after the
+  // viewport has already updated, so .matches is correct at this point.
+  _portraitMQ.addEventListener('change', () => checkOrientation());
 
   function dismissRotateOverlay() {
     _rotateSkipped = true;
     document.getElementById('rotateOverlay').classList.remove('visible');
+    // The dismiss tap IS a user gesture — best moment to request fullscreen.
+    _tryFullscreen();
   }
 </script>
 
