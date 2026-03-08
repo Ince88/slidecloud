@@ -4,6 +4,22 @@
 [functions]
   node_bundler = "esbuild"
 
+# Static pages
+[[redirects]]
+  from   = "/features"
+  to     = "/features.html"
+  status = 200
+
+[[redirects]]
+  from   = "/pricing"
+  to     = "/pricing.html"
+  status = 200
+
+[[redirects]]
+  from   = "/about"
+  to     = "/about.html"
+  status = 200
+
 # Editor app
 [[redirects]]
   from   = "/app"
