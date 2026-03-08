@@ -4,14 +4,20 @@
 [functions]
   node_bundler = "esbuild"
 
+# Editor app
+[[redirects]]
+  from   = "/app"
+  to     = "/app.html"
+  status = 200
+
 # Viewer: /s/<slug>
 [[redirects]]
   from   = "/s/*"
-  to     = "/index.html"
+  to     = "/app.html"
   status = 200
 
 # Presenter remote: /present/<slug>?token=...
 [[redirects]]
   from   = "/present/*"
-  to     = "/index.html"
+  to     = "/app.html"
   status = 200

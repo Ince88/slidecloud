@@ -3,1951 +3,250 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Flipcloud</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <title>Flipcloud — Bring your documents to life</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --sidebar-w: 290px;
-      --topbar-h: 62px;
-      --bg: #f7f8fc;
-      --surface: #ffffff;
-      --sb-bg: #14141c;
-      --sb-border: rgba(255,255,255,0.07);
-      --sb-text: #e2e8f8;
-      --sb-muted: #6c7086;
-      --accent: #3696f0;
-      --accent2: #8654ab;
-      --danger: #f87171;
-      --green: #34d399;
-      --shadow-sm: 0 1px 0 #e8eaf0;
-      --ease: cubic-bezier(0.4,0,0.2,1);
-      --grad: linear-gradient(135deg, #3696f0 0%, #8654ab 100%);
+      --blue:   #3696f0;
+      --purple: #8654ab;
+      --grad:   linear-gradient(90deg, var(--blue), var(--purple));
+      --text:   #1a1a2e;
+      --muted:  #5a5a72;
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      height: 100vh;
-      overflow: hidden;
+    html, body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: #fff;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Navbar ─────────────────────────────────────────── */
+    nav {
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 60px;
+      position: sticky;
+      top: 0;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 100;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
     }
 
-    /* ─── Sidebar ─────────────────────────────────────── */
-    .sidebar {
-      position: fixed; top: 0; left: 0;
-      width: var(--sidebar-w); height: 100vh;
-      background: var(--sb-bg);
-      display: flex; flex-direction: column;
-      transform: translateX(-100%);
-      transition: transform 0.32s var(--ease);
-      z-index: 110;
-      box-shadow: 6px 0 30px rgba(0,0,0,0.35);
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
     }
-    .sidebar.open { transform: translateX(0); }
 
-    .sb-header {
-      padding: 18px 16px 14px;
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid var(--sb-border);
-      flex-shrink: 0;
+    .nav-logo img {
+      height: 36px;
+      width: auto;
     }
-    .sb-title { color: var(--sb-text); font-size: 14px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; }
-    .sb-close {
-      background: none; border: none; color: var(--sb-muted); cursor: pointer;
-      width: 30px; height: 30px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      transition: color 0.15s, background 0.15s;
-    }
-    .sb-close:hover { color: var(--sb-text); background: rgba(255,255,255,0.07); }
 
-    .sb-actions { padding: 12px 14px; border-bottom: 1px solid var(--sb-border); flex-shrink: 0; }
-    .btn-add-slide {
-      width: 100%;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 9px 14px; background: var(--grad); color: #fff;
-      border: none; border-radius: 8px; font-size: 13px; font-weight: 700;
-      cursor: pointer; transition: background 0.15s, transform 0.1s;
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 38px;
+      list-style: none;
     }
-    .btn-add-slide:hover { background: var(--accent2); }
-    .btn-add-slide:active { transform: scale(0.98); }
 
-    .slides-list {
-      flex: 1; overflow-y: auto; padding: 10px 10px 20px;
-      display: flex; flex-direction: column; gap: 7px;
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: -0.1px;
+      transition: color 0.15s;
     }
-    .slides-list::-webkit-scrollbar { width: 4px; }
-    .slides-list::-webkit-scrollbar-track { background: transparent; }
-    .slides-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
 
-    .slide-item {
-      background: rgba(255,255,255,0.05);
-      border: 1.5px solid rgba(255,255,255,0.07);
-      border-radius: 8px; overflow: hidden; cursor: pointer; flex-shrink: 0;
-      transition: border-color 0.18s, background 0.18s;
-    }
-    .slide-item:hover { border-color: rgba(137,180,250,0.5); background: rgba(137,180,250,0.06); }
-    .slide-item.active { border-color: var(--accent); background: rgba(54,150,240,0.08); box-shadow: 0 0 0 1px var(--accent) inset; }
-    .slide-item.sortable-ghost { opacity: 0.35; }
-    .slide-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: #11111b; pointer-events: none; }
-    .slide-item-footer { padding: 6px 8px 6px 10px; display: flex; align-items: center; gap: 4px; }
-    .slide-num-badge {
-      min-width: 20px; height: 20px; background: rgba(54,150,240,0.15); color: var(--accent);
-      border-radius: 4px; font-size: 10px; font-weight: 800;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    }
-    .slide-name { color: var(--sb-muted); font-size: 11px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .btn-remove {
-      background: none; border: none; color: var(--sb-muted); cursor: pointer;
-      width: 24px; height: 24px; border-radius: 5px;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: auto;
-      transition: color 0.15s, background 0.15s;
-    }
-    .btn-remove:hover { color: var(--danger); background: rgba(243,139,168,0.12); }
-    .drag-handle { color: var(--sb-muted); cursor: grab; display: flex; align-items: center; padding: 0 2px; flex-shrink: 0; }
-    .drag-handle:active { cursor: grabbing; }
-    .sb-empty { text-align: center; padding: 36px 20px; color: var(--sb-muted); font-size: 12.5px; line-height: 1.7; }
-    .sb-empty svg { opacity: 0.3; margin-bottom: 12px; }
+    .nav-links a:hover { color: var(--blue); }
 
-    /* ─── Backdrop ────────────────────────────────────── */
-    .sb-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(3px); z-index: 109; }
-    .sb-backdrop.visible { display: block; }
-
-    /* ─── Main / Topbar ───────────────────────────────── */
-    .main { flex: 1; display: flex; flex-direction: column; height: 100vh; min-width: 0; }
-    .topbar {
-      height: var(--topbar-h); background: var(--surface); border-bottom: 1px solid #e8eaf0;
-      display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0; z-index: 10;
-    }
-    .btn-media {
-      display: flex; align-items: center; gap: 8px; padding: 8px 14px;
-      background: #f5f5f7; border: 1.5px solid #e2e2e6; border-radius: 8px;
-      font-size: 13px; font-weight: 600; color: #1e1e2e; cursor: pointer; white-space: nowrap;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .btn-media:hover { background: #ebebef; border-color: #c4c4cc; }
-    .btn-media.active { background: #1e1e2e; color: #fff; border-color: #1e1e2e; }
-    .topbar-logo {
-      font-size: 18px; font-weight: 900; letter-spacing: -0.5px;
-      flex: 1; text-align: center;
-      background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .topbar-right { display: flex; align-items: center; gap: 8px; }
-    .slide-count-pill { font-size: 12px; color: #888; background: #f0f0f4; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
-    .btn-generate {
-      display: flex; align-items: center; gap: 7px; padding: 9px 16px;
+    .btn-get-started {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 28px;
+      border-radius: 50px;
       background: var(--grad);
-      color: #fff; border: none; border-radius: 8px;
-      font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
-      box-shadow: 0 2px 12px rgba(54,150,240,0.28);
-      transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
-    }
-    .btn-generate:hover { opacity: 0.9; box-shadow: 0 4px 18px rgba(54,150,240,0.38); }
-    .btn-generate:active { transform: scale(0.98); }
-    .btn-generate:disabled { opacity: 0.38; cursor: not-allowed; }
-    .btn-preview {
-      display: flex; align-items: center; gap: 8px; padding: 9px 16px;
-      background: #1e1e2e; color: #fff; border: none; border-radius: 8px;
-      font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
-      transition: background 0.15s, transform 0.1s;
-    }
-    .btn-preview:hover { background: #313149; }
-    .btn-preview:active { transform: scale(0.98); }
-    .btn-preview:disabled { opacity: 0.38; cursor: not-allowed; }
-    .btn-saved {
-      display: flex; align-items: center; gap: 8px; padding: 9px 16px;
-      background: #fff; color: #374151; border: 1.5px solid #e2e2e6; border-radius: 8px;
-      font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
-      transition: background 0.15s, border-color 0.15s, transform 0.1s;
-    }
-    .btn-saved:hover  { background: #f5f5f8; border-color: #c5c5cd; }
-    .btn-saved:active { transform: scale(0.98); }
-
-    /* ─── Edit-mode banner ────────────────────────────── */
-    .edit-banner {
-      display: none; align-items: center; gap: 10px;
-      padding: 9px 20px;
-      background: linear-gradient(135deg, #dbeafe, #ede9fe);
-      border-bottom: 1px solid #c7d7f8;
-      font-size: 13px; color: #1e40af; font-weight: 600; flex-shrink: 0;
-    }
-    .edit-banner.visible { display: flex; }
-    .edit-banner-slug { font-style: italic; font-weight: 700; margin-left: 2px; }
-    .btn-edit-clear {
-      margin-left: auto; background: none;
-      border: 1.5px solid rgba(30,64,175,0.3); color: #1e40af;
-      border-radius: 6px; padding: 4px 11px; font-size: 11px; font-weight: 700;
-      cursor: pointer; transition: background 0.12s;
-    }
-    .btn-edit-clear:hover { background: rgba(30,64,175,0.1); }
-
-    /* ─── My Presentations modal ──────────────────────── */
-    .saved-modal { width: 620px; }
-    .saved-list  { display: flex; flex-direction: column; gap: 10px; min-height: 160px; }
-    .saved-loading {
-      display: flex; align-items: center; justify-content: center;
-      gap: 12px; padding: 60px 0; color: #9ca3af; font-size: 14px;
-    }
-    .saved-spinner {
-      width: 22px; height: 22px; border: 2.5px solid #f0f2f5;
-      border-top-color: var(--accent); border-radius: 50%;
-      animation: spin 0.75s linear infinite; flex-shrink: 0;
-    }
-    .saved-empty { text-align: center; padding: 55px 0; }
-    .saved-empty svg { display: block; margin: 0 auto 16px; opacity: 0.35; }
-    .saved-empty p     { font-size: 15px; font-weight: 600; color: #374151; margin-bottom: 5px; }
-    .saved-empty small { font-size: 13px; color: #9ca3af; }
-
-    .saved-card {
-      border: 1.5px solid #e2e2e6; border-radius: 12px; padding: 14px 16px;
-      transition: border-color 0.15s;
-    }
-    .saved-card:hover { border-color: #c5c5cd; }
-    .saved-card-title { font-size: 15px; font-weight: 700; color: #1e1e2e; }
-    .saved-card-meta  { font-size: 12px; color: #9ca3af; margin-top: 3px; }
-    .saved-card-url   {
-      display: flex; align-items: center;
-      background: #f5f5f8; border: 1.5px solid #e2e2e6; border-radius: 8px;
-      overflow: hidden; margin: 10px 0 12px;
-    }
-    .saved-card-url-text {
-      flex: 1; padding: 8px 11px; font-size: 12px; color: #6c7086;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .saved-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-    .btn-sv {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 7px 12px; border-radius: 7px; font-size: 12px; font-weight: 600;
-      cursor: pointer; border: 1.5px solid #e2e2e6; background: #fff; color: #374151;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.1px;
       text-decoration: none;
-      transition: background 0.12s, border-color 0.12s;
-    }
-    .btn-sv:hover           { background: #f5f5f8; border-color: #c5c5cd; }
-    .btn-sv.primary         { background: var(--grad); border-color: var(--accent); color: #fff; }
-    .btn-sv.primary:hover   { opacity: 0.88; }
-    .btn-sv.danger          { color: #e11d48; border-color: #fecdd3; }
-    .btn-sv.danger:hover    { background: #fff1f2; border-color: #fda4af; }
-
-    .saved-del-confirm {
-      display: none; align-items: center; gap: 8px; flex-wrap: wrap;
-      margin-top: 10px; padding: 10px 13px;
-      background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 8px;
-    }
-    .saved-del-confirm.visible { display: flex; }
-    .saved-del-confirm p { flex: 1; font-size: 12px; color: #9f1239; font-weight: 600; min-width: 180px; }
-    .btn-del { padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; }
-    .btn-del.yes { background: #e11d48; color: #fff; margin-right: 4px; }
-    .btn-del.no  { background: #f5f5f8; color: #374151; }
-
-    /* ─── Canvas area ─────────────────────────────────── */
-    .canvas-area {
-      flex: 1; display: flex; align-items: flex-start; justify-content: center;
-      padding: 28px 32px; overflow-y: auto; position: relative;
-    }
-    .canvas-area.drag-over::after {
-      content: 'Drop PDF, JPG or PNG files here';
-      position: fixed; inset: 0; background: rgba(137,180,250,0.12);
-      border: 2.5px dashed var(--accent); border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; font-weight: 700; color: var(--accent); z-index: 5;
-    }
-    .empty-state { text-align: center; color: #9ca3af; max-width: 380px; margin: auto; }
-    .empty-state svg { opacity: 0.4; margin-bottom: 20px; }
-    .empty-state h3 { font-size: 22px; font-weight: 700; color: #374151; margin-bottom: 8px; }
-    .empty-state p { font-size: 14px; line-height: 1.65; }
-    .empty-ctas { margin-top: 24px; display: flex; gap: 10px; justify-content: center; }
-
-    /* ─── Slide stack ─────────────────────────────────── */
-    .slide-stack {
-      display: flex; flex-direction: column; gap: 16px;
-      width: 100%; max-width: 900px; padding-bottom: 40px;
-    }
-    .stack-card {
-      display: flex; align-items: center; gap: 14px;
-      background: #fff; border: 1.5px solid #e2e2e6; border-radius: 14px;
-      padding: 14px; transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .stack-card:hover { border-color: #c5c5cd; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-    .stack-side {
-      display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0;
-    }
-    .stack-num {
-      width: 48px; height: 48px; border: 2px solid #e2e2e6; border-radius: 10px;
-      text-align: center; font-size: 17px; font-weight: 700; color: #1e1e2e;
-      background: #f9f9fb; outline: none; transition: border-color 0.15s, background 0.15s;
-      -moz-appearance: textfield; cursor: pointer;
-    }
-    .stack-num::-webkit-inner-spin-button,
-    .stack-num::-webkit-outer-spin-button { -webkit-appearance: none; }
-    .stack-num:focus { border-color: var(--accent); background: #fff; }
-    .stack-num-hint { font-size: 9px; color: #c5c5cd; text-align: center; line-height: 1.2; max-width: 48px; }
-    .stack-remove {
-      width: 30px; height: 30px; border: 1.5px solid #fecdd3; background: none;
-      color: #f38ba8; border-radius: 8px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.12s, color 0.12s;
-    }
-    .stack-remove:hover { background: #fff1f2; color: #e11d48; }
-    .stack-img-wrap { flex: 1; min-width: 0; }
-    .stack-img {
-      width: 100%; aspect-ratio: 16 / 9; object-fit: contain;
-      border-radius: 8px; background: #111; display: block;
-    }
-    .stack-meta {
-      display: flex; align-items: center; gap: 8px;
-      margin-top: 8px; font-size: 12px; color: #9ca3af;
-    }
-    .stack-badge {
-      background: var(--grad); color: #fff; padding: 2px 8px;
-      border-radius: 5px; font-size: 11px; font-weight: 700; flex-shrink: 0;
-    }
-    .btn-upload-big {
-      display: inline-flex; align-items: center; gap: 8px; padding: 11px 22px;
-      background: var(--grad); color: #fff; border: none; border-radius: 9px;
-      font-size: 14px; font-weight: 700; cursor: pointer;
-      box-shadow: 0 2px 12px rgba(54,150,240,0.25);
-      transition: opacity 0.15s;
-    }
-    .btn-upload-big:hover { opacity: 0.88; }
-    .btn-upload-big:hover { background: var(--accent2); }
-    .preview-wrap {
-      width: 100%; max-width: 900px; aspect-ratio: 16/9; background: #fff;
-      border-radius: 12px; box-shadow: 0 8px 48px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08);
-      overflow: hidden; position: relative;
-    }
-    .preview-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
-    .preview-nav-hint {
-      position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.8); font-size: 11px;
-      padding: 4px 12px; border-radius: 20px; pointer-events: none; white-space: nowrap;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(54, 150, 240, 0.35);
+      transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
     }
 
-    /* ─── Loading overlay ─────────────────────────────── */
-    .loading-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-      backdrop-filter: blur(6px); z-index: 300;
-      flex-direction: column; align-items: center; justify-content: center; gap: 16px;
-      color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 500;
-    }
-    .loading-overlay.visible { display: flex; }
-    .spinner { width: 46px; height: 46px; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.75s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-bar-wrap { width: 220px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
-    .loading-bar { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.25s ease; width: 0%; }
-
-    /* ─── Slideshow ───────────────────────────────────── */
-    .slideshow { display: none; position: fixed; inset: 0; background: #000; z-index: 400; align-items: center; justify-content: center; }
-    .slideshow.active { display: flex; }
-    .ss-progress { position: absolute; top: 0; left: 0; height: 3px; background: var(--accent); transition: width 0.35s ease; z-index: 5; }
-    .ss-img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; display: block; }
-    .ss-nav {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.13); color: #fff;
-      border-radius: 50%; width: 54px; height: 54px;
-      display: flex; align-items: center; justify-content: center; cursor: pointer;
-      backdrop-filter: blur(10px); transition: background 0.15s; z-index: 10;
-    }
-    .ss-nav:hover { background: rgba(255,255,255,0.18); }
-    .ss-nav:disabled { opacity: 0.2; pointer-events: none; }
-    .ss-nav.prev { left: 28px; }
-    .ss-nav.next { right: 28px; }
-    .ss-close {
-      position: absolute; top: 20px; right: 20px;
-      background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.13);
-      color: rgba(255,255,255,0.85); border-radius: 8px; padding: 7px 13px;
-      font-size: 12px; font-weight: 600; cursor: pointer;
-      display: flex; align-items: center; gap: 7px; backdrop-filter: blur(10px); z-index: 10;
-      transition: background 0.15s;
-    }
-    .ss-close:hover { background: rgba(255,255,255,0.16); }
-    .ss-counter {
-      position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
-      color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500;
-      background: rgba(0,0,0,0.4); padding: 5px 16px; border-radius: 20px;
-      backdrop-filter: blur(8px); white-space: nowrap; z-index: 10;
-    }
-    .ss-dots { position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 320px; z-index: 10; }
-    .ss-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.25); cursor: pointer; transition: background 0.18s, transform 0.18s; }
-    .ss-dot.active { background: var(--accent); transform: scale(1.5); }
-    .ss-branding { position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.22); font-size: 11px; font-weight: 600; pointer-events: none; z-index: 10; display: none; }
-    .ss-branding span { color: rgba(137,180,250,0.35); }
-
-    /* Live badge — shown in viewer mode when WS is active */
-    .ss-live-badge {
-      position: absolute; top: 20px; left: 20px;
-      display: none; align-items: center; gap: 7px;
-      background: rgba(0,0,0,0.45); backdrop-filter: blur(8px);
-      padding: 5px 12px; border-radius: 20px;
-      color: rgba(255,255,255,0.75); font-size: 11px; font-weight: 600; z-index: 10;
-    }
-    .ss-live-badge.visible { display: flex; }
-    .ss-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
-    .ss-live-dot.pulse { animation: lv-pulse 2s ease infinite; }
-    .ss-live-dot.idle  { background: #fab387; animation: none; }
-    @keyframes lv-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-    .ss-img.fade-out { animation: fadeOut 0.12s ease forwards; }
-    .ss-img.fade-in  { animation: fadeIn  0.18s ease forwards; }
-    @keyframes fadeOut { to { opacity: 0; } }
-    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
-
-    /* ─── Rotate-to-landscape prompt ─────────────────── */
-    .rotate-overlay {
-      display: none; position: fixed; inset: 0; z-index: 450;
-      background: #0a0a10;
-      flex-direction: column; align-items: center; justify-content: center;
-    }
-    .rotate-overlay.visible { display: flex; }
-
-    /* ── Portrait state ── */
-    .rotate-portrait { display: flex; flex-direction: column; align-items: center; }
-    .rotate-landscape { display: none; }
-
-    /* ── Landscape state: becomes a fullscreen tap target ── */
-    .rotate-overlay.landscape .rotate-portrait { display: none; }
-    .rotate-overlay.landscape .rotate-landscape {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      width: 100%; height: 100%; cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .rotate-overlay.landscape { background: rgba(0,0,0,0.55); }
-
-    .rotate-phone {
-      width: 72px; height: 72px; margin-bottom: 36px;
-      color: var(--accent);
-      animation: rp-tilt 2.6s ease-in-out infinite;
-    }
-    @keyframes rp-tilt {
-      0%,25%  { transform: rotate(0deg);   }
-      55%,80% { transform: rotate(-90deg); }
-      100%    { transform: rotate(0deg);   }
-    }
-    .rotate-fs-icon {
-      width: 68px; height: 68px; margin-bottom: 28px; color: #fff;
-      opacity: 0.9;
-    }
-    .rotate-title {
-      color: #fff; font-size: 22px; font-weight: 800;
-      letter-spacing: -0.3px; margin-bottom: 10px; text-align: center;
-    }
-    .rotate-sub {
-      color: rgba(255,255,255,0.4); font-size: 14px; line-height: 1.6;
-      text-align: center; margin-bottom: 40px; max-width: 230px;
-    }
-    .rotate-skip {
-      background: none; border: 1.5px solid rgba(255,255,255,0.18);
-      color: rgba(255,255,255,0.45); padding: 11px 26px; border-radius: 10px;
-      font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 0.2px;
-      -webkit-tap-highlight-color: transparent;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
-    }
-    .rotate-skip:active { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.4); }
-
-    /* ─── Viewer loading/error screen ─────────────────── */
-    .viewer-screen { display: none; position: fixed; inset: 0; background: #0a0a10; z-index: 350; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
-    .viewer-screen.visible { display: flex; }
-    .viewer-logo { font-size: 24px; font-weight: 800; color: #cdd6f4; letter-spacing: -0.5px; margin-bottom: 8px; }
-    .viewer-logo {
-      background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .viewer-logo span { color: inherit; -webkit-text-fill-color: inherit; }
-    .viewer-msg { font-size: 13px; color: rgba(255,255,255,0.45); }
-    .viewer-error { text-align: center; color: rgba(255,255,255,0.8); }
-    .viewer-error h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-    .viewer-error p  { font-size: 13px; color: rgba(255,255,255,0.45); }
-    .btn-viewer-home { margin-top: 20px; display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; background: var(--grad); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; transition: opacity 0.15s; }
-    .btn-viewer-home:hover { opacity: 0.88; }
-
-    /* ─── Presenter remote screen ─────────────────────── */
-    .presenter-screen { display: none; position: fixed; inset: 0; background: #0a0a10; z-index: 600; flex-direction: column; }
-    .presenter-screen.visible { display: flex; }
-
-    .ps-header {
-      padding: 0 20px; height: 52px; flex-shrink: 0;
-      display: flex; align-items: center; gap: 12px;
-      background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.07);
-    }
-    .ps-status { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-    .ps-status-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: background 0.3s; }
-    .ps-status-dot.connecting { background: #fab387; animation: lv-pulse 1.2s ease infinite; }
-    .ps-status-dot.live       { background: var(--green); animation: lv-pulse 2.5s ease infinite; }
-    .ps-status-dot.error      { background: var(--danger); }
-    .ps-status-label { color: rgba(255,255,255,0.6); }
-    .ps-counter { flex: 1; text-align: center; font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.85); }
-    .ps-viewers { display: flex; align-items: center; gap: 5px; font-size: 12px; color: rgba(255,255,255,0.45); }
-
-    .ps-slide-area {
-      flex: 1; display: flex; align-items: center; justify-content: center;
-      padding: 24px; overflow: hidden; position: relative;
-      /* whole area is also a swipe zone */
-    }
-    .ps-slide-img {
-      max-width: 100%; max-height: 100%; object-fit: contain;
-      border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,0.6);
-      pointer-events: none; user-select: none;
-    }
-    .ps-slide-hint {
-      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-      font-size: 11px; color: rgba(255,255,255,0.25); white-space: nowrap; pointer-events: none;
+    .btn-get-started:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(54, 150, 240, 0.45);
+      filter: brightness(1.06);
     }
 
-    .ps-nav {
-      height: 110px; flex-shrink: 0; display: flex;
-      border-top: 1px solid rgba(255,255,255,0.07);
+    .btn-get-started:active {
+      transform: translateY(0);
+      box-shadow: 0 3px 14px rgba(54, 150, 240, 0.3);
     }
-    .ps-nav-btn {
-      flex: 1; background: none; border: none; color: rgba(255,255,255,0.7); cursor: pointer;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-      font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
-      transition: background 0.12s;
-      -webkit-tap-highlight-color: transparent;
+
+    /* ── Hero ────────────────────────────────────────────── */
+    .hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 80px 60px 60px;
+      min-height: calc(100vh - 81px);
+      gap: 48px;
     }
-    .ps-nav-btn:active { background: rgba(255,255,255,0.07); }
-    .ps-nav-btn:disabled { opacity: 0.25; pointer-events: none; }
-    .ps-nav-btn.prev { border-right: 1px solid rgba(255,255,255,0.07); }
 
-    .ps-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 16px; }
-    .ps-spinner { width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.75s linear infinite; }
-    .ps-loading-label { font-size: 13px; color: rgba(255,255,255,0.4); }
+    .hero-left {
+      flex: 0 0 auto;
+      max-width: 480px;
+    }
 
-    /* ─── Generate modal ──────────────────────────────── */
-    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(5px); z-index: 500; align-items: center; justify-content: center; padding: 16px; }
-    .modal-backdrop.open { display: flex; }
-    .modal { background: #fff; border-radius: 16px; width: 500px; max-width: 100%; box-shadow: 0 24px 70px rgba(0,0,0,0.3); overflow: hidden; max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
-    .modal-header { padding: 22px 24px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-shrink: 0; }
-    .modal-header-text h2 { font-size: 18px; font-weight: 800; color: #1e1e2e; }
-    .modal-header-text p { font-size: 13px; color: #6c7086; margin-top: 3px; }
-    .modal-x { background: none; border: none; color: #9ca3af; cursor: pointer; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; transition: color 0.15s, background 0.15s; }
-    .modal-x:hover { color: #374151; background: #f3f4f6; }
-    .modal-body { padding: 20px 24px; overflow-y: auto; }
-    .modal-footer { padding: 4px 24px 22px; display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+    .hero-heading {
+      font-size: clamp(38px, 5vw, 58px);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      color: var(--text);
+      margin-bottom: 22px;
+    }
 
-    .gen-label { display: block; font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.6px; }
-    .gen-slug-wrap { display: flex; align-items: center; border: 1.5px solid #e2e2e6; border-radius: 9px; overflow: hidden; background: #f9f9fb; transition: border-color 0.15s, background 0.15s; }
-    .gen-slug-wrap:focus-within { border-color: var(--accent); background: #fff; }
-    .gen-slug-wrap:focus-within .gen-prefix { color: var(--accent); }
-    .gen-prefix { padding: 11px 0 11px 13px; font-size: 12px; color: #aaa; white-space: nowrap; pointer-events: none; transition: color 0.15s; }
-    .gen-input { flex: 1; padding: 11px 13px 11px 3px; background: none; border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e1e2e; min-width: 0; }
-    .gen-hint { margin-top: 7px; font-size: 12px; color: #9ca3af; min-height: 18px; }
-    .gen-hint.error { color: #e11d48; }
-    .gen-hint.ok    { color: #059669; }
+    .hero-heading .grad-text {
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
 
-    /* Upload progress */
-    .gen-upload-wrap { text-align: center; padding: 10px 0 6px; }
-    .gen-spinner { width: 40px; height: 40px; border: 3px solid #f0f2f5; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.75s linear infinite; margin: 0 auto 16px; }
-    .gen-upload-label { font-size: 13px; color: #6c7086; margin-bottom: 10px; }
-    .gen-bar-wrap { height: 5px; background: #f0f2f5; border-radius: 5px; overflow: hidden; }
-    .gen-bar { height: 100%; background: var(--grad); border-radius: 5px; transition: width 0.3s ease; width: 0%; }
+    .hero-sub {
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--muted);
+      max-width: 400px;
+      margin-bottom: 38px;
+    }
 
-    /* Success */
-    .gen-success-icon { width: 48px; height: 48px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 4px auto 12px; }
-    .gen-success-title { font-size: 16px; font-weight: 700; color: #1e1e2e; text-align: center; margin-bottom: 18px; }
-
-    .gen-section-label { font-size: 11px; font-weight: 700; color: #6c7086; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 7px; }
-    .gen-url-row { display: flex; align-items: center; background: #f5f5f8; border: 1.5px solid #e2e2e6; border-radius: 9px; overflow: hidden; }
-    .gen-url-text { flex: 1; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #1e1e2e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .btn-copy { padding: 10px 14px; background: none; border: none; border-left: 1.5px solid #e2e2e6; color: #6c7086; cursor: pointer; font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, color 0.15s; }
-    .btn-copy:hover { background: #ebebef; color: #1e1e2e; }
-    .btn-copy.copied { color: #059669; }
-
-    .gen-divider { margin: 16px 0; display: flex; align-items: center; gap: 10px; color: #9ca3af; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
-    .gen-divider::before, .gen-divider::after { content: ''; flex: 1; height: 1px; background: #e8e8ec; }
-
-    /* QR code section */
-    .gen-qr-row { display: flex; gap: 16px; align-items: flex-start; }
-    .gen-qr-box { flex-shrink: 0; width: 130px; height: 130px; background: #f5f5f8; border: 1.5px solid #e2e2e6; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-    .gen-qr-box canvas { border-radius: 8px; }
-    .gen-qr-info { flex: 1; min-width: 0; }
-    .gen-qr-info strong { display: block; font-size: 13px; font-weight: 700; color: #1e1e2e; margin-bottom: 5px; }
-    .gen-qr-info p { font-size: 12px; color: #6c7086; line-height: 1.55; margin-bottom: 10px; }
-    .gen-url-row.sm .gen-url-text { font-size: 11px; }
-    .gen-url-row.sm .btn-copy { padding: 8px 12px; font-size: 11px; }
-    .btn-url-open {
-      padding: 0 13px; background: none; border: none; border-left: 1.5px solid #e2e2e6;
-      color: #9ca3af; cursor: pointer; display: flex; align-items: center;
-      height: 100%; flex-shrink: 0; transition: background 0.15s, color 0.15s;
+    .btn-hero {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 15px 34px;
+      border-radius: 50px;
+      background: var(--grad);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.1px;
       text-decoration: none;
+      box-shadow: 0 6px 28px rgba(54, 150, 240, 0.38);
+      transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
     }
-    .btn-url-open:hover { background: #ebebef; color: #1e1e2e; }
 
-    /* Shared modal buttons */
-    .btn-modal-sec { padding: 9px 16px; background: #f5f5f7; border: 1.5px solid #e2e2e6; border-radius: 8px; font-size: 13px; font-weight: 600; color: #6c7086; cursor: pointer; transition: background 0.15s; }
-    .btn-modal-sec:hover { background: #ebebef; }
-    .btn-modal-pri { display: flex; align-items: center; gap: 7px; padding: 9px 18px; background: var(--grad); border: none; border-radius: 8px; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
-    .btn-modal-pri:hover { opacity: 0.88; }
-    .btn-modal-pri:active { transform: scale(0.98); }
-    .btn-modal-pri:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-open-link { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; background: #1e1e2e; color: #fff; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 700; transition: background 0.15s; }
-    .btn-open-link:hover { background: #313149; }
+    .btn-hero:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 36px rgba(54, 150, 240, 0.48);
+      filter: brightness(1.06);
+    }
 
-    .gen-state { display: none; }
-    .gen-state.active { display: block; }
+    .btn-hero svg {
+      width: 18px; height: 18px;
+      transition: transform 0.2s;
+    }
 
-    /* ─── Responsive ──────────────────────────────────── */
-    @media (max-width: 640px) {
-      .topbar-logo { display: none; }
-      .slide-count-pill { display: none; }
-      .canvas-area { padding: 12px; }
-      .stack-card { padding: 10px; gap: 10px; }
-      .stack-num { width: 40px; height: 40px; font-size: 15px; }
-      .ss-nav { width: 42px; height: 42px; }
-      .ss-nav.prev { left: 10px; }
-      .ss-nav.next { right: 10px; }
-      .btn-generate { padding: 9px 12px; }
-      .btn-preview  { padding: 9px 12px; }
+    .btn-hero:hover svg { transform: translateX(3px); }
+
+    .hero-right {
+      flex: 1 1 auto;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .hero-img-wrap {
+      width: 100%;
+      max-width: 580px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.12);
+    }
+
+    .hero-img-wrap img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* ── Mobile ──────────────────────────────────────────── */
+    @media (max-width: 860px) {
+      nav { padding: 18px 24px; }
+      .nav-links { display: none; }
+
+      .hero {
+        flex-direction: column;
+        padding: 48px 24px 40px;
+        min-height: unset;
+        text-align: center;
+      }
+
+      .hero-left { max-width: 100%; }
+      .hero-sub  { max-width: 100%; margin-inline: auto; }
+      .hero-right { justify-content: center; }
+      .hero-img-wrap { max-width: 100%; }
     }
   </style>
 </head>
 <body>
 
-<!-- ── Sidebar backdrop ───────────────────────────────── -->
-<div class="sb-backdrop" id="sbBackdrop" onclick="closeSidebar()"></div>
+  <!-- ── Navbar ──────────────────────────────────────── -->
+  <nav>
+    <a class="nav-logo" href="/">
+      <img src="/assets/logo.png" alt="Flipcloud" />
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="/app">Login</a></li>
+    </ul>
+    <a class="btn-get-started" href="/app">Get Started</a>
+  </nav>
 
-<!-- ── Left Sidebar ───────────────────────────────────── -->
-<aside class="sidebar" id="sidebar">
-  <div class="sb-header">
-    <span class="sb-title">Media</span>
-    <button class="sb-close" onclick="closeSidebar()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
-  </div>
-  <div class="sb-actions">
-    <button class="btn-add-slide" onclick="triggerFileInput()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M12 5v14M5 12h14"/></svg>
-      Add Slides
-    </button>
-  </div>
-  <div class="slides-list" id="slidesList">
-    <div class="sb-empty" id="sbEmpty">
-      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" display="block" style="margin:0 auto">
-        <rect x="2" y="3" width="20" height="14" rx="2.5"/><path d="M8 21h8M12 17v4"/>
-      </svg>
-      No slides yet.<br>Add PDF, JPG, or PNG files to get started.
-    </div>
-  </div>
-</aside>
-
-<!-- ── Main editor ────────────────────────────────────── -->
-<div class="main" id="editorMain">
-  <header class="topbar">
-    <button class="btn-media" id="btnMedia" onclick="toggleSidebar()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-        <rect x="2" y="3" width="20" height="14" rx="2.5"/><path d="M8 21h8M12 17v4"/>
-      </svg>
-      Media
-    </button>
-    <div class="topbar-logo">Flipcloud</div>
-    <div class="topbar-right">
-      <span class="slide-count-pill" id="slideCountPill">0 slides</span>
-      <button class="btn-saved" onclick="openSavedModal()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
+  <!-- ── Hero ────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-left">
+      <h1 class="hero-heading">
+        Bring <span class="grad-text">your<br>documents to life</span>
+      </h1>
+      <p class="hero-sub">
+        Create, share, and present interactive slideshows seamlessly with Flipcloud's powerful platform.
+      </p>
+      <a class="btn-hero" href="/app">
+        Get Started Free
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
-        Saved
-      </button>
-      <button class="btn-generate" id="btnGenerate" onclick="openGenerateModal()" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-        </svg>
-        Generate
-      </button>
-      <button class="btn-preview" id="btnPreview" onclick="openSlideshow()" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        Preview
-      </button>
-    </div>
-  </header>
-
-  <div class="edit-banner" id="editBanner">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-    </svg>
-    Editing saved presentation: <span class="edit-banner-slug" id="editBannerSlug"></span>
-    — generate again to overwrite.
-    <button class="btn-edit-clear" onclick="clearEditMode()">Discard</button>
-  </div>
-
-  <div class="canvas-area" id="canvasArea">
-    <div class="empty-state" id="emptyState">
-      <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="display:block;margin:0 auto">
-        <rect x="2" y="3" width="20" height="14" rx="2.5"/>
-        <path d="M8 21h8M12 17v4"/>
-        <path d="M9 10l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <h3>No slides added yet</h3>
-      <p>Add PDF, JPG, or PNG files via the <strong>Media</strong> panel,<br>or drop files anywhere on this page.</p>
-      <div class="empty-ctas">
-        <button class="btn-upload-big" onclick="triggerFileInput()">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Upload Files
-        </button>
-      </div>
-    </div>
-    <div class="slide-stack" id="slideStack" style="display:none"></div>
-  </div>
-</div>
-
-<!-- ── File processing overlay ────────────────────────── -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <span id="loadingText">Processing…</span>
-  <div class="loading-bar-wrap"><div class="loading-bar" id="loadingBar"></div></div>
-</div>
-
-<!-- ── Slideshow ─────────────────────────────────────── -->
-<div class="slideshow" id="slideshow">
-  <div class="ss-progress" id="ssProgress"></div>
-
-  <!-- Live remote badge (viewer mode only) -->
-  <div class="ss-live-badge" id="ssLiveBadge">
-    <div class="ss-live-dot" id="ssLiveDot"></div>
-    <span id="ssLiveLabel">Live</span>
-  </div>
-
-  <button class="ss-close" id="ssCloseBtn" onclick="handleSsClose()">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    <span id="ssCloseLabel">ESC</span>
-  </button>
-
-  <img class="ss-img" id="ssImg" src="" alt="Slide" />
-
-  <button class="ss-nav prev" id="navPrev" onclick="prevSlide()">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-  </button>
-  <button class="ss-nav next" id="navNext" onclick="nextSlide()">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
-  </button>
-
-  <div class="ss-dots" id="ssDots"></div>
-  <div class="ss-counter" id="ssCounter">1 / 1</div>
-  <div class="ss-branding" id="ssBranding">Made with Flipcloud</div>
-</div>
-
-<!-- ── Viewer loading/error screen ───────────────────── -->
-<div class="viewer-screen" id="viewerScreen">
-  <div class="viewer-logo">Flipcloud</div>
-  <div class="spinner"></div>
-  <div class="viewer-msg" id="viewerMsg">Loading presentation…</div>
-</div>
-
-<!-- ── Presenter remote screen ───────────────────────── -->
-<div class="presenter-screen" id="presenterScreen">
-
-  <!-- Loading state -->
-  <div class="ps-loading" id="psLoading">
-    <div class="viewer-logo">Flipcloud</div>
-    <div class="ps-spinner"></div>
-    <div class="ps-loading-label" id="psLoadingLabel">Loading presentation…</div>
-  </div>
-
-  <!-- Control UI (shown once loaded) -->
-  <div id="psControl" style="display:none;flex-direction:column;height:100%">
-    <header class="ps-header">
-      <div class="ps-status">
-        <div class="ps-status-dot connecting" id="psStatusDot"></div>
-        <span class="ps-status-label" id="psStatusLabel">Connecting…</span>
-      </div>
-      <div class="ps-counter" id="psCounter">— / —</div>
-      <div class="ps-viewers">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span id="psViewerCount">0</span>
-      </div>
-    </header>
-
-    <div class="ps-slide-area" id="psSlideArea">
-      <img class="ps-slide-img" id="psSlideImg" src="" alt="Current slide" />
-      <div class="ps-slide-hint">← swipe or tap buttons →</div>
+      </a>
     </div>
 
-    <nav class="ps-nav">
-      <button class="ps-nav-btn prev" id="psPrevBtn" onclick="presenterGo(-1)">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
-        Previous
-      </button>
-      <button class="ps-nav-btn next" id="psNextBtn" onclick="presenterGo(1)">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
-        Next
-      </button>
-    </nav>
-  </div>
-
-</div>
-
-<!-- ── Generate modal ────────────────────────────────── -->
-<div class="modal-backdrop" id="genModalBackdrop">
-  <div class="modal">
-
-    <div class="modal-header">
-      <div class="modal-header-text">
-        <h2>Generate Share Link</h2>
-        <p>Publish your slides and get a viewer link + presenter remote.</p>
-      </div>
-      <button class="modal-x" onclick="closeGenerateModal()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-
-    <!-- Form -->
-    <div class="gen-state active" id="genStateForm">
-      <div class="modal-body">
-        <label class="gen-label" for="genSlugInput">Presentation name</label>
-        <div class="gen-slug-wrap">
-          <span class="gen-prefix">slidecloud.netlify.app/s/</span>
-          <input class="gen-input" id="genSlugInput" type="text"
-            placeholder="my-presentation" maxlength="50" autocomplete="off" spellcheck="false"
-            oninput="onSlugInput()" onkeydown="if(event.key==='Enter')doGenerate()" />
-        </div>
-        <div class="gen-hint" id="genHint">Letters, numbers and hyphens — 3 to 50 characters</div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-modal-sec" onclick="closeGenerateModal()">Cancel</button>
-        <button class="btn-modal-pri" id="btnGenSubmit" onclick="doGenerate()" disabled>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-          </svg>
-          Create Link
-        </button>
+    <div class="hero-right">
+      <div class="hero-img-wrap">
+        <img src="/assets/indeximage.png" alt="Flipcloud in action" />
       </div>
     </div>
+  </section>
 
-    <!-- Uploading -->
-    <div class="gen-state" id="genStateUploading">
-      <div class="modal-body">
-        <div class="gen-upload-wrap">
-          <div class="gen-spinner"></div>
-          <div class="gen-upload-label" id="genUploadLabel">Compressing slides…</div>
-          <div class="gen-bar-wrap"><div class="gen-bar" id="genBar"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Success -->
-    <div class="gen-state" id="genStateSuccess">
-      <div class="modal-body">
-        <div class="gen-success-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.8"><path d="M20 6 9 17l-5-5"/></svg>
-        </div>
-        <div class="gen-success-title">Your presentation is live!</div>
-
-        <!-- Viewer link -->
-        <div class="gen-section-label">Share with viewers</div>
-        <div class="gen-url-row">
-          <span class="gen-url-text" id="genViewerUrl"></span>
-          <button class="btn-copy" id="btnCopyViewer" onclick="copyUrl('viewer')">Copy</button>
-          <a class="btn-url-open" id="btnOpenLink" href="#" target="_blank" rel="noopener" title="Open in new tab">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          </a>
-        </div>
-
-        <!-- Presenter remote -->
-        <div class="gen-divider">Presenter Remote</div>
-        <div class="gen-qr-row">
-          <div class="gen-qr-box" id="genQrBox"></div>
-          <div class="gen-qr-info">
-            <strong>Scan to control slides</strong>
-            <p>Open on your phone and swipe or tap to advance slides for <em>everyone</em> watching the viewer link.</p>
-            <div class="gen-url-row sm">
-              <span class="gen-url-text" id="genPresenterUrl"></span>
-              <button class="btn-copy" id="btnCopyPresenter" onclick="copyUrl('presenter')">Copy</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-modal-sec" onclick="closeGenerateModal()">Done</button>
-      </div>
-    </div>
-
-    <!-- Error -->
-    <div class="gen-state" id="genStateError">
-      <div class="modal-body">
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:6px 0">
-          <div style="width:36px;height:36px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          </div>
-          <div>
-            <div style="font-size:14px;font-weight:700;color:#1e1e2e;margin-bottom:4px">Something went wrong</div>
-            <div style="font-size:13px;color:#6c7086" id="genErrorMsg">Please try again.</div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-modal-sec" onclick="closeGenerateModal()">Cancel</button>
-        <button class="btn-modal-pri" onclick="setGenState('form')">Try Again</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- Hidden file input -->
-<input type="file" id="fileInput"
-  accept=".pdf,application/pdf,.jpg,.jpeg,image/jpeg,.png,image/png"
-  multiple style="display:none" onchange="handleFiles(this.files)" />
-
-<script>
-  // ── PDF.js ────────────────────────────────────────────
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-  // ── App state ─────────────────────────────────────────
-  let slides        = [];
-  let activeIdx     = 0;
-  let sidebarOpen   = false;
-  let ssActive      = false;
-  let ssIdx         = 0;
-  let touchStartX   = 0, touchStartY = 0;
-  let isViewerMode    = false;
-  let isPresenterMode = false;
-  let presenterIdx    = 0;
-  let socket          = null;
-  let wsUrl           = null;
-  let genViewerUrlStr    = '';
-  let genPresenterUrlStr = '';
-
-  // ── Init: URL-based mode detection ───────────────────
-  (async () => {
-    const path = window.location.pathname;
-    const vMatch = path.match(/^\/s\/([a-z0-9][a-z0-9-]*[a-z0-9]?)$/i);
-    const pMatch = path.match(/^\/present\/([a-z0-9][a-z0-9-]*[a-z0-9]?)$/i);
-
-    if (vMatch || pMatch) {
-      loadConfig(); // fire-and-forget; viewer/presenter will wait for wsUrl if needed
-    }
-
-    if (pMatch) {
-      isPresenterMode = true;
-      document.getElementById('editorMain').style.display = 'none';
-      document.getElementById('presenterScreen').classList.add('visible');
-      const slug  = pMatch[1];
-      const token = new URLSearchParams(window.location.search).get('token') ?? '';
-      await initPresenterMode(slug, token);
-    } else if (vMatch) {
-      isViewerMode = true;
-      document.getElementById('editorMain').style.display = 'none';
-      document.getElementById('viewerScreen').classList.add('visible');
-      await initViewerMode(vMatch[1]);
-    }
-  })();
-
-  // ── Config ────────────────────────────────────────────
-  async function loadConfig() {
-    try {
-      const data = await fetch('/api/config').then(r => r.json());
-      wsUrl = data.wsUrl ?? null;
-    } catch { /* silently skip */ }
-  }
-
-  // ── WebSocket class with auto-reconnect ───────────────
-  class SlideSocket {
-    constructor(url) {
-      this.url    = url;
-      this._h     = {};
-      this._delay = 2000;
-      this._alive = true;
-      this._ws    = null;
-      this._ping  = setInterval(() => {
-        if (this._ws?.readyState === WebSocket.OPEN)
-          this._ws.send(JSON.stringify({ type: 'ping' }));
-      }, 25000);
-      this._connect();
-    }
-    _connect() {
-      this._ws = new WebSocket(this.url);
-      this._ws.onopen    = ()    => { this._delay = 2000; this._emit('_open'); };
-      this._ws.onmessage = (e)   => { try { this._emit(JSON.parse(e.data).type, JSON.parse(e.data)); } catch {} };
-      this._ws.onclose   = ()    => { if (this._alive) { this._emit('_disconnect'); setTimeout(() => this._connect(), this._delay); this._delay = Math.min(this._delay * 2, 16000); } };
-      this._ws.onerror   = ()    => {};
-    }
-    send(msg) { if (this._ws?.readyState === WebSocket.OPEN) this._ws.send(JSON.stringify(msg)); }
-    on(type, fn) { this._h[type] = fn; return this; }
-    _emit(type, data) { this._h[type]?.(data); }
-    destroy() { this._alive = false; clearInterval(this._ping); this._ws?.close(); }
-  }
-
-  // ── Viewer mode ───────────────────────────────────────
-  async function initViewerMode(slug) {
-    document.getElementById('viewerMsg').textContent = `Loading "${slug}"…`;
-    try {
-      const res  = await fetch(`/api/load?slug=${encodeURIComponent(slug)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Not found');
-      slides = data.slides.map(s => ({ ...s, id: uid() }));
-    } catch (err) {
-      document.getElementById('viewerScreen').innerHTML = `
-        <div class="viewer-logo">Flipcloud</div>
-        <div class="viewer-error">
-          <h3>Presentation not found</h3>
-          <p>${err.message || 'This link may have expired or never existed.'}</p>
-          <a class="btn-viewer-home" href="/">Go to Flipcloud</a>
-        </div>`;
-      return;
-    }
-
-    document.getElementById('viewerScreen').classList.remove('visible');
-    document.getElementById('ssBranding').style.display = '';
-    document.getElementById('ssCloseLabel').textContent  = 'Exit';
-
-    ssIdx = 0;
-    ssActive = true;
-    document.getElementById('slideshow').classList.add('active');
-    document.body.style.overflow = 'hidden';
-    renderDots(); updateSS(false);
-    checkOrientation();
-
-    // Fullscreen is triggered by tapping the landscape overlay (enterFullscreenFromOverlay)
-    // or the dismiss button (dismissRotateOverlay). No extra listener needed.
-
-    // Connect to WS once config is available
-    waitForWsUrl().then(url => {
-      if (!url) return;
-      socket = new SlideSocket(url);
-      socket.on('_open', () => socket.send({ type: 'join', role: 'viewer', slug }));
-      socket.on('joined', msg => {
-        setLiveBadge(msg.presenterConnected ? 'live' : 'idle');
-        if (msg.presenterConnected) { ssIdx = msg.currentSlide; updateSS(false); }
-        setNavLock(msg.presenterConnected);
-      });
-      socket.on('slide', msg => { ssIdx = msg.index; updateSS(true); });
-      socket.on('presenter-status', msg => {
-        setLiveBadge(msg.connected ? 'live' : 'idle');
-        setNavLock(msg.connected);
-      });
-      socket.on('_disconnect', () => setLiveBadge('off'));
-    });
-  }
-
-  function waitForWsUrl(ms = 5000) {
-    return new Promise(resolve => {
-      if (wsUrl) { resolve(wsUrl); return; }
-      const t0  = Date.now();
-      const iv  = setInterval(() => {
-        if (wsUrl) { clearInterval(iv); resolve(wsUrl); return; }
-        if (Date.now() - t0 > ms) { clearInterval(iv); resolve(null); }
-      }, 200);
-    });
-  }
-
-  function setLiveBadge(status) {
-    const badge = document.getElementById('ssLiveBadge');
-    const dot   = document.getElementById('ssLiveDot');
-    const label = document.getElementById('ssLiveLabel');
-    if (status === 'off') { badge.classList.remove('visible'); return; }
-    badge.classList.add('visible');
-    if (status === 'live') {
-      dot.className = 'ss-live-dot pulse';
-      label.textContent = 'Live remote';
-    } else {
-      dot.className = 'ss-live-dot idle';
-      label.textContent = 'No presenter';
-    }
-  }
-
-  function setNavLock(locked) {
-    document.getElementById('navPrev').style.opacity = locked ? '0.2' : '';
-    document.getElementById('navNext').style.opacity = locked ? '0.2' : '';
-    document.getElementById('navPrev').style.pointerEvents = locked ? 'none' : '';
-    document.getElementById('navNext').style.pointerEvents = locked ? 'none' : '';
-  }
-
-  // ── Presenter mode ────────────────────────────────────
-  async function initPresenterMode(slug, token) {
-    document.getElementById('psLoadingLabel').textContent = `Loading "${slug}"…`;
-
-    // Load slides + WS config in parallel
-    const [slidesResult] = await Promise.allSettled([
-      fetch(`/api/load?slug=${encodeURIComponent(slug)}`).then(r => r.json().then(d => ({ ok: r.ok, data: d }))),
-      loadConfig(),
-    ]);
-
-    if (slidesResult.status === 'rejected' || !slidesResult.value.ok) {
-      const msg = slidesResult.value?.data?.error ?? 'Presentation not found';
-      document.getElementById('presenterScreen').innerHTML = `
-        <div class="ps-loading">
-          <div class="viewer-logo">Flipcloud</div>
-          <div class="viewer-error">
-            <h3>Cannot load presentation</h3>
-            <p>${msg}</p>
-            <a class="btn-viewer-home" href="/">Go home</a>
-          </div>
-        </div>`;
-      return;
-    }
-
-    slides = slidesResult.value.data.slides.map(s => ({ ...s, id: uid() }));
-    presenterIdx = 0;
-
-    // Switch from loading to control UI
-    document.getElementById('psLoading').style.display  = 'none';
-    const ctrl = document.getElementById('psControl');
-    ctrl.style.display = 'flex';
-
-    updatePresenterSlide();
-
-    // Swipe on slide area
-    const area = document.getElementById('psSlideArea');
-    let psTouchX = 0;
-    area.addEventListener('touchstart', e => { psTouchX = e.touches[0].clientX; }, { passive: true });
-    area.addEventListener('touchend',   e => {
-      const dx = e.changedTouches[0].clientX - psTouchX;
-      if (Math.abs(dx) > 45) presenterGo(dx < 0 ? 1 : -1);
-    }, { passive: true });
-
-    if (!wsUrl) { setPsStatus('error', 'WS server not configured'); return; }
-
-    socket = new SlideSocket(wsUrl);
-    socket.on('_open', () => {
-      setPsStatus('connecting', 'Connecting…');
-      socket.send({ type: 'join', role: 'presenter', slug, token });
-    });
-    socket.on('joined', msg => {
-      setPsStatus('live', 'Live');
-      document.getElementById('psViewerCount').textContent = msg.viewerCount ?? 0;
-      presenterIdx = msg.currentSlide ?? 0;
-      updatePresenterSlide();
-    });
-    socket.on('viewers', msg => {
-      document.getElementById('psViewerCount').textContent = msg.count;
-    });
-    socket.on('error', msg => {
-      setPsStatus('error', msg.message ?? 'Error');
-    });
-    socket.on('_disconnect', () => setPsStatus('connecting', 'Reconnecting…'));
-  }
-
-  function presenterGo(delta) {
-    const next = presenterIdx + delta;
-    if (next < 0 || next >= slides.length) return;
-    presenterIdx = next;
-    updatePresenterSlide();
-    socket?.send({ type: 'slide', index: presenterIdx });
-  }
-
-  function updatePresenterSlide() {
-    const slide = slides[presenterIdx];
-    if (!slide) return;
-    document.getElementById('psSlideImg').src = slide.dataUrl;
-    document.getElementById('psCounter').textContent = `${presenterIdx + 1} / ${slides.length}`;
-    document.getElementById('psPrevBtn').disabled = presenterIdx === 0;
-    document.getElementById('psNextBtn').disabled = presenterIdx === slides.length - 1;
-  }
-
-  function setPsStatus(type, label) {
-    const dot = document.getElementById('psStatusDot');
-    dot.className = `ps-status-dot ${type}`;
-    document.getElementById('psStatusLabel').textContent = label;
-  }
-
-  // ── Sidebar ───────────────────────────────────────────
-  function toggleSidebar() { sidebarOpen ? closeSidebar() : openSidebar(); }
-  function openSidebar() {
-    sidebarOpen = true;
-    document.getElementById('sidebar').classList.add('open');
-    document.getElementById('sbBackdrop').classList.add('visible');
-    document.getElementById('btnMedia').classList.add('active');
-  }
-  function closeSidebar() {
-    sidebarOpen = false;
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sbBackdrop').classList.remove('visible');
-    document.getElementById('btnMedia').classList.remove('active');
-  }
-
-  // ── File handling ─────────────────────────────────────
-  function triggerFileInput() { document.getElementById('fileInput').click(); }
-  function isImage(f) { return /^image\/(jpeg|png)$/i.test(f.type) || /\.(jpe?g|png)$/i.test(f.name); }
-  function isPDF(f)   { return f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'); }
-
-  async function handleFiles(fileList) {
-    const files = Array.from(fileList).filter(f => isPDF(f) || isImage(f));
-    if (!files.length) return;
-    const total = await countTotalSlides(files);
-    let processed = 0;
-    showLoading('Preparing slides…', 0);
-    for (const file of files) {
-      try {
-        if (isImage(file)) {
-          updateLoading(file.name, processed / total * 100);
-          const dataUrl = await readImageFile(file);
-          slides.push({ id: uid(), dataUrl, fileName: file.name, pageNum: 1, totalPages: 1 });
-          processed++;
-          updateLoading(file.name, processed / total * 100);
-        } else {
-          const buf = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-          for (let p = 1; p <= pdf.numPages; p++) {
-            updateLoading(`${file.name} · page ${p} of ${pdf.numPages}`, processed / total * 100);
-            const dataUrl = await renderPage(pdf, p);
-            slides.push({ id: uid(), dataUrl, fileName: file.name, pageNum: p, totalPages: pdf.numPages });
-            processed++;
-            updateLoading(`${file.name} · page ${p} of ${pdf.numPages}`, processed / total * 100);
-          }
-        }
-      } catch (err) { console.error('File error:', file.name, err); }
-    }
-    hideLoading();
-    document.getElementById('fileInput').value = '';
-    renderSidebar(); updateTopbar();
-    if (slides.length > 0) selectSlide(activeIdx < slides.length ? activeIdx : 0);
-  }
-
-  function readImageFile(file) {
-    return new Promise((res, rej) => { const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsDataURL(file); });
-  }
-
-  async function countTotalSlides(files) {
-    let n = 0;
-    for (const f of files) {
-      if (isImage(f)) { n++; continue; }
-      try { const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise; n += pdf.numPages; } catch { n++; }
-    }
-    return n || 1;
-  }
-
-  async function renderPage(pdf, pageNum) {
-    const page = await pdf.getPage(pageNum);
-    const vp   = page.getViewport({ scale: 2 });
-    const c    = document.createElement('canvas');
-    c.width = vp.width; c.height = vp.height;
-    await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-    return c.toDataURL('image/jpeg', 0.92);
-  }
-
-  // ── Sidebar rendering ─────────────────────────────────
-  function renderSidebar() {
-    const list  = document.getElementById('slidesList');
-    const empty = document.getElementById('sbEmpty');
-    list.querySelectorAll('.slide-item').forEach(el => el.remove());
-    if (!slides.length) { empty.style.display = ''; showEmptyState(); return; }
-    empty.style.display = 'none';
-    slides.forEach((s, i) => list.appendChild(buildSlideItem(s, i)));
-    highlightActive();
-    renderStack();
-  }
-
-  function buildSlideItem(slide, index) {
-    const item = document.createElement('div');
-    item.className = 'slide-item'; item.dataset.id = slide.id;
-    const shortName = slide.fileName.length > 20 ? slide.fileName.slice(0, 17) + '…' : slide.fileName;
-    const pageTag   = slide.totalPages > 1 ? ` p.${slide.pageNum}` : '';
-    item.innerHTML = `
-      <img class="slide-thumb" src="${slide.dataUrl}" alt="Slide ${index + 1}" loading="lazy" />
-      <div class="slide-item-footer">
-        <span class="drag-handle" title="Drag to reorder">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <circle cx="9"  cy="5"  r="1.2" fill="currentColor"/><circle cx="15" cy="5"  r="1.2" fill="currentColor"/>
-            <circle cx="9"  cy="12" r="1.2" fill="currentColor"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/>
-            <circle cx="9"  cy="19" r="1.2" fill="currentColor"/><circle cx="15" cy="19" r="1.2" fill="currentColor"/>
-          </svg>
-        </span>
-        <span class="slide-num-badge">${index + 1}</span>
-        <span class="slide-name" title="${slide.fileName}${pageTag}">${shortName}${pageTag}</span>
-        <button class="btn-remove" title="Remove" onclick="removeSlide('${slide.id}',event)">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-        </button>
-      </div>`;
-    item.addEventListener('click', e => {
-      if (e.target.closest('.btn-remove')) return;
-      const idx = slides.findIndex(s => s.id === slide.id);
-      if (idx !== -1) selectSlide(idx);
-    });
-    return item;
-  }
-
-  function reNumberSlides() {
-    document.querySelectorAll('.slide-item .slide-num-badge').forEach((el, i) => { el.textContent = i + 1; });
-  }
-  function highlightActive() {
-    document.querySelectorAll('.slide-item').forEach((el, i) => el.classList.toggle('active', i === activeIdx));
-  }
-  function removeSlide(id, e) {
-    if (e) e.stopPropagation();
-    const idx = slides.findIndex(s => s.id === id);
-    if (idx === -1) return;
-    slides.splice(idx, 1);
-    if (activeIdx >= slides.length) activeIdx = Math.max(0, slides.length - 1);
-    renderSidebar(); updateTopbar();
-    if (!slides.length) showEmptyState(); else selectSlide(activeIdx);
-  }
-  function selectSlide(idx) {
-    activeIdx = idx;
-    highlightActive();
-    document.querySelector('.slide-item.active')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    // Scroll to matching stack card
-    const slide = slides[idx];
-    if (slide) document.getElementById(`stack-${slide.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-  function showEmptyState() {
-    document.getElementById('emptyState').style.display  = '';
-    document.getElementById('slideStack').style.display  = 'none';
-  }
-  function renderStack() {
-    const stack = document.getElementById('slideStack');
-    stack.style.display = '';
-    document.getElementById('emptyState').style.display = 'none';
-    stack.innerHTML = '';
-    slides.forEach((slide, i) => {
-      const card = document.createElement('div');
-      card.className = 'stack-card';
-      card.id = `stack-${slide.id}`;
-      const pageTag = slide.totalPages > 1 ? ` · page ${slide.pageNum}` : '';
-      card.innerHTML = `
-        <div class="stack-side">
-          <input class="stack-num" type="number" min="1" max="${slides.length}" value="${i + 1}"
-            title="Type a number and press Enter to move this slide" />
-          <div class="stack-num-hint">↵ move</div>
-          <button class="stack-remove" onclick="removeSlide('${slide.id}',event)" title="Remove">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M18 6 6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-        <div class="stack-img-wrap">
-          <img class="stack-img" src="${slide.dataUrl}" loading="lazy" alt="Slide ${i + 1}" />
-          <div class="stack-meta">
-            <span class="stack-badge">${i + 1} / ${slides.length}</span>
-            <span>${slide.fileName}${pageTag}</span>
-          </div>
-        </div>`;
-      const numInput = card.querySelector('.stack-num');
-      numInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const to = parseInt(numInput.value, 10) - 1;
-          if (!isNaN(to)) reorderSlide(i, to);
-          numInput.blur();
-        }
-      });
-      // Revert display value on blur without Enter
-      numInput.addEventListener('blur', () => { numInput.value = slides.indexOf(slide) + 1; });
-      stack.appendChild(card);
-    });
-  }
-
-  function reorderSlide(fromIdx, toIdx) {
-    toIdx = Math.max(0, Math.min(slides.length - 1, toIdx));
-    if (fromIdx === toIdx) return;
-    const [s] = slides.splice(fromIdx, 1);
-    slides.splice(toIdx, 0, s);
-    activeIdx = toIdx;
-    renderSidebar();
-    setTimeout(() => document.getElementById(`stack-${s.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
-  }
-
-  function updateTopbar() {
-    const n = slides.length;
-    document.getElementById('slideCountPill').textContent = `${n} slide${n !== 1 ? 's' : ''}`;
-    document.getElementById('btnPreview').disabled  = n === 0;
-    document.getElementById('btnGenerate').disabled = n === 0;
-  }
-
-  // ── SortableJS ────────────────────────────────────────
-  Sortable.create(document.getElementById('slidesList'), {
-    animation: 160, ghostClass: 'sortable-ghost', handle: '.drag-handle', filter: '.sb-empty',
-    onEnd() {
-      const prevId   = slides[activeIdx]?.id;
-      const newOrder = Array.from(document.querySelectorAll('.slide-item'))
-        .map(el => slides.find(s => s.id === el.dataset.id)).filter(Boolean);
-      slides = newOrder;
-      if (prevId) { const ni = slides.findIndex(s => s.id === prevId); if (ni !== -1) activeIdx = ni; }
-      reNumberSlides(); highlightActive();
-    },
-  });
-
-  // ── Slideshow (editor) ────────────────────────────────
-  function openSlideshow() {
-    if (!slides.length) return;
-    document.activeElement?.blur();
-    ssIdx = activeIdx; ssActive = true;
-    document.getElementById('slideshow').classList.add('active');
-    document.body.style.overflow = 'hidden';
-    renderDots(); updateSS(false);
-    // Request fullscreen NOW — we're inside a user gesture (click/tap).
-    // This is the only reliable moment; orientation-change events have no gesture.
-    if (_isMobile()) _tryFullscreen();
-    checkOrientation();
-  }
-  function handleSsClose() {
-    if (isViewerMode || isPresenterMode) window.location.href = '/';
-    else closeSlideshow();
-  }
-  function closeSlideshow() {
-    ssActive = false;
-    _rotateSkipped = false;
-    document.getElementById('slideshow').classList.remove('active');
-    document.getElementById('rotateOverlay').classList.remove('visible');
-    document.body.style.overflow = '';
-    _exitFullscreen();
-  }
-  function updateSS(animate = true) {
-    const slide = slides[ssIdx]; if (!slide) return;
-    const img   = document.getElementById('ssImg');
-    if (animate) {
-      img.classList.remove('fade-in'); img.classList.add('fade-out');
-      setTimeout(() => { img.src = slide.dataUrl; img.classList.remove('fade-out'); img.classList.add('fade-in'); }, 120);
-    } else { img.src = slide.dataUrl; }
-    document.getElementById('ssCounter').textContent  = `${ssIdx + 1} / ${slides.length}`;
-    document.getElementById('ssProgress').style.width = `${(ssIdx + 1) / slides.length * 100}%`;
-    document.getElementById('navPrev').disabled        = ssIdx === 0;
-    document.getElementById('navNext').disabled        = ssIdx === slides.length - 1;
-    document.querySelectorAll('.ss-dot').forEach((d, i) => d.classList.toggle('active', i === ssIdx));
-  }
-  function renderDots() {
-    const c = document.getElementById('ssDots'); c.innerHTML = '';
-    if (slides.length <= 1 || slides.length > 25) return;
-    slides.forEach((_, i) => {
-      const d = document.createElement('div');
-      d.className = `ss-dot${i === ssIdx ? ' active' : ''}`;
-      d.onclick = () => { ssIdx = i; updateSS(); };
-      c.appendChild(d);
-    });
-  }
-  function nextSlide() { if (ssIdx < slides.length - 1) { ssIdx++; updateSS(); } }
-  function prevSlide() { if (ssIdx > 0)                  { ssIdx--; updateSS(); } }
-
-  // ── Keyboard ──────────────────────────────────────────
-  document.addEventListener('keydown', e => {
-    if (isPresenterMode) {
-      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); presenterGo(1); }
-      if (e.key === 'ArrowLeft')                   { e.preventDefault(); presenterGo(-1); }
-      return;
-    }
-    if (!ssActive) return;
-    switch (e.key) {
-      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextSlide(); break;
-      case 'ArrowLeft':  case 'ArrowUp':             e.preventDefault(); prevSlide(); break;
-      case 'Escape': e.preventDefault(); handleSsClose(); break;
-    }
-  });
-
-  // ── Touch swipe (slideshow) ───────────────────────────
-  const ssEl = document.getElementById('slideshow');
-  ssEl.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, { passive: true });
-  ssEl.addEventListener('touchend',   e => {
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const dy = e.changedTouches[0].clientY - touchStartY;
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 45) { dx < 0 ? nextSlide() : prevSlide(); }
-  }, { passive: true });
-
-  // ── Drag-and-drop ─────────────────────────────────────
-  const canvasArea = document.getElementById('canvasArea');
-  canvasArea.addEventListener('dragover',  e => { e.preventDefault(); canvasArea.classList.add('drag-over'); });
-  canvasArea.addEventListener('dragleave', () => canvasArea.classList.remove('drag-over'));
-  canvasArea.addEventListener('drop', e => { e.preventDefault(); canvasArea.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
-  document.addEventListener('dragover', e => e.preventDefault());
-  document.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files); });
-
-  // ── Loading overlay ───────────────────────────────────
-  function showLoading(text, pct = 0) { document.getElementById('loadingText').textContent = text; document.getElementById('loadingBar').style.width = pct + '%'; document.getElementById('loadingOverlay').classList.add('visible'); }
-  function updateLoading(text, pct) { document.getElementById('loadingText').textContent = text; document.getElementById('loadingBar').style.width = pct + '%'; }
-  function hideLoading() { document.getElementById('loadingBar').style.width = '100%'; setTimeout(() => document.getElementById('loadingOverlay').classList.remove('visible'), 300); }
-
-  // ── Generate modal ────────────────────────────────────
-  let _generating    = false;  // guard against double-submit
-  let _rotateSkipped = false;  // suppress rotate overlay after user dismisses it
-
-  function openGenerateModal() {
-    _generating = false;
-    setGenState('form');
-    const input = document.getElementById('genSlugInput');
-    input.value = _editingSlug ?? '';
-    if (_editingSlug) {
-      document.getElementById('genHint').textContent = `Will overwrite "${_editingSlug}"`;
-      document.getElementById('genHint').className   = 'gen-hint ok';
-      document.getElementById('btnGenSubmit').disabled = false;
-    } else {
-      document.getElementById('genHint').textContent = 'Letters, numbers and hyphens — 3 to 50 characters';
-      document.getElementById('genHint').className   = 'gen-hint';
-      document.getElementById('btnGenSubmit').disabled = true;
-    }
-    document.getElementById('genModalBackdrop').classList.add('open');
-    setTimeout(() => input.focus(), 50);
-  }
-  function closeGenerateModal() { document.getElementById('genModalBackdrop').classList.remove('open'); }
-  document.getElementById('genModalBackdrop').addEventListener('click', e => { if (e.target === e.currentTarget) closeGenerateModal(); });
-
-  function setGenState(name) {
-    ['form','uploading','success','error'].forEach(s =>
-      document.getElementById('genState' + s.charAt(0).toUpperCase() + s.slice(1)).classList.toggle('active', s === name));
-  }
-
-  function onSlugInput() {
-    const input = document.getElementById('genSlugInput');
-    let v = input.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    if (v !== input.value) input.value = v;
-    const hint = document.getElementById('genHint');
-    const btn  = document.getElementById('btnGenSubmit');
-    if (!v)             { hint.textContent = 'Letters, numbers and hyphens — 3 to 50 characters'; hint.className = 'gen-hint'; btn.disabled = true; return; }
-    if (v.length < 3)   { hint.textContent = 'Too short — minimum 3 characters'; hint.className = 'gen-hint error'; btn.disabled = true; return; }
-    if (v.startsWith('-') || v.endsWith('-')) { hint.textContent = 'Cannot start or end with a hyphen'; hint.className = 'gen-hint error'; btn.disabled = true; return; }
-    hint.textContent = `Your link: slidecloud.netlify.app/s/${v}`;
-    hint.className   = 'gen-hint ok';
-    btn.disabled     = false;
-  }
-
-  async function doGenerate() {
-    if (_generating) return;
-    const slug = document.getElementById('genSlugInput').value.trim();
-    if (!slug || slug.length < 3) return;
-
-    _generating = true;
-    const token = generateToken();
-    setGenState('uploading');
-
-    // Compress slides
-    const compressed = [];
-    for (let i = 0; i < slides.length; i++) {
-      setGenUpload(`Compressing slide ${i + 1} of ${slides.length}…`, (i / slides.length) * 55);
-      compressed.push({ ...slides[i], dataUrl: await compressSlide(slides[i].dataUrl) });
-    }
-
-    setGenUpload('Uploading to cloud…', 65);
-
-    try {
-      const body = JSON.stringify({
-        slug, presenterToken: token,
-        overwrite: _editingSlug === slug,
-        slides: compressed.map(s => ({ dataUrl: s.dataUrl, fileName: s.fileName, pageNum: s.pageNum, totalPages: s.totalPages })),
-      });
-
-      // Netlify Functions cap at 6 MB — warn early so the user knows what happened
-      if (body.length > 5.8 * 1024 * 1024) {
-        _generating = false;
-        setGenState('error');
-        document.getElementById('genErrorMsg').textContent =
-          `Slides are too large to upload (${(body.length / 1024 / 1024).toFixed(1)} MB). ` +
-          'Try using fewer slides or smaller images.';
-        return;
-      }
-
-      const res  = await fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      });
-      setGenUpload('Finishing…', 95);
-
-      // Parse JSON carefully — a 502/504 can return HTML which isn't JSON
-      let json = {};
-      try { json = await res.json(); } catch { /* non-JSON body — json stays {} */ }
-
-      if (!res.ok) {
-        _generating = false;
-        if (res.status === 409) {
-          // Name taken — go back to form with inline error so user can just rename
-          setGenState('form');
-          const hint = document.getElementById('genHint');
-          hint.textContent = '⚠ That name is already taken — choose a different one';
-          hint.className   = 'gen-hint error';
-          document.getElementById('btnGenSubmit').disabled = false;
-          document.getElementById('genSlugInput').select();
-        } else {
-          setGenState('error');
-          document.getElementById('genErrorMsg').textContent =
-            json.error || `Upload failed (HTTP ${res.status}) — please try again.`;
-        }
-        return;
-      }
-
-      setGenUpload('Done!', 100);
-
-      const base = 'https://slidecloud.netlify.app';
-      genViewerUrlStr    = `${base}/s/${slug}`;
-      genPresenterUrlStr = `${base}/present/${slug}?token=${token}`;
-
-      document.getElementById('genViewerUrl').textContent    = genViewerUrlStr;
-      document.getElementById('genPresenterUrl').textContent = genPresenterUrlStr;
-      document.getElementById('btnOpenLink').href            = genViewerUrlStr;
-
-      renderQRCode(genPresenterUrlStr);
-      setGenState('success');
-      clearEditMode();
-      // keep _generating = true so re-opening modal resets it via openGenerateModal()
-    } catch (err) {
-      _generating = false;
-      console.error('[doGenerate] caught:', err);
-      setGenState('error');
-      document.getElementById('genErrorMsg').textContent =
-        (err && err.message) ? `Error: ${err.message}` : 'Network error — check your connection and try again.';
-    }
-  }
-
-  function setGenUpload(label, pct) {
-    document.getElementById('genUploadLabel').textContent = label;
-    document.getElementById('genBar').style.width         = pct + '%';
-  }
-
-  function copyUrl(which) {
-    const url   = which === 'presenter' ? genPresenterUrlStr : genViewerUrlStr;
-    const btnId = which === 'presenter' ? 'btnCopyPresenter' : 'btnCopyViewer';
-    navigator.clipboard.writeText(url).then(() => {
-      const btn = document.getElementById(btnId);
-      btn.textContent = 'Copied!'; btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-    });
-  }
-
-  // ── QR Code ───────────────────────────────────────────
-  function renderQRCode(url) {
-    const box = document.getElementById('genQrBox');
-    box.innerHTML = '';
-    try {
-      const qr = new QRCode(box, {
-        text: url,
-        width: 130,
-        height: 130,
-        colorDark: '#1e1e2e',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M,
-      });
-      // qrcodejs creates a canvas + img; style the canvas
-      const c = box.querySelector('canvas');
-      if (c) c.style.cssText = 'border-radius:8px;display:block';
-    } catch (e) {
-      box.textContent = 'QR unavailable';
-      box.style.cssText = 'font-size:11px;color:#9ca3af';
-    }
-  }
-
-  // ── Slide compression ─────────────────────────────────
-  function compressSlide(dataUrl, maxW = 1920, maxH = 1080, q = 0.72) {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
-        const c = document.createElement('canvas');
-        c.width = Math.round(img.width * ratio); c.height = Math.round(img.height * ratio);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        resolve(c.toDataURL('image/jpeg', q));
-      };
-      img.onerror = () => resolve(dataUrl);
-      img.src = dataUrl;
-    });
-  }
-
-  // ── Utilities ─────────────────────────────────────────
-  function uid() { return 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-  function generateToken() {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  // ── My Presentations ──────────────────────────────────
-  let _editingSlug  = null;
-  const _deletedSlugs = new Set(); // guard against Blobs eventual-consistency lag
-
-  function openSavedModal() {
-    document.getElementById('savedModalBackdrop').classList.add('open');
-    loadSavedList();
-  }
-  function closeSavedModal() {
-    document.getElementById('savedModalBackdrop').classList.remove('open');
-  }
-  document.getElementById('savedModalBackdrop').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeSavedModal();
-  });
-
-  async function loadSavedList() {
-    const list = document.getElementById('savedList');
-    list.innerHTML = '<div class="saved-loading"><div class="saved-spinner"></div>Loading…</div>';
-    try {
-      const res  = await fetch('/api/list');
-      const data = await res.json();
-      const items = (data.items ?? []).filter(i => !_deletedSlugs.has(i.slug));
-      if (!items.length) {
-        list.innerHTML = `
-          <div class="saved-empty">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            <p>No saved presentations yet</p>
-            <small>Use the <strong>Generate</strong> button to create your first share link.</small>
-          </div>`;
-        return;
-      }
-      list.innerHTML = '';
-      items.forEach(item => list.appendChild(buildSavedCard(item)));
-    } catch {
-      list.innerHTML = '<div class="saved-empty"><p style="color:#e11d48">Failed to load — check your connection.</p></div>';
-    }
-  }
-
-  function _fmtDate(iso) {
-    if (!iso) return 'Unknown date';
-    return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-  }
-  function _esc(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function buildSavedCard(item) {
-    const base      = 'https://slidecloud.netlify.app';
-    const viewerUrl = `${base}/s/${item.slug}`;
-    const slides_n  = item.slideCount;
-    const div = document.createElement('div');
-    div.className = 'saved-card';
-    div.id = `scard-${_esc(item.slug)}`;
-    div.innerHTML = `
-      <div class="saved-card-title">${_esc(item.slug)}</div>
-      <div class="saved-card-meta">${slides_n} slide${slides_n !== 1 ? 's' : ''} &middot; Created ${_fmtDate(item.createdAt)}</div>
-      <div class="saved-card-url">
-        <span class="saved-card-url-text">${viewerUrl}</span>
-        <button class="btn-copy" data-slug="${_esc(item.slug)}" onclick="copySavedUrl(this)">Copy</button>
-      </div>
-      <div class="saved-card-actions">
-        <a href="${viewerUrl}" target="_blank" class="btn-sv">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          Open
-        </a>
-        <button class="btn-sv primary" data-slug="${_esc(item.slug)}" onclick="loadIntoEditor(this.dataset.slug)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Load &amp; Edit
-        </button>
-        <button class="btn-sv danger" data-slug="${_esc(item.slug)}" onclick="confirmDelete(this.dataset.slug)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-          Delete
-        </button>
-      </div>
-      <div class="saved-del-confirm" id="delconfirm-${_esc(item.slug)}">
-        <p>Permanently delete <strong>${_esc(item.slug)}</strong>?</p>
-        <button class="btn-del yes" data-slug="${_esc(item.slug)}" onclick="doDelete(this.dataset.slug)">Delete</button>
-        <button class="btn-del no"  data-slug="${_esc(item.slug)}" onclick="cancelDelete(this.dataset.slug)">Cancel</button>
-      </div>`;
-    return div;
-  }
-
-  function copySavedUrl(btn) {
-    const url = `https://slidecloud.netlify.app/s/${btn.dataset.slug}`;
-    navigator.clipboard.writeText(url).then(() => {
-      btn.textContent = 'Copied!'; btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
-    });
-  }
-
-  function confirmDelete(slug) {
-    document.getElementById(`delconfirm-${slug}`)?.classList.add('visible');
-  }
-  function cancelDelete(slug) {
-    document.getElementById(`delconfirm-${slug}`)?.classList.remove('visible');
-  }
-  async function doDelete(slug) {
-    const card   = document.getElementById(`scard-${slug}`);
-    const yesbtn = card?.querySelector('.btn-del.yes');
-    if (yesbtn) { yesbtn.textContent = 'Deleting…'; yesbtn.disabled = true; }
-    try {
-      const res = await fetch('/api/delete', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ slug }),
-      });
-      if (!res.ok) {
-        let msg = `HTTP ${res.status}`;
-        try { const j = await res.json(); msg = j.error || msg; } catch {}
-        throw new Error(msg);
-      }
-      // Remember this deletion so stale list() results are filtered out
-      _deletedSlugs.add(slug);
-      // Remove card from DOM immediately
-      if (card) card.remove();
-      // If list is now empty, show the empty state
-      if (!document.querySelector('#savedList .saved-card')) loadSavedList();
-      if (_editingSlug === slug) clearEditMode();
-    } catch (err) {
-      if (yesbtn) { yesbtn.textContent = 'Delete'; yesbtn.disabled = false; }
-      cancelDelete(slug);
-      alert(`Delete failed: ${err.message} — please try again.`);
-    }
-  }
-
-  async function loadIntoEditor(slug) {
-    const btn = document.querySelector(`#scard-${slug} .btn-sv.primary`);
-    if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
-    try {
-      const res  = await fetch(`/api/load?slug=${encodeURIComponent(slug)}`);
-      const data = await res.json();
-      if (!data.slides?.length) { alert('No slides found for this presentation.'); return; }
-
-      // Load slides into editor
-      slides    = data.slides.map(s => ({ ...s, id: uid() }));
-      activeIdx = 0;
-      renderSidebar();
-      selectSlide(0);
-      updateTopbar();
-
-      // Edit mode banner
-      _editingSlug = slug;
-      document.getElementById('editBannerSlug').textContent = slug;
-      document.getElementById('editBanner').classList.add('visible');
-
-      closeSavedModal();
-
-      // Show existing share links + QR code in the generate modal success state
-      const base = 'https://slidecloud.netlify.app';
-      genViewerUrlStr    = `${base}/s/${slug}`;
-      genPresenterUrlStr = data.presenterToken
-        ? `${base}/present/${slug}?token=${data.presenterToken}`
-        : null;
-
-      document.getElementById('genViewerUrl').textContent = genViewerUrlStr;
-      document.getElementById('btnOpenLink').href         = genViewerUrlStr;
-
-      if (genPresenterUrlStr) {
-        document.getElementById('genPresenterUrl').textContent = genPresenterUrlStr;
-        renderQRCode(genPresenterUrlStr);
-      } else {
-        document.getElementById('genPresenterUrl').textContent = '(no presenter token)';
-        document.getElementById('genQrBox').innerHTML = '';
-      }
-
-      document.querySelector('#genStateSuccess .gen-success-title').textContent =
-        'Presentation loaded — share links below';
-      setGenState('success');
-      document.getElementById('genModalBackdrop').classList.add('open');
-    } catch (err) {
-      alert(`Failed to load presentation: ${err.message}`);
-    } finally {
-      if (btn) { btn.textContent = 'Load & Edit'; btn.disabled = false; }
-    }
-  }
-
-  function clearEditMode() {
-    _editingSlug = null;
-    document.getElementById('editBanner').classList.remove('visible');
-  }
-
-  // ── Rotate-to-landscape / fullscreen ──────────────────
-  // _rotateSkipped is declared near the top of the script block
-  // Orientation hiding is handled entirely by CSS @media (orientation: landscape) —
-  // no JS event listeners needed for that. JS only decides whether to show the overlay.
-
-  function _isMobile() {
-    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  }
-
-  // iOS Safari does not support requestFullscreen — detect it so we can skip the prompt.
-  function _isIOS() {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  }
-
-  function _tryFullscreen() {
-    if (_isIOS()) return; // not supported on iOS Safari
-    try {
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
-    } catch {}
-  }
-
-  function _exitFullscreen() {
-    try { if (document.fullscreenElement) document.exitFullscreen(); } catch {}
-  }
-
-  // Portrait = viewport taller than wide. Read AFTER the viewport settles.
-  function _isPortrait() {
-    return window.innerHeight > window.innerWidth;
-  }
-
-  function checkOrientation() {
-    const ssOn    = document.getElementById('slideshow').classList.contains('active');
-    const portrait = _isPortrait();
-    const overlay  = document.getElementById('rotateOverlay');
-
-    if (ssOn && _isMobile() && !_rotateSkipped) {
-      if (!portrait) {
-        // Landscape reached — on iOS just dismiss silently (no fullscreen API available).
-        // On Android show the "tap for fullscreen" prompt.
-        if (_isIOS()) {
-          _rotateSkipped = true;
-          overlay.classList.remove('visible', 'landscape');
-          return;
-        }
-      }
-      overlay.classList.add('visible');
-      overlay.classList.toggle('landscape', !portrait);
-    } else {
-      overlay.classList.remove('visible', 'landscape');
-    }
-  }
-
-  // On Android, orientationchange fires BEFORE the viewport updates.
-  // resize fires AFTER — so we debounce and read dimensions after both have settled.
-  let _orientTimer = null;
-  function _scheduleOrientCheck() {
-    clearTimeout(_orientTimer);
-    _orientTimer = setTimeout(checkOrientation, 300);
-  }
-
-  window.addEventListener('orientationchange', _scheduleOrientCheck);
-  window.addEventListener('resize',            _scheduleOrientCheck);
-  window.matchMedia('(orientation: portrait)').addEventListener('change', _scheduleOrientCheck);
-
-  function dismissRotateOverlay() {
-    _rotateSkipped = true;
-    document.getElementById('rotateOverlay').classList.remove('visible', 'landscape');
-    _tryFullscreen(); // no-op on iOS, works on Android (user gesture)
-  }
-
-  function enterFullscreenFromOverlay() {
-    _rotateSkipped = true;
-    document.getElementById('rotateOverlay').classList.remove('visible', 'landscape');
-    _tryFullscreen();
-  }
-</script>
-
-<!-- ── My Presentations modal ─────────────────────── -->
-<div class="modal-backdrop" id="savedModalBackdrop">
-  <div class="modal saved-modal">
-    <div class="modal-header">
-      <div class="modal-header-text">
-        <h2>My Presentations</h2>
-        <p>All your saved slideshows — open, edit or delete them.</p>
-      </div>
-      <button class="modal-x" onclick="closeSavedModal()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="saved-list" id="savedList"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-modal-sec" onclick="closeSavedModal()">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- Rotate-to-landscape overlay -->
-<div class="rotate-overlay" id="rotateOverlay">
-  <!-- Portrait: ask user to rotate -->
-  <div class="rotate-portrait">
-    <svg class="rotate-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="5" y="1" width="14" height="22" rx="2.5"/>
-      <line x1="9" y1="19.5" x2="15" y2="19.5" stroke-width="1.8"/>
-      <circle cx="12" cy="4.5" r="0.8" fill="currentColor" stroke="none"/>
-    </svg>
-    <div class="rotate-title">Rotate your device</div>
-    <div class="rotate-sub">Turn your phone to landscape for the full-screen experience.</div>
-    <button class="rotate-skip" onclick="dismissRotateOverlay()">Continue in portrait</button>
-  </div>
-  <!-- Landscape: tap anywhere to go fullscreen -->
-  <div class="rotate-landscape" onclick="enterFullscreenFromOverlay()">
-    <svg class="rotate-fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
-    </svg>
-    <div class="rotate-title">Tap for fullscreen</div>
-    <div class="rotate-sub">Tap anywhere to hide the browser bar and go fullscreen.</div>
-  </div>
-</div>
 </body>
 </html>
