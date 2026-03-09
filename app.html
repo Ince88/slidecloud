@@ -342,7 +342,48 @@
     .slideshow { display: none; position: fixed; inset: 0; background: #000; z-index: 400; align-items: center; justify-content: center; }
     .slideshow.active { display: flex; }
     .ss-progress { position: absolute; top: 0; left: 0; height: 3px; background: var(--accent); transition: width 0.35s ease; z-index: 5; }
+
+    /* Wrapper that lets text layers sit on top of the base image */
+    .ss-slide-wrap {
+      position: relative; display: flex; align-items: center; justify-content: center;
+      max-width: 100%; max-height: 100%; container-type: size;
+    }
     .ss-img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; display: block; }
+
+    /* Text layers inside the viewer */
+    .ss-text-layer {
+      position: absolute; opacity: 0; pointer-events: none;
+      white-space: pre-wrap; line-height: 1.3;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      transition: none;
+    }
+    .ss-text-layer.revealed { opacity: 1; }
+
+    /* ── Animation keyframes ── */
+    @keyframes ss-fade      { from { opacity:0 }                                          to { opacity:1 } }
+    @keyframes ss-slide-up  { from { opacity:0; transform:translateY(60px) }             to { opacity:1; transform:translateY(0) } }
+    @keyframes ss-slide-dn  { from { opacity:0; transform:translateY(-60px) }            to { opacity:1; transform:translateY(0) } }
+    @keyframes ss-slide-l   { from { opacity:0; transform:translateX(-80px) }            to { opacity:1; transform:translateX(0) } }
+    @keyframes ss-slide-r   { from { opacity:0; transform:translateX(80px) }             to { opacity:1; transform:translateX(0) } }
+    @keyframes ss-zoom      { from { opacity:0; transform:scale(0.6) }                   to { opacity:1; transform:scale(1) } }
+    @keyframes ss-bounce    { 0%{opacity:0;transform:scale(0.5)} 60%{opacity:1;transform:scale(1.1)} 80%{transform:scale(0.95)} 100%{opacity:1;transform:scale(1)} }
+    .ss-text-layer.anim-fade      { animation: ss-fade     0.5s ease forwards; }
+    .ss-text-layer.anim-slide-up  { animation: ss-slide-up 0.5s ease forwards; }
+    .ss-text-layer.anim-slide-down{ animation: ss-slide-dn 0.5s ease forwards; }
+    .ss-text-layer.anim-slide-left{ animation: ss-slide-l  0.5s ease forwards; }
+    .ss-text-layer.anim-slide-right{animation: ss-slide-r  0.5s ease forwards; }
+    .ss-text-layer.anim-zoom-in   { animation: ss-zoom     0.5s ease forwards; }
+    .ss-text-layer.anim-bounce    { animation: ss-bounce   0.6s ease forwards; }
+    /* typewriter handled in JS (no CSS animation class) */
+
+    /* Layer count badge on slideshow nav */
+    .ss-layer-hint {
+      position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,0.12); backdrop-filter: blur(8px);
+      color: rgba(255,255,255,0.75); font-size: 12px; font-weight: 600;
+      padding: 4px 12px; border-radius: 20px; pointer-events: none;
+      transition: opacity 0.3s; z-index: 10;
+    }
     .ss-nav {
       position: absolute; top: 50%; transform: translateY(-50%);
       background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.13); color: #fff;
@@ -521,14 +562,54 @@
       color: #6b7280; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0;
     }
     .stack-card.text-editing { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(54,150,240,0.15); }
-    /* Small badge shown on slides that have a text layer saved */
-    .stack-text-badge {
-      position: absolute; bottom: 6px; right: 6px; z-index: 4;
-      width: 20px; height: 20px; border-radius: 5px;
-      background: var(--accent); color: #fff;
-      font-size: 11px; font-weight: 800; line-height: 20px; text-align: center;
-      pointer-events: none; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+
+    /* ─── Layers panel (under slide thumbnail in editor) ── */
+    .layers-panel {
+      margin-top: 8px; padding: 8px 10px 10px;
+      background: #f8f8fc; border-radius: 8px; border: 1px solid #ebebf5;
     }
+    .layers-panel-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #8a8aaa; margin-bottom: 6px;
+    }
+    .layers-list { display: flex; flex-direction: column; gap: 5px; }
+    .layer-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: #fff; border: 1.5px solid #e2e2e6; border-radius: 7px;
+      padding: 5px 7px; font-size: 12px; color: #3a3a5c;
+    }
+    .layer-chip.layer-bg { border-color: #d0d0e8; color: #8a8aaa; font-style: italic; }
+    .layer-chip-drag { cursor: grab; color: #c0c0d0; flex-shrink: 0; }
+    .layer-chip-icon {
+      width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800;
+    }
+    .layer-chip-icon.icon-bg { background: #e2e2e6; color: #8a8aaa; }
+    .layer-chip-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .layer-anim-select {
+      flex-shrink: 0; font-size: 11px; color: #3a3a5c;
+      border: 1.5px solid #e2e2e6; border-radius: 5px;
+      background: #fff; padding: 2px 4px; cursor: pointer; max-width: 90px;
+    }
+    .layer-anim-select:focus { border-color: var(--accent); outline: none; }
+    .layer-chip-edit, .layer-chip-del {
+      flex-shrink: 0; width: 22px; height: 22px; border-radius: 5px;
+      border: 1.5px solid #e2e2e6; background: #fff;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: #6b7280; transition: border-color .1s, color .1s;
+    }
+    .layer-chip-edit:hover { border-color: var(--accent); color: var(--accent); }
+    .layer-chip-del:hover  { border-color: #e11d48; color: #e11d48; }
+    .btn-add-layer {
+      display: inline-flex; align-items: center; gap: 5px; margin-top: 6px;
+      padding: 4px 10px; border-radius: 6px;
+      border: 1.5px dashed rgba(54,150,240,0.35); background: transparent;
+      color: var(--accent); font-size: 11px; font-weight: 700; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .btn-add-layer:hover { border-color: var(--accent); background: rgba(54,150,240,0.06); }
 
     /* ─── Grid Slide Builder ──────────────────────────── */
     .grid-modal { width: 720px; max-width: 96vw; max-height: 92vh; overflow-y: auto; }
@@ -917,7 +998,10 @@
     <span id="ssCloseLabel">ESC</span>
   </button>
 
-  <img class="ss-img" id="ssImg" src="" alt="Slide" />
+  <div class="ss-slide-wrap" id="ssSlide">
+    <img class="ss-img" id="ssImg" src="" alt="Slide" />
+  </div>
+  <div class="ss-layer-hint" id="ssLayerHint" style="display:none"></div>
 
   <button class="ss-nav prev" id="navPrev" onclick="prevSlide()">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
@@ -1105,6 +1189,7 @@
   let sidebarOpen   = false;
   let ssActive      = false;
   let ssIdx         = 0;
+  let ssLayerIdx    = 0; // how many layers have been revealed on the current slide
   let touchStartX   = 0, touchStartY = 0;
   let isViewerMode    = false;
   let isPresenterMode = false;
@@ -1121,7 +1206,8 @@
   let _textItalic   = false;
   let _textAlign    = 'left';
   let _textShadow   = true;
-  let _stBaseImg    = null; // cached Image element for real-time canvas redraws
+  let _stBaseImg      = null; // cached Image element for real-time canvas redraws
+  let _textEditLayerId = null; // null = new layer; string = editing existing layer id
 
   // Grid Slide Builder state
   let _gridRows     = 2;
@@ -1545,6 +1631,76 @@
     document.getElementById('emptyState').style.display  = '';
     document.getElementById('slideStack').style.display  = 'none';
   }
+  const ANIM_OPTIONS = [
+    { value: 'none',        label: 'No animation' },
+    { value: 'fade',        label: 'Fade in' },
+    { value: 'slide-up',    label: 'Slide up' },
+    { value: 'slide-down',  label: 'Slide down' },
+    { value: 'slide-left',  label: 'Slide from left' },
+    { value: 'slide-right', label: 'Slide from right' },
+    { value: 'zoom-in',     label: 'Zoom in' },
+    { value: 'typewriter',  label: 'Typewriter' },
+    { value: 'bounce',      label: 'Bounce' },
+  ];
+
+  function buildLayersPanel(slide, slideIdx) {
+    const layers = slide.layers || [];
+    const chips  = layers.map((l, li) => {
+      const preview = l.text.replace(/\n/g, ' ').slice(0, 18) + (l.text.length > 18 ? '…' : '');
+      const opts    = ANIM_OPTIONS.map(o =>
+        `<option value="${o.value}"${l.animation === o.value ? ' selected' : ''}>${o.label}</option>`
+      ).join('');
+      return `
+        <div class="layer-chip" data-layer-id="${l.id}">
+          <span class="layer-chip-drag" title="Drag to reorder">
+            <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+              <circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/>
+              <circle cx="3" cy="7"   r="1.2"/><circle cx="7" cy="7"   r="1.2"/>
+              <circle cx="3" cy="11.5" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/>
+            </svg>
+          </span>
+          <div class="layer-chip-icon">T</div>
+          <span class="layer-chip-text" title="${l.text.replace(/"/g,"&quot;")}">${preview || '(empty)'}</span>
+          <select class="layer-anim-select" title="Animation"
+            onchange="setLayerAnimation(${slideIdx},'${l.id}',this.value)">${opts}</select>
+          <button class="layer-chip-edit" title="Edit text"
+            onclick="openTextEditor(${slideIdx},'${l.id}')">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+          <button class="layer-chip-del" title="Delete layer"
+            onclick="deleteLayer(${slideIdx},'${l.id}')">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="layers-panel" id="layers-${slide.id}">
+        <div class="layers-panel-title">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:3px;vertical-align:middle"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+          Layers &amp; Animations
+        </div>
+        <div class="layers-list" id="layerList-${slide.id}">
+          <div class="layer-chip layer-bg">
+            <div class="layer-chip-icon icon-bg">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="3 9 9 3 15 9 21 3"/></svg>
+            </div>
+            <span class="layer-chip-text">Background image</span>
+          </div>
+          ${chips}
+        </div>
+        <button class="btn-add-layer" onclick="openTextEditor(${slideIdx})">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Text Layer
+        </button>
+      </div>`;
+  }
+
   function renderStack() {
     const stack = document.getElementById('slideStack');
     stack.style.display = '';
@@ -1567,19 +1723,14 @@
           </button>
         </div>
         <div class="stack-img-wrap">
-          <div class="stack-img-container" id="imgc-${slide.id}"
-               ondblclick="openTextEditor(${i})" title="${slide.textLayer ? 'Double-click to edit text' : 'Double-click to add text'}">
+          <div class="stack-img-container" id="imgc-${slide.id}">
             <img class="stack-img" src="${slide.dataUrl}" loading="lazy" alt="Slide ${i + 1}" />
-            ${slide.textLayer ? `<div class="stack-text-badge" title="Has text — double-click to edit">T</div>` : ''}
           </div>
           <div class="stack-meta">
             <span class="stack-badge">${i + 1} / ${slides.length}</span>
             <span>${slide.fileName}${pageTag}</span>
-            <button class="btn-add-text" onclick="openTextEditor(${i})" title="${slide.textLayer ? 'Edit text overlay' : 'Add text overlay'}">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-              ${slide.textLayer ? 'Edit Text' : 'Add Text'}
-            </button>
           </div>
+          ${buildLayersPanel(slide, i)}
         </div>`;
       const numInput = card.querySelector('.stack-num');
       numInput.addEventListener('keydown', e => {
@@ -1590,8 +1741,28 @@
           numInput.blur();
         }
       });
-      // Revert display value on blur without Enter
       numInput.addEventListener('blur', () => { numInput.value = slides.indexOf(slide) + 1; });
+
+      // SortableJS for layer chips within each slide
+      const layerList = card.querySelector(`#layerList-${slide.id}`);
+      if (layerList && slide.layers?.length) {
+        Sortable.create(layerList, {
+          animation: 140, handle: '.layer-chip-drag', ghostClass: 'sortable-ghost',
+          filter: '.layer-bg', // don't allow moving the background chip
+          onEnd(evt) {
+            // index 0 in DOM is background chip (not a real layer)
+            const newOrder = Array.from(layerList.querySelectorAll('.layer-chip:not(.layer-bg)'))
+              .map(el => slide.layers.find(l => l.id === el.dataset.layerId))
+              .filter(Boolean);
+            slide.layers = newOrder;
+            computeFlatDataUrl(slide).then(() => {
+              renderSidebar();
+              renderStack();
+            });
+          },
+        });
+      }
+
       stack.appendChild(card);
     });
   }
@@ -1651,31 +1822,157 @@
     document.body.style.overflow = '';
     _exitFullscreen();
   }
-  function updateSS(animate = true) {
-    const slide = slides[ssIdx]; if (!slide) return;
-    const img   = document.getElementById('ssImg');
+  // ── Viewer helpers ────────────────────────────────────
+
+  // Build a CSS font-size value for a text layer relative to the slide wrapper.
+  // We use cqh (container query height) so it scales with the displayed slide size.
+  function _layerFontSize(layer) {
+    return `calc(${layer.style.fontSize / 100} * 100cqh)`;
+  }
+
+  // Inject hidden text layer divs into #ssSlide and reset ssLayerIdx.
+  function _setSlideInViewer(animate = true) {
+    const slide  = slides[ssIdx];
+    if (!slide) return;
+
+    const wrap = document.getElementById('ssSlide');
+    const img  = document.getElementById('ssImg');
+
+    // Remove any previous layer divs
+    wrap.querySelectorAll('.ss-text-layer').forEach(el => el.remove());
+    ssLayerIdx = 0;
+
+    // Set background image (use baseDataUrl so flat thumbnail doesn't obscure layers)
+    const src = slide.baseDataUrl || slide.dataUrl;
     if (animate) {
       img.classList.remove('fade-in'); img.classList.add('fade-out');
-      setTimeout(() => { img.src = slide.dataUrl; img.classList.remove('fade-out'); img.classList.add('fade-in'); }, 120);
-    } else { img.src = slide.dataUrl; }
+      setTimeout(() => {
+        img.src = src;
+        img.classList.remove('fade-out'); img.classList.add('fade-in');
+      }, 120);
+    } else {
+      img.src = src;
+    }
+
+    // Build hidden layer divs
+    const layers = slide.layers || [];
+    layers.forEach((layer, n) => {
+      if (layer.type !== 'text') return;
+      const div       = document.createElement('div');
+      div.className   = 'ss-text-layer';
+      div.dataset.idx = n;
+      div.dataset.anim = layer.animation || 'fade';
+      div.style.left      = `${layer.xFrac * 100}%`;
+      div.style.top       = `${layer.yFrac * 100}%`;
+      div.style.fontSize  = _layerFontSize(layer);
+      div.style.color     = layer.style.color;
+      div.style.fontWeight= layer.style.bold   ? '700' : '400';
+      div.style.fontStyle = layer.style.italic ? 'italic' : 'normal';
+      div.style.textAlign = layer.style.align;
+      if (layer.style.shadow) {
+        div.style.textShadow = `0 2px 8px rgba(0,0,0,0.65)`;
+      }
+      div.textContent = layer.text;
+      wrap.appendChild(div);
+    });
+
+    // Update counter, progress, nav, dots
     document.getElementById('ssCounter').textContent  = `${ssIdx + 1} / ${slides.length}`;
     document.getElementById('ssProgress').style.width = `${(ssIdx + 1) / slides.length * 100}%`;
-    document.getElementById('navPrev').disabled        = ssIdx === 0;
-    document.getElementById('navNext').disabled        = ssIdx === slides.length - 1;
+    document.getElementById('navPrev').disabled = ssIdx === 0 && ssLayerIdx === 0;
+    document.getElementById('navNext').disabled = ssIdx === slides.length - 1 && layers.length === 0;
     document.querySelectorAll('.ss-dot').forEach((d, i) => d.classList.toggle('active', i === ssIdx));
+    _updateLayerHint();
   }
+
+  function _updateLayerHint() {
+    const slide  = slides[ssIdx];
+    const layers = slide?.layers || [];
+    const hint   = document.getElementById('ssLayerHint');
+    if (!hint) return;
+    const remaining = layers.length - ssLayerIdx;
+    if (remaining > 0) {
+      hint.style.display = '';
+      hint.textContent   = `${ssLayerIdx + 1} / ${layers.length + 1} elements`;
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+
+  // Reveal the nth text layer with its animation.
+  function revealLayer(n) {
+    const div = document.querySelector(`.ss-text-layer[data-idx="${n}"]`);
+    if (!div) return;
+    const anim = div.dataset.anim || 'fade';
+
+    if (anim === 'typewriter') {
+      const fullText = div.textContent;
+      div.textContent = '';
+      div.classList.add('revealed');
+      let ci = 0;
+      const iv = setInterval(() => {
+        if (ci >= fullText.length) { clearInterval(iv); return; }
+        div.textContent += fullText[ci++];
+      }, 40);
+    } else {
+      div.classList.add('revealed');
+      if (anim !== 'none') {
+        div.classList.remove(`anim-${anim}`);
+        void div.offsetWidth; // force reflow to restart animation
+        div.classList.add(`anim-${anim}`);
+      }
+    }
+  }
+
+  function updateSS(animate = true) { _setSlideInViewer(animate); }
+
   function renderDots() {
     const c = document.getElementById('ssDots'); c.innerHTML = '';
     if (slides.length <= 1 || slides.length > 25) return;
     slides.forEach((_, i) => {
       const d = document.createElement('div');
       d.className = `ss-dot${i === ssIdx ? ' active' : ''}`;
-      d.onclick = () => { ssIdx = i; updateSS(); };
+      d.onclick = () => { ssIdx = i; ssLayerIdx = 0; _setSlideInViewer(); };
       c.appendChild(d);
     });
   }
-  function nextSlide() { if (ssIdx < slides.length - 1) { ssIdx++; updateSS(); } }
-  function prevSlide() { if (ssIdx > 0)                  { ssIdx--; updateSS(); } }
+
+  function nextSlide() {
+    const layers = slides[ssIdx]?.layers || [];
+    if (ssLayerIdx < layers.length) {
+      // Reveal next layer on this slide
+      revealLayer(ssLayerIdx);
+      ssLayerIdx++;
+      _updateLayerHint();
+      document.getElementById('navPrev').disabled = false;
+      document.getElementById('navNext').disabled =
+        ssIdx === slides.length - 1 && ssLayerIdx >= layers.length;
+    } else if (ssIdx < slides.length - 1) {
+      // All layers shown — advance to next slide
+      ssIdx++;
+      _setSlideInViewer();
+    }
+  }
+
+  function prevSlide() {
+    if (ssLayerIdx > 0) {
+      // Hide the last revealed layer
+      ssLayerIdx--;
+      const div = document.querySelector(`.ss-text-layer[data-idx="${ssLayerIdx}"]`);
+      if (div) { div.classList.remove('revealed'); div.className = 'ss-text-layer'; }
+      _updateLayerHint();
+      document.getElementById('navNext').disabled = false;
+    } else if (ssIdx > 0) {
+      // Go to previous slide, showing all its layers already revealed
+      ssIdx--;
+      _setSlideInViewer();
+      // Immediately reveal all layers of the previous slide
+      const prevLayers = slides[ssIdx]?.layers || [];
+      prevLayers.forEach((_, n) => revealLayer(n));
+      ssLayerIdx = prevLayers.length;
+      _updateLayerHint();
+    }
+  }
 
   // ── Keyboard ──────────────────────────────────────────
   document.addEventListener('keydown', e => {
@@ -1779,7 +2076,14 @@
       const body = JSON.stringify({
         slug, presenterToken: token,
         overwrite: _editingSlug === slug,
-        slides: compressed.map(s => ({ dataUrl: s.dataUrl, fileName: s.fileName, pageNum: s.pageNum, totalPages: s.totalPages })),
+        slides: compressed.map(s => ({
+          dataUrl:    s.dataUrl,
+          fileName:   s.fileName,
+          pageNum:    s.pageNum,
+          totalPages: s.totalPages,
+          baseDataUrl: s.baseDataUrl || s.dataUrl,
+          layers:     s.layers || [],
+        })),
       });
 
       // Netlify Functions cap at 6 MB — warn early so the user knows what happened
@@ -2164,21 +2468,28 @@
     if (col) col.value = _textColor;
   }
 
-  function openTextEditor(idx) {
+  // idx = slide index; layerId = existing layer id to edit (null/undefined = new layer)
+  function openTextEditor(idx, layerId) {
     closeTextEditor();
-    _textEditIdx = idx;
-    _stBaseImg   = null;
+    _textEditIdx     = idx;
+    _textEditLayerId = layerId || null;
+    _stBaseImg       = null;
 
     const slide = slides[idx];
-    const tl    = slide.textLayer; // existing layer when re-editing via double-click
+    // Use layers[] for re-editing; fall back to legacy textLayer for old saves
+    const tl = layerId
+      ? slide.layers?.find(l => l.id === layerId)
+      : (slide.layers?.length === 0 || !slide.layers) ? slide.textLayer : null;
 
-    // Restore style state from saved layer or use defaults
-    _textFontSize = tl ? tl.fontSize : 5;
-    _textColor    = tl ? tl.color    : '#ffffff';
-    _textBold     = tl ? tl.bold     : true;
-    _textItalic   = tl ? tl.italic   : false;
-    _textAlign    = tl ? tl.align    : 'left';
-    _textShadow   = tl ? tl.shadow   : true;
+    // Restore style state from saved layer or use defaults.
+    // Layers store style in a sub-object; legacy textLayer stored flat.
+    const st = tl?.style || tl; // support both new layers[] and legacy textLayer
+    _textFontSize = st ? (st.fontSize ?? 5)    : 5;
+    _textColor    = st ? (st.color   ?? '#ffffff')           : '#ffffff';
+    _textBold     = st ? (st.bold    ?? true)                : true;
+    _textItalic   = st ? (st.italic  ?? false)               : false;
+    _textAlign    = st ? (st.align   ?? 'left')              : 'left';
+    _textShadow   = st ? (st.shadow  ?? true)                : true;
 
     const card = document.getElementById(`stack-${slide.id}`);
     const imgC = document.getElementById(`imgc-${slide.id}`);
@@ -2223,10 +2534,11 @@
       });
     };
 
-    // When re-editing use the saved base image (without text burned in).
-    // On first edit, use the displayed <img> element (already decoded in memory).
-    const baseUrl = tl && slide.baseDataUrl ? slide.baseDataUrl : slide.dataUrl;
-    const imgEl   = !tl && imgC.querySelector('.stack-img');
+    // When re-editing (or adding a new layer to a slide that already has layers),
+    // always load from baseDataUrl so only this layer's text shows in the preview.
+    const hasLayers = (slide.layers?.length ?? 0) > 0;
+    const baseUrl   = (tl || hasLayers) && slide.baseDataUrl ? slide.baseDataUrl : slide.dataUrl;
+    const imgEl     = !tl && !hasLayers && imgC.querySelector('.stack-img');
     if (!tl && imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
       _stBaseImg = imgEl;
       _onBaseReady();
@@ -2391,8 +2703,9 @@
     document.getElementById('stToolbar')?.remove();
     document.querySelectorAll('.stack-card.text-editing')
       .forEach(c => c.classList.remove('text-editing'));
-    _textEditIdx = -1;
-    _stBaseImg   = null;
+    _textEditIdx     = -1;
+    _textEditLayerId = null;
+    _stBaseImg       = null;
   }
 
   function setInlineTextSize(pct) {
@@ -2440,64 +2753,114 @@
     _drawTextCanvas();
   }
 
-  // Apply: the canvas already shows the exact final result, just export it.
-  function applyTextToSlide() {
-    const canvas = document.getElementById('stCanvas');
-    const text   = document.getElementById('stToolbarText')?.value || '';
-    if (!canvas || !text.trim()) { closeTextEditor(); return; }
+  // Draw one text layer onto an existing canvas context at full 1920×1080 resolution.
+  function _drawLayerOnCtx(ctx, layer) {
+    const W = 1920, H = 1080;
+    const fontPx = layer.style.fontSize / 100 * H;
+    const lineH  = fontPx * 1.3;
+    ctx.save();
+    ctx.font         = `${layer.style.italic ? 'italic ' : ''}${layer.style.bold ? '700' : '400'} ${fontPx}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    ctx.fillStyle    = layer.style.color;
+    ctx.textAlign    = layer.style.align;
+    ctx.textBaseline = 'top';
+    if (layer.style.shadow) {
+      ctx.shadowColor   = 'rgba(0,0,0,0.65)';
+      ctx.shadowBlur    = fontPx * 0.18;
+      ctx.shadowOffsetX = fontPx * 0.04;
+      ctx.shadowOffsetY = fontPx * 0.04;
+    }
+    const cx = layer.xFrac * W, cy = layer.yFrac * H;
+    layer.text.split('\n').forEach((line, i) => ctx.fillText(line, cx, cy + i * lineH));
+    ctx.restore();
+  }
+
+  // Recompute slide.dataUrl as a flat composite of baseDataUrl + all layers.
+  // Returns a Promise<string> (data URL). Also updates slide.dataUrl in-place.
+  async function computeFlatDataUrl(slide) {
+    const W = 1920, H = 1080;
+    const c   = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const ctx = c.getContext('2d');
+    await new Promise(res => {
+      const img = new Image();
+      img.onload = () => { ctx.drawImage(img, 0, 0, W, H); res(); };
+      img.onerror = res;
+      img.src = slide.baseDataUrl || slide.dataUrl;
+    });
+    for (const layer of (slide.layers || [])) {
+      if (layer.type === 'text') _drawLayerOnCtx(ctx, layer);
+    }
+    slide.dataUrl = c.toDataURL('image/jpeg', 0.92);
+    return slide.dataUrl;
+  }
+
+  // Apply: save layer data, recompute flat thumbnail, refresh editor.
+  async function applyTextToSlide() {
+    const text = document.getElementById('stToolbarText')?.value || '';
+    if (!text.trim()) { closeTextEditor(); return; }
 
     const savedIdx = _textEditIdx;
     const slide    = slides[savedIdx];
     const handle   = document.getElementById('stHandle');
     const imgC     = document.getElementById(`imgc-${slide.id}`);
+    const editId   = _textEditLayerId;
 
-    // Save the clean base image once (so re-editing always starts from the original)
+    // Preserve the clean background on first text addition
     if (!slide.baseDataUrl) slide.baseDataUrl = slide.dataUrl;
+    if (!slide.layers)      slide.layers = [];
 
-    // Store all text layer data so double-click re-opens the editor with exact values
-    if (handle && imgC) {
-      slide.textLayer = {
-        text,
-        xFrac:    parseFloat(handle.dataset.xPx) / imgC.offsetWidth,
-        yFrac:    parseFloat(handle.dataset.yPx) / imgC.offsetHeight,
+    const xFrac = handle && imgC ? parseFloat(handle.dataset.xPx) / imgC.offsetWidth  : 0.5;
+    const yFrac = handle && imgC ? parseFloat(handle.dataset.yPx) / imgC.offsetHeight : 0.5;
+
+    const layerData = {
+      text, xFrac, yFrac,
+      style: {
         fontSize: _textFontSize,
         color:    _textColor,
         bold:     _textBold,
         italic:   _textItalic,
         align:    _textAlign,
         shadow:   _textShadow,
-      };
+      },
+      animation: 'fade',
+    };
+
+    if (editId) {
+      // Update existing layer in-place
+      const existing = slide.layers.find(l => l.id === editId);
+      if (existing) Object.assign(existing, layerData);
+      else { layerData.id = editId; slide.layers.push(layerData); }
+    } else {
+      // New layer
+      layerData.id = uid();
+      slide.layers.push(layerData);
     }
 
-    // Redraw without the dashed selection box before exporting
-    const ctx2 = canvas.getContext('2d');
-    ctx2.clearRect(0, 0, 1920, 1080);
-    ctx2.drawImage(_stBaseImg, 0, 0, 1920, 1080);
-    const fontPx2 = _textFontSize / 100 * 1080;
-    const lineH2  = fontPx2 * 1.3;
-    ctx2.save();
-    ctx2.font         = `${_textItalic ? 'italic ' : ''}${_textBold ? '700' : '400'} ${fontPx2}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-    ctx2.fillStyle    = _textColor;
-    ctx2.textAlign    = _textAlign;
-    ctx2.textBaseline = 'top';
-    if (_textShadow) {
-      ctx2.shadowColor   = 'rgba(0,0,0,0.65)';
-      ctx2.shadowBlur    = fontPx2 * 0.18;
-      ctx2.shadowOffsetX = fontPx2 * 0.04;
-      ctx2.shadowOffsetY = fontPx2 * 0.04;
-    }
-    const expX = parseFloat(document.getElementById('stHandle')?.dataset.xPx || 0) / imgC.offsetWidth  * 1920;
-    const expY = parseFloat(document.getElementById('stHandle')?.dataset.yPx || 0) / imgC.offsetHeight * 1080;
-    text.split('\n').forEach((line, i) => ctx2.fillText(line, expX, expY + i * lineH2));
-    ctx2.restore();
-
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    // Recompute flat thumbnail from base + all layers
     closeTextEditor();
-    slide.dataUrl = dataUrl;
+    await computeFlatDataUrl(slide);
     renderSidebar();
     renderStack();
     selectSlide(savedIdx);
     updateTopbar();
+  }
+
+  // Delete a text layer from a slide and recompute thumbnail.
+  async function deleteLayer(slideIdx, layerId) {
+    const slide = slides[slideIdx];
+    if (!slide?.layers) return;
+    slide.layers = slide.layers.filter(l => l.id !== layerId);
+    await computeFlatDataUrl(slide);
+    renderSidebar();
+    renderStack();
+    selectSlide(slideIdx);
+    updateTopbar();
+  }
+
+  // Change the animation for a layer without opening the full editor.
+  function setLayerAnimation(slideIdx, layerId, animation) {
+    const layer = slides[slideIdx]?.layers?.find(l => l.id === layerId);
+    if (layer) layer.animation = animation;
   }
 
   // ── Grid Slide Builder ─────────────────────────────────
