@@ -444,14 +444,14 @@
     .btn-add-text:hover { background: rgba(54,150,240,0.14); border-color: var(--accent); }
 
     /* Wrapper so canvas/overlay can be positioned over the image */
-    .stack-img-container { position: relative; width: 100%; }
+    .stack-img-container { position: relative; width: 100%; overflow: hidden; }
 
     /* Canvas drawn on top of the slide image — shows text in real-time.
-       What you see here is EXACTLY what gets exported (no position mapping needed). */
+       Size is set via JS to match the container exactly so the 1920×1080
+       canvas never bleeds outside the thumbnail. */
     .stack-canvas-overlay {
-      position: absolute; inset: 0; display: block;
-      width: 100%; height: 100%; border-radius: 8px;
-      pointer-events: none; z-index: 5;
+      position: absolute; top: 0; left: 0; display: block;
+      border-radius: 8px; pointer-events: none; z-index: 5;
     }
 
     /* Transparent overlay above canvas; holds the drag handle only */
@@ -1390,7 +1390,8 @@
       try {
         if (isImage(file)) {
           updateLoading(file.name, processed / total * 100);
-          const dataUrl = await readImageFile(file);
+          const raw    = await readImageFile(file);
+          const dataUrl = await normaliseSlide(raw);
           slides.push({ id: uid(), dataUrl, fileName: file.name, pageNum: 1, totalPages: 1 });
           processed++;
           updateLoading(file.name, processed / total * 100);
@@ -1417,6 +1418,28 @@
     return new Promise((res, rej) => { const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsDataURL(file); });
   }
 
+  // Place any image (any size/ratio) onto a 1920×1080 canvas, centred & letterboxed.
+  function normaliseSlide(dataUrl, bg = '#000000') {
+    const W = 1920, H = 1080;
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const c   = document.createElement('canvas');
+        c.width = W; c.height = H;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+        const scale = Math.min(W / img.naturalWidth, H / img.naturalHeight);
+        const sw = img.naturalWidth  * scale;
+        const sh = img.naturalHeight * scale;
+        ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
+        resolve(c.toDataURL('image/jpeg', 0.92));
+      };
+      img.onerror = () => resolve(dataUrl); // fallback: keep original
+      img.src = dataUrl;
+    });
+  }
+
   async function countTotalSlides(files) {
     let n = 0;
     for (const f of files) {
@@ -1427,11 +1450,22 @@
   }
 
   async function renderPage(pdf, pageNum) {
-    const page = await pdf.getPage(pageNum);
-    const vp   = page.getViewport({ scale: 2 });
-    const c    = document.createElement('canvas');
-    c.width = vp.width; c.height = vp.height;
-    await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+    const W = 1920, H = 1080;
+    const page      = await pdf.getPage(pageNum);
+    const vpNative  = page.getViewport({ scale: 1 });
+    // Scale the PDF page to fill 1920×1080 while preserving aspect ratio
+    const scale     = Math.min(W / vpNative.width, H / vpNative.height);
+    const vp        = page.getViewport({ scale });
+    const dx        = Math.round((W - vp.width)  / 2);
+    const dy        = Math.round((H - vp.height) / 2);
+    const vpOffset  = page.getViewport({ scale, offsetX: dx, offsetY: dy });
+
+    const c   = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+    await page.render({ canvasContext: ctx, viewport: vpOffset }).promise;
     return c.toDataURL('image/jpeg', 0.92);
   }
 
@@ -2127,6 +2161,9 @@
     canvas.id = 'stCanvas';
     canvas.width = 1920; canvas.height = 1080;
     canvas.className = 'stack-canvas-overlay';
+    // Set CSS display size to exactly match the container — prevents any layout shift
+    canvas.style.width  = imgC.offsetWidth  + 'px';
+    canvas.style.height = imgC.offsetHeight + 'px';
     imgC.appendChild(canvas);
 
     // Load base image. Drawing from the existing <img> element is instant (no
