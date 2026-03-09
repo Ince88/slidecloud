@@ -2309,17 +2309,10 @@
       ctx.shadowOffsetY = fontPx * 0.04;
     }
 
-    // The anchor dot always marks the LEFT edge of the text block.
-    // For centre/right alignment we shift the draw origin so the block
-    // still starts at cx — this way changing alignment never moves the text.
-    const lines    = text.split('\n');
-    const maxWidth = Math.max(...lines.map(l => ctx.measureText(l).width));
-    let drawX = cx;
-    if (_textAlign === 'center') drawX = cx + maxWidth / 2;
-    if (_textAlign === 'right')  drawX = cx + maxWidth;
-
+    // cx/cy is the anchor for all alignment modes (left edge, centre, or right
+    // edge depending on _textAlign) — same as PowerPoint / Canva behaviour.
     ctx.textAlign = _textAlign;
-    lines.forEach((line, i) => ctx.fillText(line, drawX, cy + i * fontPx * 1.3));
+    text.split('\n').forEach((line, i) => ctx.fillText(line, cx, cy + i * fontPx * 1.3));
     ctx.restore();
   }
 
@@ -2353,6 +2346,19 @@
     document.getElementById('stAlignL')?.classList.toggle('on', a === 'left');
     document.getElementById('stAlignC')?.classList.toggle('on', a === 'center');
     document.getElementById('stAlignR')?.classList.toggle('on', a === 'right');
+
+    // Move the anchor dot to the natural position for the chosen alignment,
+    // so "left" always means text at the left, "right" at the right, etc.
+    const handle = document.getElementById('stHandle');
+    const imgC   = _textEditIdx >= 0
+      ? document.getElementById(`imgc-${slides[_textEditIdx].id}`) : null;
+    if (handle && imgC) {
+      const cw  = imgC.offsetWidth;
+      const cur = parseFloat(handle.dataset.yPx) || imgC.offsetHeight / 2; // keep Y
+      const nx  = a === 'left' ? cw * 0.03 : a === 'center' ? cw * 0.5 : cw * 0.97;
+      handle.dataset.xPx = nx;
+      handle.style.left  = nx + 'px';
+    }
     _drawTextCanvas();
   }
   function setInlineColor(c) {
