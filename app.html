@@ -433,6 +433,206 @@
     }
     .rotate-skip:active { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.4); }
 
+    /* ─── Inline Text Overlay Editor ─────────────────── */
+    .btn-add-text {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 6px; margin-left: auto;
+      border: 1.5px solid rgba(54,150,240,0.3); background: rgba(54,150,240,0.06);
+      color: var(--accent); font-size: 11px; font-weight: 700; cursor: pointer;
+      transition: background .15s, border-color .15s; flex-shrink: 0;
+    }
+    .btn-add-text:hover { background: rgba(54,150,240,0.14); border-color: var(--accent); }
+
+    /* Wrapper so canvas/overlay can be positioned over the image */
+    .stack-img-container { position: relative; width: 100%; }
+
+    /* Canvas drawn on top of the slide image — shows text in real-time.
+       What you see here is EXACTLY what gets exported (no position mapping needed). */
+    .stack-canvas-overlay {
+      position: absolute; inset: 0; display: block;
+      width: 100%; height: 100%; border-radius: 8px;
+      pointer-events: none; z-index: 5;
+    }
+
+    /* Transparent overlay above canvas; holds the drag handle only */
+    .stack-text-overlay {
+      position: absolute; inset: 0; z-index: 10; pointer-events: none;
+      border-radius: 8px;
+    }
+
+    /* Small dot that marks the text anchor point — drag it anywhere on the slide */
+    .stack-text-handle {
+      position: absolute;
+      cursor: grab; touch-action: none; pointer-events: all;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--accent); border: 2.5px solid #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      user-select: none; z-index: 11;
+      /* centre the dot precisely on the text anchor coords */
+      transform: translate(-50%, -50%);
+    }
+    .stack-text-handle:active { cursor: grabbing; transform: translate(-50%,-50%) scale(1.15); }
+
+    /* Compact toolbar that appears below the image while editing */
+    .stack-text-toolbar {
+      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+      padding: 8px 0 6px; margin-bottom: 2px;
+      border-bottom: 1px solid #f0f0f5;
+    }
+    .stb-sep { width: 1px; height: 22px; background: #e2e2e6; margin: 0 1px; flex-shrink: 0; }
+    .stb-btn {
+      width: 28px; height: 28px; border-radius: 6px; border: 1.5px solid #e2e2e6;
+      background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #3a3a5c;
+      transition: border-color .1s, background .1s, color .1s; flex-shrink: 0;
+    }
+    .stb-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .stb-btn.on { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .stb-size {
+      padding: 0 8px; height: 28px; border-radius: 6px; border: 1.5px solid #e2e2e6;
+      background: #fff; font-size: 12px; font-weight: 600; color: #3a3a5c; cursor: pointer;
+      flex-shrink: 0;
+    }
+    .stb-size.on { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .stb-color {
+      width: 28px; height: 28px; border-radius: 6px; border: 1.5px solid #e2e2e6;
+      cursor: pointer; padding: 2px; background: none; flex-shrink: 0;
+    }
+    /* Text input lives in the toolbar, not on the slide */
+    .stb-textarea {
+      flex: 1; min-width: 120px; resize: none;
+      padding: 5px 9px; border-radius: 6px; border: 1.5px solid #e2e2e6;
+      background: #fff; font-size: 13px; color: #1a1a2e; line-height: 1.4;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      outline: none;
+    }
+    .stb-textarea:focus { border-color: var(--accent); }
+    .stb-apply {
+      margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 14px; border-radius: 6px; border: none;
+      background: var(--grad); color: #fff; font-size: 12px; font-weight: 700;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .stb-cancel {
+      display: inline-flex; align-items: center;
+      padding: 5px 12px; border-radius: 6px;
+      border: 1.5px solid #e2e2e6; background: #fff;
+      color: #6b7280; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+    }
+    .stack-card.text-editing { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(54,150,240,0.15); }
+
+    /* ─── Grid Slide Builder ──────────────────────────── */
+    .grid-modal { width: 720px; max-width: 96vw; max-height: 92vh; overflow-y: auto; }
+
+    .grid-toolbar {
+      display: flex; align-items: center; gap: 16px;
+      padding: 14px 20px; border-bottom: 1px solid #f0f0f5; background: #fafafa;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .grid-toolbar::-webkit-scrollbar { height: 0; }
+    .grid-toolbar-group { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .grid-toolbar-label { font-size: 12px; font-weight: 600; color: #8a8aaa; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+
+    .grid-size-btn {
+      padding: 5px 12px; border-radius: 7px; flex-shrink: 0;
+      border: 1.5px solid #e2e8f0; background: #fff;
+      font-size: 12px; font-weight: 600; cursor: pointer; color: #3a3a5c;
+      transition: border-color .15s, background .15s, color .15s;
+    }
+    .grid-size-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .grid-size-btn.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+
+    .grid-bg-picker {
+      width: 30px; height: 30px; border-radius: 7px; border: 1.5px solid #e2e8f0;
+      cursor: pointer; padding: 2px; background: none;
+    }
+
+    .grid-preview-outer {
+      padding: 20px 20px 0;
+    }
+    .grid-preview-wrap {
+      width: 100%; aspect-ratio: 16/9;
+      border-radius: 12px; overflow: hidden;
+      border: 1.5px solid #e2e8f0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    }
+    .grid-preview {
+      display: grid; width: 100%; height: 100%;
+      background: #fff;
+    }
+    .grid-cell {
+      position: relative; cursor: pointer; overflow: hidden;
+      background: #f0f0f8;
+      background-size: cover; background-position: center;
+      transition: box-shadow .12s;
+    }
+    .grid-cell::before {
+      content: ''; position: absolute; inset: 0;
+      background: rgba(54,150,240,0); transition: background .12s;
+      pointer-events: none;
+    }
+    .grid-cell:hover::before { background: rgba(54,150,240,0.12); }
+    .grid-cell.selected { box-shadow: inset 0 0 0 3px var(--accent); }
+    .grid-cell.selected::before { background: rgba(54,150,240,0.15); }
+    .grid-cell.has-image .cell-empty-icon { display: none; }
+    .cell-empty-icon {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .cell-empty-icon svg { opacity: 0.18; }
+    .cell-selected-badge {
+      display: none; position: absolute; top: 6px; right: 6px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      align-items: center; justify-content: center; font-size: 12px;
+      box-shadow: 0 2px 8px rgba(54,150,240,.5);
+      pointer-events: none; z-index: 2;
+    }
+    .grid-cell.selected .cell-selected-badge { display: flex; }
+
+    .grid-actions-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 20px; border-top: 1px solid #f0f0f5; flex-wrap: wrap;
+    }
+    .grid-hint { font-size: 13px; color: #8a8aaa; flex: 1; min-width: 140px; }
+    .btn-grid-img {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; border-radius: 8px; border: none;
+      background: var(--grad); color: #fff; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: filter .15s, transform .1s;
+    }
+    .btn-grid-img:hover { filter: brightness(1.1); }
+    .btn-grid-img:active { transform: scale(0.97); }
+    .btn-grid-img:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+    .btn-grid-clear-cell {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 8px;
+      border: 1.5px solid #e2e8f0; background: #fff;
+      color: var(--danger); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-grid-clear-cell:hover { background: #fff0f0; }
+    .btn-grid-clear-cell:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-add-grid-slide {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 20px; border-radius: 8px; border: none;
+      background: #1a1a2e; color: #fff; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-add-grid-slide:hover { background: #2c2c48; }
+
+    .btn-build-slide {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 9px 14px; background: rgba(54,150,240,0.1); color: var(--accent);
+      border: 1.5px solid rgba(54,150,240,0.25); border-radius: 8px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: background .15s, border-color .15s;
+      margin-top: 8px;
+    }
+    .btn-build-slide:hover { background: rgba(54,150,240,0.18); border-color: var(--accent); }
+
     /* ─── Viewer loading/error screen ─────────────────── */
     .viewer-screen { display: none; position: fixed; inset: 0; background: #0a0a10; z-index: 350; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
     .viewer-screen.visible { display: flex; }
@@ -605,6 +805,13 @@
     <button class="btn-add-slide" onclick="triggerFileInput()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M12 5v14M5 12h14"/></svg>
       Add Slides
+    </button>
+    <button class="btn-build-slide" onclick="openGridModal()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      Build Grid Slide
     </button>
   </div>
   <div class="slides-list" id="slidesList">
@@ -897,6 +1104,24 @@
   let socket          = null;
   let wsUrl           = null;
   let genViewerUrlStr    = '';
+
+  // Text Overlay Editor state
+  let _textEditIdx  = -1;
+  let _textFontSize = 5;   // percent of slide height (≈54px on 1080p)
+  let _textColor    = '#ffffff';
+  let _textBold     = true;
+  let _textItalic   = false;
+  let _textAlign    = 'left';
+  let _textShadow   = true;
+  let _stBaseImg    = null; // cached Image element for real-time canvas redraws
+
+  // Grid Slide Builder state
+  let _gridRows     = 2;
+  let _gridCols     = 2;
+  let _gridImages   = {};
+  let _selectedCell = null;
+  let _gridBg       = '#ffffff';
+  const GRID_GAP_PX = 6;
   let genPresenterUrlStr = '';
 
   // ── Init: URL-based mode detection ───────────────────
@@ -1300,10 +1525,16 @@
           </button>
         </div>
         <div class="stack-img-wrap">
-          <img class="stack-img" src="${slide.dataUrl}" loading="lazy" alt="Slide ${i + 1}" />
+          <div class="stack-img-container" id="imgc-${slide.id}">
+            <img class="stack-img" src="${slide.dataUrl}" loading="lazy" alt="Slide ${i + 1}" />
+          </div>
           <div class="stack-meta">
             <span class="stack-badge">${i + 1} / ${slides.length}</span>
             <span>${slide.fileName}${pageTag}</span>
+            <button class="btn-add-text" onclick="openTextEditor(${i})" title="Add text overlay">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+              Add Text
+            </button>
           </div>
         </div>`;
       const numInput = card.querySelector('.stack-num');
@@ -1868,7 +2099,491 @@
     // Dismiss tap is a user gesture — best moment to request fullscreen.
     _tryFullscreen();
   }
+
+  // ── Inline Text Overlay Editor ─────────────────────────
+  //
+  // Strategy: a <canvas> overlays the slide image and renders text in real-time.
+  // A small dot handle can be dragged anywhere to set the text anchor.
+  // The text input lives in the toolbar below the image.
+  // Apply just exports the already-rendered canvas — no HTML→canvas mapping needed.
+
+  function openTextEditor(idx) {
+    closeTextEditor();
+    _textEditIdx  = idx;
+    _textFontSize = 5;
+    _textColor    = '#ffffff';
+    _textBold     = true; _textItalic = false;
+    _textAlign    = 'left'; _textShadow = true;
+    _stBaseImg    = null;
+
+    const slide = slides[idx];
+    const card  = document.getElementById(`stack-${slide.id}`);
+    const imgC  = document.getElementById(`imgc-${slide.id}`);
+    if (!card || !imgC) return;
+    card.classList.add('text-editing');
+
+    // ── Canvas overlay (real-time text preview) ──────────
+    const canvas = document.createElement('canvas');
+    canvas.id = 'stCanvas';
+    canvas.width = 1920; canvas.height = 1080;
+    canvas.className = 'stack-canvas-overlay';
+    imgC.appendChild(canvas);
+
+    // Load base image. Drawing from the existing <img> element is instant (no
+    // network) because the browser already has the bitmap in memory.
+    const imgEl = imgC.querySelector('.stack-img');
+    if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+      _stBaseImg = imgEl;
+      _drawTextCanvas();
+    } else {
+      _stBaseImg = new Image();
+      _stBaseImg.onload = _drawTextCanvas;
+      _stBaseImg.src = slide.dataUrl;
+    }
+
+    // ── Drag handle (dot at text anchor) ─────────────────
+    const overlay = document.createElement('div');
+    overlay.className = 'stack-text-overlay';
+    overlay.id = 'stOverlay';
+
+    const handle = document.createElement('div');
+    handle.className = 'stack-text-handle';
+    handle.id = 'stHandle';
+    // Crosshair icon inside the dot
+    handle.innerHTML = `<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="10" y1="2" x2="10" y2="18"/><line x1="2" y1="10" x2="18" y2="10"/></svg>`;
+    overlay.appendChild(handle);
+    imgC.appendChild(overlay);
+
+    // Position dot at centre initially; store anchor as px from container top-left
+    requestAnimationFrame(() => {
+      handle.dataset.xPx = imgC.offsetWidth  / 2;
+      handle.dataset.yPx = imgC.offsetHeight / 2;
+      handle.style.left  = handle.dataset.xPx + 'px';
+      handle.style.top   = handle.dataset.yPx + 'px';
+      _drawTextCanvas();
+      document.getElementById('stToolbarText')?.focus();
+    });
+
+    // ── Pointer Events drag ───────────────────────────────
+    handle.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      handle.setPointerCapture(e.pointerId);
+      const startX = e.clientX, startY = e.clientY;
+      const origX  = parseFloat(handle.dataset.xPx) || imgC.offsetWidth  / 2;
+      const origY  = parseFloat(handle.dataset.yPx) || imgC.offsetHeight / 2;
+
+      const onMove = ev => {
+        const cw = imgC.offsetWidth, ch = imgC.offsetHeight;
+        // Allow the anchor to reach the very edges (0 → full dimension)
+        const nx = Math.max(0, Math.min(cw, origX + ev.clientX - startX));
+        const ny = Math.max(0, Math.min(ch, origY + ev.clientY - startY));
+        handle.dataset.xPx = nx;
+        handle.dataset.yPx = ny;
+        handle.style.left  = nx + 'px';
+        handle.style.top   = ny + 'px';
+        _drawTextCanvas();
+      };
+      const onUp = () => {
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup',   onUp);
+      };
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup',   onUp);
+    });
+
+    // ── Toolbar (text input + style controls) ────────────
+    const toolbar = document.createElement('div');
+    toolbar.className = 'stack-text-toolbar';
+    toolbar.id = 'stToolbar';
+    toolbar.innerHTML = `
+      <textarea class="stb-textarea" id="stToolbarText" rows="2"
+        placeholder="Type text here… drag the ✛ on the slide to position it"></textarea>
+      <div class="stb-sep"></div>
+      <button class="stb-size" data-sz="3"  onclick="setInlineTextSize(3)">S</button>
+      <button class="stb-size on" data-sz="5" onclick="setInlineTextSize(5)">M</button>
+      <button class="stb-size" data-sz="7"  onclick="setInlineTextSize(7)">L</button>
+      <button class="stb-size" data-sz="10" onclick="setInlineTextSize(10)">XL</button>
+      <div class="stb-sep"></div>
+      <button class="stb-btn on" id="stBold"   onclick="toggleInlineBold()"><b>B</b></button>
+      <button class="stb-btn"    id="stItalic" onclick="toggleInlineItalic()"><i>I</i></button>
+      <div class="stb-sep"></div>
+      <button class="stb-btn on" id="stAlignL" onclick="setInlineAlign('left')" title="Left">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+      </button>
+      <button class="stb-btn" id="stAlignC" onclick="setInlineAlign('center')" title="Center">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+      </button>
+      <button class="stb-btn" id="stAlignR" onclick="setInlineAlign('right')" title="Right">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="stb-sep"></div>
+      <input type="color" class="stb-color" id="stColor" value="#ffffff" oninput="setInlineColor(this.value)" />
+      <button class="stb-btn on" id="stShadow" onclick="toggleInlineShadow()" title="Shadow">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
+      </button>
+      <button class="stb-cancel" onclick="closeTextEditor()">Cancel</button>
+      <button class="stb-apply" onclick="applyTextToSlide()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Apply
+      </button>`;
+
+    const imgWrap = card.querySelector('.stack-img-wrap');
+    imgWrap.insertBefore(toolbar, imgWrap.querySelector('.stack-meta'));
+
+    // Re-draw canvas whenever the user types
+    toolbar.querySelector('#stToolbarText').addEventListener('input', _drawTextCanvas);
+
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // Redraw the canvas overlay: base image + text at the handle's anchor position.
+  // This is the single source of truth — what you see here IS what Apply exports.
+  function _drawTextCanvas() {
+    const canvas = document.getElementById('stCanvas');
+    const handle = document.getElementById('stHandle');
+    if (!canvas || !_stBaseImg || !handle) return;
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 1920, 1080);
+    ctx.drawImage(_stBaseImg, 0, 0, 1920, 1080);
+
+    const text = (document.getElementById('stToolbarText')?.value || '').trimEnd();
+    if (!text) return;
+
+    // Map handle anchor (pixels in display space) → canvas coordinates (1920×1080)
+    const imgC = _textEditIdx >= 0
+      ? document.getElementById(`imgc-${slides[_textEditIdx].id}`) : null;
+    if (!imgC) return;
+    const dw = imgC.offsetWidth, dh = imgC.offsetHeight;
+    const ax = parseFloat(handle.dataset.xPx) || dw / 2;
+    const ay = parseFloat(handle.dataset.yPx) || dh / 2;
+    const cx = ax / dw * 1920;
+    const cy = ay / dh * 1080;
+
+    const fontPx = _textFontSize / 100 * 1080;
+    ctx.save();
+    ctx.font         = `${_textItalic ? 'italic ' : ''}${_textBold ? '700' : '400'} ${fontPx}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    ctx.fillStyle    = _textColor;
+    ctx.textAlign    = _textAlign;
+    ctx.textBaseline = 'top';
+    if (_textShadow) {
+      ctx.shadowColor   = 'rgba(0,0,0,0.65)';
+      ctx.shadowBlur    = fontPx * 0.18;
+      ctx.shadowOffsetX = fontPx * 0.04;
+      ctx.shadowOffsetY = fontPx * 0.04;
+    }
+    text.split('\n').forEach((line, i) => ctx.fillText(line, cx, cy + i * fontPx * 1.3));
+    ctx.restore();
+  }
+
+  function closeTextEditor() {
+    document.getElementById('stCanvas')?.remove();
+    document.getElementById('stOverlay')?.remove();
+    document.getElementById('stToolbar')?.remove();
+    document.querySelectorAll('.stack-card.text-editing')
+      .forEach(c => c.classList.remove('text-editing'));
+    _textEditIdx = -1;
+    _stBaseImg   = null;
+  }
+
+  function setInlineTextSize(pct) {
+    _textFontSize = pct;
+    document.querySelectorAll('.stb-size').forEach(b => b.classList.toggle('on', +b.dataset.sz === pct));
+    _drawTextCanvas();
+  }
+  function toggleInlineBold() {
+    _textBold = !_textBold;
+    document.getElementById('stBold')?.classList.toggle('on', _textBold);
+    _drawTextCanvas();
+  }
+  function toggleInlineItalic() {
+    _textItalic = !_textItalic;
+    document.getElementById('stItalic')?.classList.toggle('on', _textItalic);
+    _drawTextCanvas();
+  }
+  function setInlineAlign(a) {
+    _textAlign = a;
+    ['Left','Center','Right'].forEach(n =>
+      document.getElementById('stAlign'+n)?.classList.toggle('on', a === n.toLowerCase()));
+    _drawTextCanvas();
+  }
+  function setInlineColor(c) {
+    _textColor = c;
+    _drawTextCanvas();
+  }
+  function toggleInlineShadow() {
+    _textShadow = !_textShadow;
+    document.getElementById('stShadow')?.classList.toggle('on', _textShadow);
+    _drawTextCanvas();
+  }
+
+  // Apply: the canvas already shows the exact final result, just export it.
+  function applyTextToSlide() {
+    const canvas = document.getElementById('stCanvas');
+    const text   = document.getElementById('stToolbarText')?.value || '';
+    if (!canvas || !text.trim()) { closeTextEditor(); return; }
+
+    const savedIdx = _textEditIdx;
+    const dataUrl  = canvas.toDataURL('image/jpeg', 0.92);
+    closeTextEditor();
+    slides[savedIdx].dataUrl = dataUrl;
+    renderSidebar();
+    renderStack();
+    selectSlide(savedIdx);
+    updateTopbar();
+  }
+
+  // ── Grid Slide Builder ─────────────────────────────────
+
+  function openGridModal() {
+    _gridRows = 2; _gridCols = 2;
+    _gridImages = {}; _selectedCell = null; _gridBg = '#ffffff';
+    document.getElementById('gridBgPicker').value = '#ffffff';
+    renderGridPreview();
+    _syncGridSizeBtns();
+    _updateGridActions();
+    document.getElementById('gridModalBackdrop').classList.add('open');
+  }
+
+  function closeGridModal() {
+    document.getElementById('gridModalBackdrop').classList.remove('open');
+  }
+
+  function setGrid(rows, cols) {
+    _gridRows = rows; _gridCols = cols;
+    _gridImages = {}; _selectedCell = null;
+    renderGridPreview();
+    _syncGridSizeBtns();
+    _updateGridActions();
+  }
+
+  function _syncGridSizeBtns() {
+    document.querySelectorAll('.grid-size-btn').forEach(b => {
+      b.classList.remove('active');
+      // Match by text content e.g. "2×2"
+      if (b.textContent.trim() === `${_gridRows}×${_gridCols}`) b.classList.add('active');
+    });
+  }
+
+  function renderGridPreview() {
+    const preview = document.getElementById('gridPreview');
+    preview.style.gridTemplateColumns = `repeat(${_gridCols}, 1fr)`;
+    preview.style.gridTemplateRows    = `repeat(${_gridRows}, 1fr)`;
+    preview.style.gap                 = '3px';
+    preview.style.backgroundColor     = _gridBg;
+    preview.innerHTML = '';
+
+    for (let r = 0; r < _gridRows; r++) {
+      for (let c = 0; c < _gridCols; c++) {
+        const key  = `${r}-${c}`;
+        const cell = document.createElement('div');
+        cell.className   = 'grid-cell';
+        cell.dataset.key = key;
+
+        if (_gridImages[key]) {
+          cell.classList.add('has-image');
+          cell.style.backgroundImage    = `url(${_gridImages[key]})`;
+          cell.style.backgroundSize     = 'cover';
+          cell.style.backgroundPosition = 'center';
+        }
+        if (_selectedCell === key) cell.classList.add('selected');
+
+        // Empty placeholder icon
+        cell.innerHTML = `
+          <div class="cell-empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <div class="cell-selected-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>`;
+
+        cell.addEventListener('click', () => selectGridCell(key));
+        preview.appendChild(cell);
+      }
+    }
+  }
+
+  function selectGridCell(key) {
+    _selectedCell = (_selectedCell === key) ? null : key;
+    // Update classes without full re-render for snappiness
+    document.querySelectorAll('.grid-cell').forEach(el => {
+      el.classList.toggle('selected', el.dataset.key === _selectedCell);
+    });
+    _updateGridActions();
+  }
+
+  function _updateGridActions() {
+    const hasSel = _selectedCell !== null;
+    const hasImg = hasSel && !!_gridImages[_selectedCell];
+    document.getElementById('btnGridAddImg').disabled    = !hasSel;
+    document.getElementById('btnGridClearCell').disabled = !hasImg;
+    document.getElementById('gridHint').textContent = hasSel
+      ? (_gridImages[_selectedCell] ? 'Cell has an image — replace or clear it' : 'Cell selected — add an image below')
+      : 'Click a cell to select it';
+  }
+
+  function setGridBg(color) {
+    _gridBg = color;
+    document.getElementById('gridPreview').style.backgroundColor = color;
+  }
+
+  function triggerGridImageInput() {
+    document.getElementById('gridImageInput').click();
+  }
+
+  function handleGridImageInput(e) {
+    const file = e.target.files[0];
+    if (!file || !_selectedCell) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      _gridImages[_selectedCell] = ev.target.result;
+      // Update just the affected cell
+      const el = document.querySelector(`.grid-cell[data-key="${_selectedCell}"]`);
+      if (el) {
+        el.classList.add('has-image');
+        el.style.backgroundImage    = `url(${ev.target.result})`;
+        el.style.backgroundSize     = 'cover';
+        el.style.backgroundPosition = 'center';
+      }
+      _updateGridActions();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  function clearSelectedCell() {
+    if (!_selectedCell) return;
+    delete _gridImages[_selectedCell];
+    const el = document.querySelector(`.grid-cell[data-key="${_selectedCell}"]`);
+    if (el) {
+      el.classList.remove('has-image');
+      el.style.backgroundImage = '';
+    }
+    _updateGridActions();
+  }
+
+  async function addGridSlide() {
+    const W = 1920, H = 1080;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Background
+    ctx.fillStyle = _gridBg;
+    ctx.fillRect(0, 0, W, H);
+
+    const G  = GRID_GAP_PX;
+    const cW = (W - (_gridCols - 1) * G) / _gridCols;
+    const cH = (H - (_gridRows - 1) * G) / _gridRows;
+
+    for (let r = 0; r < _gridRows; r++) {
+      for (let c = 0; c < _gridCols; c++) {
+        const key = `${r}-${c}`;
+        const x   = c * (cW + G);
+        const y   = r * (cH + G);
+
+        if (_gridImages[key]) {
+          await new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+              // object-fit: cover
+              const scale = Math.max(cW / img.width, cH / img.height);
+              const sw = img.width  * scale;
+              const sh = img.height * scale;
+              const dx = x + (cW - sw) / 2;
+              const dy = y + (cH - sh) / 2;
+              ctx.save();
+              ctx.beginPath();
+              ctx.rect(x, y, cW, cH);
+              ctx.clip();
+              ctx.drawImage(img, dx, dy, sw, sh);
+              ctx.restore();
+              resolve();
+            };
+            img.onerror = resolve;
+            img.src = _gridImages[key];
+          });
+        }
+      }
+    }
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    slides.push({ id: uid(), dataUrl, fileName: `Grid ${_gridRows}×${_gridCols}`, pageNum: 1, totalPages: 1 });
+    activeIdx = slides.length - 1;
+    renderSidebar();
+    selectSlide(activeIdx);
+    updateTopbar();
+    closeGridModal();
+  }
 </script>
+
+<!-- ── Grid Slide Builder modal ───────────────────── -->
+<div class="modal-backdrop" id="gridModalBackdrop">
+  <div class="modal grid-modal">
+    <div class="modal-header">
+      <div class="modal-header-text">
+        <h2>Grid Slide Builder</h2>
+        <p>Choose a layout, click cells to select, then add images.</p>
+      </div>
+      <button class="modal-x" onclick="closeGridModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Toolbar: layout + background -->
+    <div class="grid-toolbar">
+      <div class="grid-toolbar-group">
+        <span class="grid-toolbar-label">Layout</span>
+        <button class="grid-size-btn" onclick="setGrid(1,1)">1×1</button>
+        <button class="grid-size-btn" onclick="setGrid(1,2)">1×2</button>
+        <button class="grid-size-btn" onclick="setGrid(2,1)">2×1</button>
+        <button class="grid-size-btn active" id="gsBtn-2-2" onclick="setGrid(2,2)">2×2</button>
+        <button class="grid-size-btn" onclick="setGrid(2,3)">2×3</button>
+        <button class="grid-size-btn" onclick="setGrid(3,2)">3×2</button>
+        <button class="grid-size-btn" onclick="setGrid(3,3)">3×3</button>
+        <button class="grid-size-btn" onclick="setGrid(3,4)">3×4</button>
+        <button class="grid-size-btn" onclick="setGrid(4,4)">4×4</button>
+      </div>
+      <div class="grid-toolbar-group">
+        <span class="grid-toolbar-label">Background</span>
+        <input type="color" class="grid-bg-picker" id="gridBgPicker" value="#ffffff" oninput="setGridBg(this.value)" />
+      </div>
+    </div>
+
+    <!-- 16:9 slide preview -->
+    <div class="grid-preview-outer">
+      <div class="grid-preview-wrap">
+        <div class="grid-preview" id="gridPreview"></div>
+      </div>
+    </div>
+
+    <!-- Cell actions -->
+    <div class="grid-actions-row">
+      <span class="grid-hint" id="gridHint">Click a cell to select it</span>
+      <button class="btn-grid-clear-cell" id="btnGridClearCell" onclick="clearSelectedCell()" disabled>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        Clear cell
+      </button>
+      <button class="btn-grid-img" id="btnGridAddImg" onclick="triggerGridImageInput()" disabled>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Add image
+      </button>
+      <input type="file" id="gridImageInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleGridImageInput(event)" />
+    </div>
+
+    <div class="modal-footer" style="justify-content:flex-end;gap:10px;display:flex;padding:16px 20px;border-top:1px solid #f0f0f5;">
+      <button class="modal-btn-secondary" onclick="closeGridModal()">Cancel</button>
+      <button class="btn-add-grid-slide" onclick="addGridSlide()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Add to Presentation
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ── My Presentations modal ─────────────────────── -->
 <div class="modal-backdrop" id="savedModalBackdrop">
