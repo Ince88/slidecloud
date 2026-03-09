@@ -2301,7 +2301,6 @@
     ctx.save();
     ctx.font         = `${_textItalic ? 'italic ' : ''}${_textBold ? '700' : '400'} ${fontPx}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
     ctx.fillStyle    = _textColor;
-    ctx.textAlign    = _textAlign;
     ctx.textBaseline = 'top';
     if (_textShadow) {
       ctx.shadowColor   = 'rgba(0,0,0,0.65)';
@@ -2309,7 +2308,18 @@
       ctx.shadowOffsetX = fontPx * 0.04;
       ctx.shadowOffsetY = fontPx * 0.04;
     }
-    text.split('\n').forEach((line, i) => ctx.fillText(line, cx, cy + i * fontPx * 1.3));
+
+    // The anchor dot always marks the LEFT edge of the text block.
+    // For centre/right alignment we shift the draw origin so the block
+    // still starts at cx — this way changing alignment never moves the text.
+    const lines    = text.split('\n');
+    const maxWidth = Math.max(...lines.map(l => ctx.measureText(l).width));
+    let drawX = cx;
+    if (_textAlign === 'center') drawX = cx + maxWidth / 2;
+    if (_textAlign === 'right')  drawX = cx + maxWidth;
+
+    ctx.textAlign = _textAlign;
+    lines.forEach((line, i) => ctx.fillText(line, drawX, cy + i * fontPx * 1.3));
     ctx.restore();
   }
 
@@ -2340,8 +2350,9 @@
   }
   function setInlineAlign(a) {
     _textAlign = a;
-    ['Left','Center','Right'].forEach(n =>
-      document.getElementById('stAlign'+n)?.classList.toggle('on', a === n.toLowerCase()));
+    document.getElementById('stAlignL')?.classList.toggle('on', a === 'left');
+    document.getElementById('stAlignC')?.classList.toggle('on', a === 'center');
+    document.getElementById('stAlignR')?.classList.toggle('on', a === 'right');
     _drawTextCanvas();
   }
   function setInlineColor(c) {
