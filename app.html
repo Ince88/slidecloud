@@ -2311,8 +2311,8 @@
     card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // Redraw the canvas overlay: base image + text (or placeholder box) at the anchor.
-  // This is the single source of truth — what you see here IS what Apply exports.
+  // Redraw the canvas overlay: base image + dashed text box + text (or placeholder).
+  // The dashed box stays visible the whole time while editing, just like PowerPoint/Canva.
   function _drawTextCanvas() {
     const canvas = document.getElementById('stCanvas');
     const handle = document.getElementById('stHandle');
@@ -2332,32 +2332,46 @@
     const cx = ax / dw * 1920;
     const cy = ay / dh * 1080;
 
-    const fontPx  = _textFontSize / 100 * 1080;
-    const text    = (document.getElementById('stToolbarText')?.value || '').trimEnd();
+    const fontPx = _textFontSize / 100 * 1080;
+    const text   = (document.getElementById('stToolbarText')?.value || '').trimEnd();
+    const lines  = text ? text.split('\n') : [];
+    const lineH  = fontPx * 1.3;
+    const pad    = fontPx * 0.28;
 
     ctx.save();
+    ctx.font = `${_textItalic ? 'italic ' : ''}${_textBold ? '700' : '400'} ${fontPx}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+
+    // Measure content width; fall back to a sensible default when empty
+    const contentW = text
+      ? Math.max(...lines.map(l => ctx.measureText(l).width))
+      : Math.min(760, 1920 - cx - 40);
+    const boxW = contentW + pad * 2;
+    const boxH = Math.max(1, lines.length || 1) * lineH + pad * 2;
+
+    // Box origin shifts with alignment so the box always wraps the text
+    let boxX = cx - pad;
+    if (_textAlign === 'center') boxX = cx - contentW / 2 - pad;
+    if (_textAlign === 'right')  boxX = cx - contentW     - pad;
+
+    // ── Dashed selection box (always visible while editing) ──
+    ctx.strokeStyle = 'rgba(54,150,240,0.8)';
+    ctx.lineWidth   = Math.max(3, fontPx * 0.035);
+    ctx.setLineDash([fontPx * 0.2, fontPx * 0.1]);
+    ctx.strokeRect(boxX, cy - pad, boxW, boxH);
+    ctx.setLineDash([]);
 
     if (!text) {
-      // No text yet — draw a dashed placeholder box so the user can see where
-      // the text will appear and knows to type in the toolbar below.
-      const phW = Math.min(900, 1920 - cx - 30);
-      const phH = fontPx * 2.2;
-      ctx.strokeStyle = 'rgba(54,150,240,0.75)';
-      ctx.lineWidth   = Math.max(3, fontPx * 0.04);
-      ctx.setLineDash([fontPx * 0.22, fontPx * 0.11]);
-      ctx.strokeRect(cx, cy, phW, phH);
-      ctx.setLineDash([]);
-      ctx.font         = `400 ${fontPx * 0.45}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-      ctx.fillStyle    = 'rgba(54,150,240,0.7)';
+      // Placeholder hint centred inside the box
+      ctx.font         = `400 ${fontPx * 0.42}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+      ctx.fillStyle    = 'rgba(54,150,240,0.65)';
       ctx.textAlign    = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText('Type your text in the toolbar below  ↓', cx + fontPx * 0.18, cy + fontPx * 0.68);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Type in the toolbar below  ↓', boxX + pad, cy - pad + boxH / 2);
       ctx.restore();
       return;
     }
 
-    // Draw the actual text
-    ctx.font         = `${_textItalic ? 'italic ' : ''}${_textBold ? '700' : '400'} ${fontPx}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    // ── Actual text ──────────────────────────────────────────
     ctx.fillStyle    = _textColor;
     ctx.textAlign    = _textAlign;
     ctx.textBaseline = 'top';
@@ -2367,7 +2381,7 @@
       ctx.shadowOffsetX = fontPx * 0.04;
       ctx.shadowOffsetY = fontPx * 0.04;
     }
-    text.split('\n').forEach((line, i) => ctx.fillText(line, cx, cy + i * fontPx * 1.3));
+    lines.forEach((line, i) => ctx.fillText(line, cx, cy + i * lineH));
     ctx.restore();
   }
 
@@ -2454,6 +2468,28 @@
         shadow:   _textShadow,
       };
     }
+
+    // Redraw without the dashed selection box before exporting
+    const ctx2 = canvas.getContext('2d');
+    ctx2.clearRect(0, 0, 1920, 1080);
+    ctx2.drawImage(_stBaseImg, 0, 0, 1920, 1080);
+    const fontPx2 = _textFontSize / 100 * 1080;
+    const lineH2  = fontPx2 * 1.3;
+    ctx2.save();
+    ctx2.font         = `${_textItalic ? 'italic ' : ''}${_textBold ? '700' : '400'} ${fontPx2}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    ctx2.fillStyle    = _textColor;
+    ctx2.textAlign    = _textAlign;
+    ctx2.textBaseline = 'top';
+    if (_textShadow) {
+      ctx2.shadowColor   = 'rgba(0,0,0,0.65)';
+      ctx2.shadowBlur    = fontPx2 * 0.18;
+      ctx2.shadowOffsetX = fontPx2 * 0.04;
+      ctx2.shadowOffsetY = fontPx2 * 0.04;
+    }
+    const expX = parseFloat(document.getElementById('stHandle')?.dataset.xPx || 0) / imgC.offsetWidth  * 1920;
+    const expY = parseFloat(document.getElementById('stHandle')?.dataset.yPx || 0) / imgC.offsetHeight * 1080;
+    text.split('\n').forEach((line, i) => ctx2.fillText(line, expX, expY + i * lineH2));
+    ctx2.restore();
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     closeTextEditor();
