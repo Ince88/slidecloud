@@ -2194,19 +2194,6 @@
     canvas.style.height = imgC.offsetHeight + 'px';
     imgC.appendChild(canvas);
 
-    // When re-editing use the saved base image (without text burned in).
-    // On first edit, draw from the displayed <img> element (already in memory).
-    const baseUrl = tl && slide.baseDataUrl ? slide.baseDataUrl : slide.dataUrl;
-    const imgEl   = !tl && imgC.querySelector('.stack-img');
-    if (!tl && imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
-      _stBaseImg = imgEl;
-      _drawTextCanvas();
-    } else {
-      _stBaseImg = new Image();
-      _stBaseImg.onload = _drawTextCanvas;
-      _stBaseImg.src = baseUrl;
-    }
-
     // ── Drag handle (dot at text anchor) ─────────────────
     const overlay = document.createElement('div');
     overlay.className = 'stack-text-overlay';
@@ -2219,19 +2206,35 @@
     overlay.appendChild(handle);
     imgC.appendChild(overlay);
 
-    // Restore handle position from saved layer (xFrac/yFrac are fractions of 1920×1080)
-    requestAnimationFrame(() => {
-      const initX = tl ? tl.xFrac * imgC.offsetWidth  : imgC.offsetWidth  / 2;
-      const initY = tl ? tl.yFrac * imgC.offsetHeight : imgC.offsetHeight / 2;
-      handle.dataset.xPx = initX;
-      handle.dataset.yPx = initY;
-      handle.style.left  = initX + 'px';
-      handle.style.top   = initY + 'px';
-      _drawTextCanvas();
-      const ta = document.getElementById('stToolbarText');
-      if (ta && tl) { ta.value = tl.text; _drawTextCanvas(); }
-      ta?.focus();
-    });
+    // Called once the base image is ready: position the handle, fill the textarea,
+    // then draw. Doing it in this order guarantees canvas shows the correct text.
+    const _onBaseReady = () => {
+      requestAnimationFrame(() => {
+        const initX = tl ? tl.xFrac * imgC.offsetWidth  : imgC.offsetWidth  / 2;
+        const initY = tl ? tl.yFrac * imgC.offsetHeight : imgC.offsetHeight / 2;
+        handle.dataset.xPx = initX;
+        handle.dataset.yPx = initY;
+        handle.style.left  = initX + 'px';
+        handle.style.top   = initY + 'px';
+        const ta = document.getElementById('stToolbarText');
+        if (ta && tl) ta.value = tl.text;
+        _drawTextCanvas();
+        ta?.focus();
+      });
+    };
+
+    // When re-editing use the saved base image (without text burned in).
+    // On first edit, use the displayed <img> element (already decoded in memory).
+    const baseUrl = tl && slide.baseDataUrl ? slide.baseDataUrl : slide.dataUrl;
+    const imgEl   = !tl && imgC.querySelector('.stack-img');
+    if (!tl && imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+      _stBaseImg = imgEl;
+      _onBaseReady();
+    } else {
+      _stBaseImg = new Image();
+      _stBaseImg.onload = _onBaseReady;
+      _stBaseImg.src = baseUrl;
+    }
 
     // ── Pointer Events drag ───────────────────────────────
     handle.addEventListener('pointerdown', e => {
