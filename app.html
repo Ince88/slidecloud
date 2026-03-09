@@ -521,6 +521,14 @@
       color: #6b7280; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0;
     }
     .stack-card.text-editing { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(54,150,240,0.15); }
+    /* Small badge shown on slides that have a text layer saved */
+    .stack-text-badge {
+      position: absolute; bottom: 6px; right: 6px; z-index: 4;
+      width: 20px; height: 20px; border-radius: 5px;
+      background: var(--accent); color: #fff;
+      font-size: 11px; font-weight: 800; line-height: 20px; text-align: center;
+      pointer-events: none; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
 
     /* ─── Grid Slide Builder ──────────────────────────── */
     .grid-modal { width: 720px; max-width: 96vw; max-height: 92vh; overflow-y: auto; }
@@ -1559,15 +1567,17 @@
           </button>
         </div>
         <div class="stack-img-wrap">
-          <div class="stack-img-container" id="imgc-${slide.id}">
+          <div class="stack-img-container" id="imgc-${slide.id}"
+               ondblclick="openTextEditor(${i})" title="${slide.textLayer ? 'Double-click to edit text' : 'Double-click to add text'}">
             <img class="stack-img" src="${slide.dataUrl}" loading="lazy" alt="Slide ${i + 1}" />
+            ${slide.textLayer ? `<div class="stack-text-badge" title="Has text — double-click to edit">T</div>` : ''}
           </div>
           <div class="stack-meta">
             <span class="stack-badge">${i + 1} / ${slides.length}</span>
             <span>${slide.fileName}${pageTag}</span>
-            <button class="btn-add-text" onclick="openTextEditor(${i})" title="Add text overlay">
+            <button class="btn-add-text" onclick="openTextEditor(${i})" title="${slide.textLayer ? 'Edit text overlay' : 'Add text overlay'}">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-              Add Text
+              ${slide.textLayer ? 'Edit Text' : 'Add Text'}
             </button>
           </div>
         </div>`;
@@ -2141,18 +2151,37 @@
   // The text input lives in the toolbar below the image.
   // Apply just exports the already-rendered canvas — no HTML→canvas mapping needed.
 
+  // Sync toolbar button visual states from the current _text* globals
+  function _syncToolbarState() {
+    document.querySelectorAll('.stb-size').forEach(b => b.classList.toggle('on', +b.dataset.sz === _textFontSize));
+    document.getElementById('stBold')?.classList.toggle('on', _textBold);
+    document.getElementById('stItalic')?.classList.toggle('on', _textItalic);
+    document.getElementById('stAlignL')?.classList.toggle('on', _textAlign === 'left');
+    document.getElementById('stAlignC')?.classList.toggle('on', _textAlign === 'center');
+    document.getElementById('stAlignR')?.classList.toggle('on', _textAlign === 'right');
+    document.getElementById('stShadow')?.classList.toggle('on', _textShadow);
+    const col = document.getElementById('stColor');
+    if (col) col.value = _textColor;
+  }
+
   function openTextEditor(idx) {
     closeTextEditor();
-    _textEditIdx  = idx;
-    _textFontSize = 5;
-    _textColor    = '#ffffff';
-    _textBold     = true; _textItalic = false;
-    _textAlign    = 'left'; _textShadow = true;
-    _stBaseImg    = null;
+    _textEditIdx = idx;
+    _stBaseImg   = null;
 
     const slide = slides[idx];
-    const card  = document.getElementById(`stack-${slide.id}`);
-    const imgC  = document.getElementById(`imgc-${slide.id}`);
+    const tl    = slide.textLayer; // existing layer when re-editing via double-click
+
+    // Restore style state from saved layer or use defaults
+    _textFontSize = tl ? tl.fontSize : 5;
+    _textColor    = tl ? tl.color    : '#ffffff';
+    _textBold     = tl ? tl.bold     : true;
+    _textItalic   = tl ? tl.italic   : false;
+    _textAlign    = tl ? tl.align    : 'left';
+    _textShadow   = tl ? tl.shadow   : true;
+
+    const card = document.getElementById(`stack-${slide.id}`);
+    const imgC = document.getElementById(`imgc-${slide.id}`);
     if (!card || !imgC) return;
     card.classList.add('text-editing');
 
@@ -2161,21 +2190,21 @@
     canvas.id = 'stCanvas';
     canvas.width = 1920; canvas.height = 1080;
     canvas.className = 'stack-canvas-overlay';
-    // Set CSS display size to exactly match the container — prevents any layout shift
     canvas.style.width  = imgC.offsetWidth  + 'px';
     canvas.style.height = imgC.offsetHeight + 'px';
     imgC.appendChild(canvas);
 
-    // Load base image. Drawing from the existing <img> element is instant (no
-    // network) because the browser already has the bitmap in memory.
-    const imgEl = imgC.querySelector('.stack-img');
-    if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+    // When re-editing use the saved base image (without text burned in).
+    // On first edit, draw from the displayed <img> element (already in memory).
+    const baseUrl = tl && slide.baseDataUrl ? slide.baseDataUrl : slide.dataUrl;
+    const imgEl   = !tl && imgC.querySelector('.stack-img');
+    if (!tl && imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
       _stBaseImg = imgEl;
       _drawTextCanvas();
     } else {
       _stBaseImg = new Image();
       _stBaseImg.onload = _drawTextCanvas;
-      _stBaseImg.src = slide.dataUrl;
+      _stBaseImg.src = baseUrl;
     }
 
     // ── Drag handle (dot at text anchor) ─────────────────
@@ -2186,19 +2215,22 @@
     const handle = document.createElement('div');
     handle.className = 'stack-text-handle';
     handle.id = 'stHandle';
-    // Crosshair icon inside the dot
     handle.innerHTML = `<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="10" y1="2" x2="10" y2="18"/><line x1="2" y1="10" x2="18" y2="10"/></svg>`;
     overlay.appendChild(handle);
     imgC.appendChild(overlay);
 
-    // Position dot at centre initially; store anchor as px from container top-left
+    // Restore handle position from saved layer (xFrac/yFrac are fractions of 1920×1080)
     requestAnimationFrame(() => {
-      handle.dataset.xPx = imgC.offsetWidth  / 2;
-      handle.dataset.yPx = imgC.offsetHeight / 2;
-      handle.style.left  = handle.dataset.xPx + 'px';
-      handle.style.top   = handle.dataset.yPx + 'px';
+      const initX = tl ? tl.xFrac * imgC.offsetWidth  : imgC.offsetWidth  / 2;
+      const initY = tl ? tl.yFrac * imgC.offsetHeight : imgC.offsetHeight / 2;
+      handle.dataset.xPx = initX;
+      handle.dataset.yPx = initY;
+      handle.style.left  = initX + 'px';
+      handle.style.top   = initY + 'px';
       _drawTextCanvas();
-      document.getElementById('stToolbarText')?.focus();
+      const ta = document.getElementById('stToolbarText');
+      if (ta && tl) { ta.value = tl.text; _drawTextCanvas(); }
+      ta?.focus();
     });
 
     // ── Pointer Events drag ───────────────────────────────
@@ -2269,6 +2301,9 @@
 
     // Re-draw canvas whenever the user types
     toolbar.querySelector('#stToolbarText').addEventListener('input', _drawTextCanvas);
+
+    // Sync button states to the current (possibly restored) style globals
+    _syncToolbarState();
 
     card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
@@ -2378,9 +2413,31 @@
     if (!canvas || !text.trim()) { closeTextEditor(); return; }
 
     const savedIdx = _textEditIdx;
-    const dataUrl  = canvas.toDataURL('image/jpeg', 0.92);
+    const slide    = slides[savedIdx];
+    const handle   = document.getElementById('stHandle');
+    const imgC     = document.getElementById(`imgc-${slide.id}`);
+
+    // Save the clean base image once (so re-editing always starts from the original)
+    if (!slide.baseDataUrl) slide.baseDataUrl = slide.dataUrl;
+
+    // Store all text layer data so double-click re-opens the editor with exact values
+    if (handle && imgC) {
+      slide.textLayer = {
+        text,
+        xFrac:    parseFloat(handle.dataset.xPx) / imgC.offsetWidth,
+        yFrac:    parseFloat(handle.dataset.yPx) / imgC.offsetHeight,
+        fontSize: _textFontSize,
+        color:    _textColor,
+        bold:     _textBold,
+        italic:   _textItalic,
+        align:    _textAlign,
+        shadow:   _textShadow,
+      };
+    }
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     closeTextEditor();
-    slides[savedIdx].dataUrl = dataUrl;
+    slide.dataUrl = dataUrl;
     renderSidebar();
     renderStack();
     selectSlide(savedIdx);
