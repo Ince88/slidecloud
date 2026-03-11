@@ -1919,10 +1919,13 @@
   let ssActive      = false;
   let ssIdx         = 0;
   let ssLayerIdx    = 0; // how many layers have been revealed on the current slide
+  let _abortFogTransition = false;
   let touchStartX   = 0, touchStartY = 0;
   let isViewerMode    = false;
   let isPresenterMode = false;
   let presenterIdx    = 0;
+  let presenterLayerIdx = 0;
+  let presenterLayerIdx = 0;
   let socket          = null;
   let wsUrl           = null;
   let genViewerUrlStr    = '';
@@ -2061,10 +2064,31 @@
       socket.on('_open', () => socket.send({ type: 'join', role: 'viewer', slug }));
       socket.on('joined', msg => {
         setLiveBadge(msg.presenterConnected ? 'live' : 'idle');
-        if (msg.presenterConnected) { ssIdx = msg.currentSlide; updateSS(false); }
         setNavLock(msg.presenterConnected);
+        if (msg.presenterConnected) {
+          const idx = Math.max(0, Math.min(Number(msg.currentSlide) ?? 0, slides.length - 1));
+          ssIdx = idx;
+          ssLayerIdx = 0;
+          const overlay = document.getElementById('ssFogOverlay');
+          if (overlay) { overlay.onanimationend = null; overlay.classList.remove('sweep-in', 'sweep-out', 'rev'); overlay.style.transform = ''; }
+          updateSS(false);
+        }
       });
-      socket.on('slide', msg => { ssIdx = msg.index; updateSS(true); });
+      socket.on('slide', msg => {
+        _abortFogTransition = true;
+        const idx = Math.max(0, Math.min(Number(msg.index) || 0, slides.length - 1));
+        ssIdx = idx;
+        ssLayerIdx = 0;
+        const overlay = document.getElementById('ssFogOverlay');
+        if (overlay) {
+          overlay.onanimationend = null;
+          overlay.classList.remove('sweep-in', 'sweep-out', 'rev');
+          overlay.style.transform = '';
+        }
+        updateSS(false);
+      });
+      socket.on('next', () => { nextSlide(); });
+      socket.on('prev', () => { prevSlide(); });
       socket.on('presenter-status', msg => {
         setLiveBadge(msg.connected ? 'live' : 'idle');
         setNavLock(msg.connected);
@@ -2132,6 +2156,7 @@
 
     slides = slidesResult.value.data.slides.map(s => ({ ...s, id: uid() }));
     presenterIdx = 0;
+    presenterLayerIdx = 0;
 
     // Switch from loading to control UI
     document.getElementById('psLoading').style.display  = 'none';
@@ -2159,7 +2184,8 @@
     socket.on('joined', msg => {
       setPsStatus('live', 'Live');
       document.getElementById('psViewerCount').textContent = msg.viewerCount ?? 0;
-      presenterIdx = msg.currentSlide ?? 0;
+      presenterIdx = Math.max(0, Math.min(msg.currentSlide ?? 0, slides.length - 1));
+      presenterLayerIdx = 0;
       updatePresenterSlide();
     });
     socket.on('viewers', msg => {
@@ -2172,11 +2198,34 @@
   }
 
   function presenterGo(delta) {
-    const next = presenterIdx + delta;
-    if (next < 0 || next >= slides.length) return;
-    presenterIdx = next;
+    const layers = slides[presenterIdx]?.layers || [];
+    if (delta > 0) {
+      if (presenterLayerIdx < layers.length) {
+        const steps = _layerSteps(layers);
+        const curStep = steps[presenterLayerIdx];
+        while (presenterLayerIdx < layers.length && steps[presenterLayerIdx] === curStep) presenterLayerIdx++;
+        socket?.send({ type: 'next' });
+      } else if (presenterIdx < slides.length - 1) {
+        presenterIdx++;
+        presenterLayerIdx = 0;
+        socket?.send({ type: 'next' });
+        socket?.send({ type: 'slide', index: presenterIdx });
+      } else return;
+    } else {
+      if (presenterLayerIdx > 0) {
+        const steps = _layerSteps(layers);
+        const prevStep = steps[presenterLayerIdx - 1];
+        while (presenterLayerIdx > 0 && steps[presenterLayerIdx - 1] === prevStep) presenterLayerIdx--;
+        socket?.send({ type: 'prev' });
+      } else if (presenterIdx > 0) {
+        presenterIdx--;
+        const prevLayers = slides[presenterIdx]?.layers || [];
+        presenterLayerIdx = prevLayers.length;
+        socket?.send({ type: 'prev' });
+        socket?.send({ type: 'slide', index: presenterIdx });
+      } else return;
+    }
     updatePresenterSlide();
-    socket?.send({ type: 'slide', index: presenterIdx });
   }
 
   function updatePresenterSlide() {
@@ -2184,8 +2233,11 @@
     if (!slide) return;
     document.getElementById('psSlideImg').src = slide.dataUrl;
     document.getElementById('psCounter').textContent = `${presenterIdx + 1} / ${slides.length}`;
-    document.getElementById('psPrevBtn').disabled = presenterIdx === 0;
-    document.getElementById('psNextBtn').disabled = presenterIdx === slides.length - 1;
+    const layers = slide.layers || [];
+    const atStart = presenterIdx === 0 && presenterLayerIdx === 0;
+    const atEnd = presenterIdx === slides.length - 1 && presenterLayerIdx >= layers.length;
+    document.getElementById('psPrevBtn').disabled = atStart;
+    document.getElementById('psNextBtn').disabled = atEnd;
   }
 
   function setPsStatus(type, label) {
@@ -3067,11 +3119,11 @@
 
   // Pre-render a single layer onto a transparent 1920×1080 canvas → data URL.
   // Uses the exact same _drawLayerOnCtx as the flat composite, so position is pixel-perfect.
-  function _preRenderLayer(layer) {
+  function _preRenderLayer(layer, slide) {
     const c = document.createElement('canvas');
     c.width = 1920; c.height = 1080;
     const ctx = c.getContext('2d');
-    const p = _drawLayerOnCtx(ctx, layer);
+    const p = _drawLayerOnCtx(ctx, layer, slide);
     if (p && typeof p.then === 'function') {
       return p.then(() => c.toDataURL('image/png'));
     }
@@ -3080,7 +3132,8 @@
 
   // Inject hidden layer divs into #ssSlide and reset ssLayerIdx.
   async function _setSlideInViewer(animate = true) {
-    const slide  = slides[ssIdx];
+    const targetIdx = ssIdx;
+    const slide  = slides[targetIdx];
     if (!slide) return;
 
     const wrap = document.getElementById('ssSlide');
@@ -3090,12 +3143,13 @@
     wrap.querySelectorAll('.ss-text-layer, .ss-image-layer, .ss-youtube-layer').forEach(el => el.remove());
     ssLayerIdx = 0;
 
-    // Base: baseDataUrl (grid with cell images) when layers exist, else dataUrl.
+    // Base: baseDataUrl when layers exist, else dataUrl. If baseDataUrl missing (old save), use dataUrl.
     const layers0 = slide.layers || [];
     if (slide.grid && layers0.length > 0 && !slide.baseDataUrl) {
       await computeFlatDataUrl(slide);
     }
-    const src = (layers0.length > 0 && slide.baseDataUrl) ? slide.baseDataUrl : slide.dataUrl;
+    const hasBase = layers0.length > 0 && slide.baseDataUrl;
+    const src = hasBase ? slide.baseDataUrl : slide.dataUrl;
     if (animate) {
       img.classList.remove('fade-in'); img.classList.add('fade-out');
       setTimeout(() => {
@@ -3106,10 +3160,12 @@
       img.src = src;
     }
 
-    // Build layer divs for reveal animation.
-    // Text layers are pre-rendered as images (same canvas pipeline as flat composite)
-    // so positioning is pixel-perfect. Image layers use regular img elements.
-    for (let n = 0; n < layers0.length; n++) {
+    // Build layer divs for reveal animation (only when we have baseDataUrl; else we show composite).
+    // Skip if a newer slide request arrived (remote control race).
+    if (targetIdx !== ssIdx) return;
+    const buildLayers = hasBase;
+    for (let n = 0; n < layers0.length && buildLayers; n++) {
+      if (targetIdx !== ssIdx) break;
       const layer = layers0[n];
       const div = document.createElement('div');
       div.dataset.idx = n;
@@ -3216,23 +3272,22 @@
         layerImg.style.width = '100%';
         layerImg.style.height = '100%';
         layerImg.style.display = 'block';
-        layerImg.src = await _preRenderLayer(layer);
+        layerImg.src = await _preRenderLayer(layer, slide);
         div.appendChild(layerImg);
       }
-      wrap.appendChild(div);
+      if (targetIdx === ssIdx) wrap.appendChild(div);
     }
 
-    // Auto-reveal step-0 layers when slide loads so the slide doesn't start completely blank.
-    // Only the first "reveal group" (step 0) is shown; subsequent groups need Next press.
-    // YouTube autoplay layers are also revealed regardless of step.
-    if (layers0.length > 0) {
+    // Stale check: a newer slide request arrived, skip the rest
+    if (targetIdx !== ssIdx) return;
+
+    // Auto-reveal step-0 layers; user advances with Next (or presenter sends next slide).
+    if (buildLayers && layers0.length > 0) {
       const steps0 = _layerSteps(layers0);
-      // Reveal all step-0 layers
       layers0.forEach((layer, n) => {
         const isYtAutoplay = layer.type === 'youtube' && layer.autoplay !== false;
         if (steps0[n] === 0 || isYtAutoplay) revealLayer(n);
       });
-      // Advance ssLayerIdx past the auto-revealed step-0 layers
       while (ssLayerIdx < layers0.length && steps0[ssLayerIdx] === 0) ssLayerIdx++;
     }
 
@@ -3340,6 +3395,7 @@
   }
 
   function _runFogTransition(direction, onDone) {
+    _abortFogTransition = false;
     const overlay = document.getElementById('ssFogOverlay');
     if (!overlay) {
       ssIdx += direction;
@@ -3365,6 +3421,12 @@
     if (rev) overlay.classList.add('rev');
     overlay.onanimationend = () => {
       overlay.onanimationend = null;
+      if (_abortFogTransition) {
+        overlay.classList.remove('sweep-in', 'rev');
+        overlay.style.transform = '';
+        onDone && onDone();
+        return;
+      }
       if (overlay.classList.contains('sweep-in')) {
         ssIdx += direction;
         _setSlideInViewer(false);

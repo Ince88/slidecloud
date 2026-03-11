@@ -105,6 +105,7 @@ wss.on('connection', (ws) => {
           viewerCount: room.viewers.size,
         }));
         broadcast(room.viewers, { type: 'presenter-status', connected: true });
+        broadcast(room.viewers, { type: 'slide', index: room.currentSlide });
 
       } else {
         const room = getRoom(slug);
@@ -130,6 +131,13 @@ wss.on('connection', (ws) => {
       if (!Number.isFinite(idx) || idx < 0 || idx > 999) return;
       room.currentSlide = idx;
       broadcast(room.viewers, { type: 'slide', index: idx });
+    }
+
+    // ── Next/Prev (layer or slide) ───────────────────────────
+    if ((msg.type === 'next' || msg.type === 'prev') && role === 'presenter') {
+      const room = rooms.get(slug);
+      if (!room) return;
+      broadcast(room.viewers, { type: msg.type });
     }
   });
 
