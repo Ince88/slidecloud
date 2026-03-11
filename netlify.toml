@@ -3,6 +3,13 @@
 
 [functions]
   node_bundler = "esbuild"
+  directory = "netlify/functions"
+
+# API: proxy /api/* to Netlify functions (for local dev + deploy)
+[[redirects]]
+  from   = "/api/*"
+  to     = "/.netlify/functions/:splat"
+  status = 200
 
 # Static pages
 [[redirects]]

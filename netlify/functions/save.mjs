@@ -15,7 +15,7 @@ export default async (req) => {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { slug, slides, presenterToken } = body;
+  const { slug, slides, presenterToken, overwrite } = body;
 
   if (!slug || typeof slug !== 'string') {
     return Response.json({ error: 'Missing slug' }, { status: 400 });
@@ -34,7 +34,7 @@ export default async (req) => {
     const store = getStore('presentations');
 
     const existing = await store.get(slug);
-    if (existing !== null) {
+    if (existing !== null && !overwrite) {
       return Response.json({ error: 'That name is already taken — please choose another' }, { status: 409 });
     }
 
@@ -42,9 +42,13 @@ export default async (req) => {
       slug,
       slides: slides.map(s => ({
         dataUrl:    s.dataUrl,
+        baseDataUrl: s.baseDataUrl ?? s.dataUrl,
         fileName:   s.fileName   ?? '',
         pageNum:    s.pageNum    ?? 1,
         totalPages: s.totalPages ?? 1,
+        bgGradient: s.bgGradient ?? null,
+        bgColor:    s.bgColor ?? null,
+        layers:     Array.isArray(s.layers) ? s.layers : [],
       })),
       // Store the presenter token so check-presenter.mjs can validate it
       presenterToken: typeof presenterToken === 'string' ? presenterToken.slice(0, 64) : null,
