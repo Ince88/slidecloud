@@ -1,0 +1,1850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flipcloud — Generate from PowerPoint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue:   #3696f0;
+    --purple: #8654ab;
+    --grad:   linear-gradient(90deg, var(--blue), var(--purple));
+    --text:   #1a1a2e;
+    --muted:  #5a5a72;
+    --line:   #e5e7eb;
+    --panel:  #ffffff;
+    --soft:   #f7f9fc;
+  }
+  html, body {
+    min-height: 100%;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(180deg,#f7f9fc 0%,#eef2f7 100%);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Navbar */
+  nav {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 60px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    position: sticky; top:0; z-index:50;
+  }
+  .nav-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+  .nav-logo img { height: 56px; width:auto; }
+  .nav-back {
+    color: var(--muted);
+    text-decoration:none;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-back:hover { color: var(--blue); }
+
+  /* Layout */
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+  h1.page-title {
+    font-size: clamp(32px, 3.4vw, 46px);
+    font-weight: 900;
+    letter-spacing: -1.2px;
+    line-height: 1.05;
+    margin-bottom: 12px;
+  }
+  h1 .grad-text {
+    background: var(--grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  p.page-sub {
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+    max-width: 640px;
+  }
+
+  /* Form card */
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 12px 40px rgba(15,23,42,.05);
+  }
+  .card h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    letter-spacing: -0.3px;
+  }
+
+  label { display:block; font-size:13px; font-weight:600; color: var(--text); margin-bottom: 6px; letter-spacing:-0.1px; }
+  input[type="text"], input[type="password"], textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--line);
+    font-family: inherit;
+    font-size: 14px;
+    background: var(--soft);
+    transition: .15s;
+    outline: none;
+  }
+  input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
+    border-color: var(--blue); background: #fff;
+  }
+
+  /* Dropzone */
+  .dropzone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    background: var(--soft);
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: .15s;
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--blue);
+    background: #f0f7ff;
+  }
+  .dropzone .dz-icon {
+    width: 48px; height:48px; margin: 0 auto 12px;
+    background: var(--grad);
+    color:#fff;
+    border-radius: 14px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .dropzone .dz-icon svg { width:24px; height:24px; }
+  .dz-title { font-weight:700; font-size:15px; margin-bottom:4px; }
+  .dz-sub { color: var(--muted); font-size:13px; }
+  .dz-file { margin-top: 10px; font-size: 13px; color: var(--blue); font-weight:600; }
+  input[type="file"] { display:none; }
+
+  .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px){ .grid-2{ grid-template-columns: 1fr; } }
+
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height:1.4; }
+
+  /* Logo preview */
+  .logo-preview {
+    display:flex; align-items:center; gap:12px;
+    padding: 10px 12px;
+    background: var(--soft);
+    border-radius: 10px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .logo-preview img { height: 40px; width:auto; border-radius: 6px; background:#fff; padding:4px; border:1px solid var(--line); }
+
+  .auto-badge {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, rgba(54,150,240,.12), rgba(134,84,171,.12));
+    border: 1px solid rgba(54,150,240,.3);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--blue);
+    width: fit-content;
+    letter-spacing: 0.1px;
+  }
+  .auto-badge.show { display: inline-flex; }
+  .auto-badge::before {
+    content: "";
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--grad);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: .4; }
+  }
+
+  .field-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .field-label-row label { margin: 0; }
+
+  .inline-status {
+    display: none;
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, rgba(54,150,240,.08), rgba(134,84,171,.08));
+    border: 1px solid rgba(54,150,240,.25);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--blue);
+    align-items: center;
+    gap: 10px;
+  }
+  .inline-status.show { display: flex; }
+  .inline-status .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(54,150,240,.2);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    flex: 0 0 auto;
+  }
+  .inline-status.done .spinner {
+    border: none; background: #10b981;
+    position: relative;
+    animation: none;
+  }
+  .inline-status.done .spinner::after {
+    content: "✓";
+    color: #fff;
+    font-size: 11px;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .inline-status.done { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Action buttons */
+  .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top: 8px; }
+  .btn {
+    border:none; cursor:pointer;
+    padding: 14px 24px;
+    border-radius: 50px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.1px;
+    transition: .15s;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn-primary {
+    background: var(--grad);
+    color: #fff;
+    box-shadow: 0 6px 24px rgba(54,150,240,.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.05); }
+  .btn-primary:disabled {
+    opacity: .6; cursor: not-allowed; transform:none; filter: grayscale(.2);
+  }
+  .btn-secondary {
+    background: #fff;
+    border: 1.5px solid var(--line);
+    color: var(--text);
+  }
+  .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* Progress */
+  .progress {
+    display: none;
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .progress.show { display: block; }
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--grad);
+    transition: width .3s ease;
+    width: 0%;
+  }
+  .progress-text {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .error-msg {
+    display:none;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #991b1b;
+    font-size: 14px;
+  }
+  .error-msg.show { display: block; }
+
+  .success-msg {
+    display:none;
+    margin-top: 14px;
+    padding: 14px 16px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 12px;
+    color: #065f46;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .success-msg.show { display:block; }
+  .success-msg a { color: #047857; font-weight: 700; }
+
+  /* ── Success panel (after publish) ───────────────────── */
+  .success-panel {
+    display: none;
+    border-top: 1px solid var(--line);
+    padding: 22px 24px 24px;
+    background: #fff;
+  }
+  .success-panel.show { display: block; }
+  .success-head {
+    display:flex; align-items:center; gap:10px;
+    margin-bottom: 6px;
+  }
+  .success-check {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #d1fae5;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink: 0;
+  }
+  .success-head strong {
+    font-size: 16px; font-weight: 700; color: #064e3b;
+  }
+  .success-sub {
+    font-size: 13px; color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .share-label {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 14px 0 6px;
+  }
+  .share-row {
+    display:flex; align-items:center; gap: 8px;
+    padding: 10px 12px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    min-width: 0;
+  }
+  .share-url {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 13px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .btn-copy-sm, .btn-open-sm {
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .15s ease;
+    text-decoration: none;
+    display: inline-flex; align-items:center; justify-content:center;
+  }
+  .btn-copy-sm:hover, .btn-open-sm:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+  .btn-copy-sm.copied {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+  }
+  .btn-open-sm {
+    width: 32px; height: 32px; padding: 0;
+  }
+  .presenter-divider {
+    display:flex; align-items:center; gap:10px;
+    margin: 22px 0 12px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .presenter-divider::before,
+  .presenter-divider::after {
+    content: ''; flex: 1 1 auto;
+    height: 1px; background: var(--line);
+  }
+  .qr-row {
+    display: flex; gap: 18px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .qr-box {
+    flex-shrink: 0;
+    padding: 10px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    width: 150px; height: 150px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .qr-box img, .qr-box canvas {
+    display:block;
+    max-width: 100%; height: auto;
+    border-radius: 6px;
+  }
+  .qr-info { flex: 1 1 240px; min-width: 0; }
+  .qr-info strong {
+    display: block;
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin-bottom: 4px;
+  }
+  .qr-info p {
+    font-size: 13px; color: var(--muted);
+    line-height: 1.5;
+    margin: 0 0 10px;
+  }
+
+  /* ── Image gallery ──────────────────────────────────── */
+  .gallery-card {
+    display: none;
+  }
+  .gallery-card.show { display: block; }
+  .gallery-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 14px;
+    flex-wrap: wrap;
+  }
+  .gallery-count {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .gallery-count .n {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .gallery-size-warn {
+    color: #b91c1c;
+    font-weight: 600;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .15s ease;
+  }
+  .btn-ghost:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .gallery-item {
+    position: relative;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all .18s ease;
+    aspect-ratio: 4 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .gallery-item:hover {
+    border-color: var(--blue);
+    transform: translateY(-1px);
+  }
+  .gallery-item img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    object-fit: contain;
+    transition: opacity .18s ease;
+  }
+  .gallery-item:not(.selected) img {
+    opacity: 0.45;
+    filter: grayscale(0.6);
+  }
+  .gallery-item.selected {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(54, 150, 240, 0.15);
+  }
+  .gallery-item .gallery-check {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s ease;
+  }
+  .gallery-item.selected .gallery-check {
+    background: var(--blue);
+    border-color: var(--blue);
+  }
+  .gallery-item .gallery-check svg {
+    width: 14px; height: 14px;
+    color: #fff;
+    opacity: 0;
+    transition: opacity .15s ease;
+  }
+  .gallery-item.selected .gallery-check svg {
+    opacity: 1;
+  }
+  .gallery-item .gallery-origin {
+    position: absolute;
+    bottom: 6px; left: 6px;
+    background: rgba(30, 30, 46, 0.82);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 3px 7px;
+    border-radius: 6px;
+    backdrop-filter: blur(4px);
+  }
+  .gallery-empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--muted);
+    font-size: 13px;
+    background: var(--soft);
+    border-radius: 10px;
+  }
+
+  /* Preview iframe */
+  .preview-card {
+    padding: 0;
+    overflow: hidden;
+    display: none;
+  }
+  .preview-card.show { display: block; }
+  .preview-head {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .preview-head h2 { margin: 0; }
+  .preview-frame {
+    width: 100%;
+    height: 640px;
+    border: none;
+    display: block;
+    background: #eef2f7;
+  }
+  .publish-row {
+    padding: 18px 24px;
+    background: var(--soft);
+    border-top: 1px solid var(--line);
+    display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  }
+  .publish-row input { flex: 1 1 220px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/">
+    <img src="/assets/logo.png" alt="Flipcloud" />
+  </a>
+  <a class="nav-back" href="/">← Back to home</a>
+</nav>
+
+<div class="wrap">
+  <h1 class="page-title">Turn a PowerPoint into <span class="grad-text">a website presentation</span>.</h1>
+  <p class="page-sub">
+    Upload a .pptx file and we'll read its content, structure it into topics and generate a clean, single-screen presentation you can share. The sidebar navigation is only visible to the person controlling the presentation from their phone.
+    <br><br>
+    <strong>Don't have a PowerPoint?</strong>
+    <a href="/ai" style="color: var(--blue); font-weight: 700; text-decoration: none;">Generate one from a prompt with AI →</a>
+  </p>
+
+  <!-- Step 1: Upload PPT -->
+  <div class="card">
+    <h2>1. Upload your PowerPoint</h2>
+    <label for="pptFile" class="dropzone" id="pptDz">
+      <div class="dz-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <div class="dz-title">Click to choose a .pptx file</div>
+      <div class="dz-sub">or drag and drop here</div>
+      <div class="dz-file" id="pptFileName"></div>
+    </label>
+    <input type="file" id="pptFile" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+    <div class="inline-status" id="pptStatus"></div>
+  </div>
+
+  <!-- Step 2: Optional logo + title -->
+  <div class="card">
+    <h2>2. Branding &amp; settings</h2>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">
+      We automatically detect the company name and logo from your PPT. You can change anything below.
+    </div>
+    <div class="grid-2">
+      <div>
+        <div class="field-label-row">
+          <label for="presTitle">Presentation title</label>
+          <span class="auto-badge" id="titleAutoBadge">AI detected</span>
+        </div>
+        <input type="text" id="presTitle" placeholder="e.g. Acme Co. — Company overview" />
+        <div class="hint">Shown in the sidebar header and as the page title.</div>
+      </div>
+      <div>
+        <div class="field-label-row">
+          <label for="presSubtitle">Subtitle (optional)</label>
+          <span class="auto-badge" id="subtitleAutoBadge">AI detected</span>
+        </div>
+        <input type="text" id="presSubtitle" placeholder="e.g. Interactive company presentation" />
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="field-label-row">
+        <label for="logoFile">Logo</label>
+        <span class="auto-badge" id="logoAutoBadge">Auto-picked from PPT</span>
+      </div>
+      <label for="logoFile" class="dropzone" style="padding:16px;">
+        <div class="dz-title" style="font-size:14px;">Click to replace the logo</div>
+        <div class="dz-sub">PNG, JPG or SVG. Appears on the first section.</div>
+      </label>
+      <input type="file" id="logoFile" accept="image/*" />
+      <div class="logo-preview" id="logoPreview" style="display:none;">
+        <img id="logoImg" src="" alt="logo" />
+        <span id="logoName"></span>
+        <button type="button" class="btn btn-secondary" style="margin-left:auto;padding:6px 14px;font-size:12px;" onclick="clearLogo()">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2.5: Image gallery (shown after PPT is parsed) -->
+  <div class="card gallery-card" id="galleryCard">
+    <h2>3. Pick images to include</h2>
+    <p class="hint" style="margin:0;">We found these images in your PowerPoint. Highlight the ones you want the AI to place into the generated presentation.</p>
+    <div class="gallery-toolbar">
+      <span class="gallery-count"><span class="n" id="galleryCount">0</span> selected <span id="gallerySize" style="margin-left:6px;"></span></span>
+      <button type="button" class="btn-ghost" onclick="selectAllImages()">Select all</button>
+      <button type="button" class="btn-ghost" onclick="deselectAllImages()">Deselect all</button>
+    </div>
+    <div class="gallery-grid" id="galleryGrid"></div>
+  </div>
+
+  <!-- Step 3: API key + Generate -->
+  <div class="card">
+    <h2>4. OpenAI API key</h2>
+    <label for="apiKey">Your OpenAI API key (stored only in your browser)</label>
+    <input type="password" id="apiKey" placeholder="sk-..." />
+    <div class="hint">We use your API key to structure the PowerPoint into topics. It never leaves your browser — we don't store it.</div>
+
+    <div class="actions" style="margin-top: 18px;">
+      <button class="btn btn-primary" id="generateBtn" onclick="generate()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+        Generate presentation
+      </button>
+    </div>
+
+    <div class="progress" id="progress">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">Preparing…</div>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- Preview card (shown after generation) -->
+  <div class="card preview-card" id="previewCard">
+    <div class="preview-head">
+      <h2>Preview</h2>
+      <div>
+        <button class="btn btn-secondary" onclick="openPreviewFullscreen()" style="padding:10px 18px;font-size:13px;">Open full preview</button>
+      </div>
+    </div>
+    <iframe class="preview-frame" id="previewFrame"></iframe>
+    <div class="publish-row">
+      <input type="text" id="slugInput" placeholder="your-presentation-name" />
+      <button class="btn btn-primary" id="publishBtn" onclick="publish()" style="padding:12px 22px;font-size:14px;">Publish &amp; get share link</button>
+    </div>
+    <div class="success-msg" id="successMsg"></div>
+
+    <!-- Success panel (shown after publish) -->
+    <div class="success-panel" id="successPanel">
+      <div class="success-head">
+        <div class="success-check">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <strong>Your presentation is live!</strong>
+      </div>
+      <div class="success-sub">Share the viewer link with your audience, and scan the QR code on your phone to control the slides.</div>
+
+      <div class="share-label">Share with viewers</div>
+      <div class="share-row">
+        <span class="share-url" id="successViewerUrl"></span>
+        <button class="btn-copy-sm" id="copyViewerBtn" onclick="copyShareUrl('viewer')">Copy</button>
+        <a class="btn-open-sm" id="openViewerLink" href="#" target="_blank" rel="noopener" title="Open in new tab">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      </div>
+
+      <div class="presenter-divider">Presenter Remote</div>
+      <div class="qr-row">
+        <div class="qr-box" id="qrBox"></div>
+        <div class="qr-info">
+          <strong>Scan to control slides</strong>
+          <p>Open on your phone and tap the sidebar topics to jump sections for <em>everyone</em> watching the viewer link.</p>
+          <div class="share-row">
+            <span class="share-url" id="successPresenterUrl"></span>
+            <button class="btn-copy-sm" id="copyPresenterBtn" onclick="copyShareUrl('presenter')">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────
+  let pptFileData = null;
+  let pptFileName = '';
+  let logoDataUrl = null;
+  let generated = null; // { type:'web', title, subtitle, brand, sections: [...] }
+
+  // ── File handling ─────────────────────────────────────
+  const pptInput = document.getElementById('pptFile');
+  const pptDz    = document.getElementById('pptDz');
+  const pptFileNameEl = document.getElementById('pptFileName');
+
+  pptInput.addEventListener('change', (e) => handlePpt(e.target.files?.[0]));
+  ['dragenter','dragover'].forEach(ev => pptDz.addEventListener(ev, (e)=>{ e.preventDefault(); pptDz.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => pptDz.addEventListener(ev, (e)=>{ e.preventDefault(); pptDz.classList.remove('drag'); }));
+  pptDz.addEventListener('drop', (e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handlePpt(f); });
+
+  let parsedSlides = null; // cache of { text, images } per slide after upload
+  let autoLogoFromPpt = false; // true when the logo was auto-picked from the PPT
+  let autoTitle = '';
+  let autoSubtitle = '';
+
+  async function handlePpt(file) {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pptx')) {
+      showError('Please select a .pptx file.');
+      return;
+    }
+    pptFileName = file.name;
+    pptFileNameEl.textContent = 'Selected: ' + file.name;
+
+    // Read file as ArrayBuffer
+    pptFileData = await file.arrayBuffer();
+
+    // Pre-fill title from file name (as a placeholder until AI fills it)
+    const titleIn = document.getElementById('presTitle');
+    if (!titleIn.value) {
+      titleIn.value = file.name.replace(/\.pptx$/i, '').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    // Parse PPTX (text + images) and auto-detect logo / company name
+    try {
+      setInlineStatus('Reading PowerPoint content…');
+      parsedSlides = await extractPptData(pptFileData);
+      if (!parsedSlides.length) {
+        setInlineStatus('', false);
+        showError('Could not read slide content from this PPT.');
+        return;
+      }
+
+      // Auto-pick logo from the first slide's images (smallest = most likely a logo)
+      autoPickLogoFrom(parsedSlides);
+
+      // Populate the gallery of candidate images the user can pick from
+      buildImageGallery(parsedSlides);
+
+      // If we have an API key, auto-detect company name/subtitle via a quick AI call
+      const key = apiKeyIn.value.trim();
+      if (key) {
+        setInlineStatus('Detecting company name with AI…');
+        try {
+          const meta = await detectCompanyMeta(key, parsedSlides);
+          if (meta) {
+            autoTitle = meta.title || '';
+            autoSubtitle = meta.subtitle || '';
+            applyAutoMeta();
+          }
+          const bits = [];
+          if (autoTitle) bits.push('name');
+          if (autoLogoFromPpt) bits.push('logo');
+          const what = bits.length ? bits.join(' + ') : 'content';
+          setInlineStatus('Ready — auto-detected ' + what + '. Feel free to edit.', true);
+        } catch (e) {
+          console.warn('Auto-detect failed:', e);
+          setInlineStatus(autoLogoFromPpt ? 'Logo detected. Add an API key to also auto-fill the company name.' : 'Ready', true);
+        }
+      } else {
+        if (autoLogoFromPpt) {
+          setInlineStatus('Logo auto-detected from the PPT. Add your API key to also auto-fill the company name.', true);
+        } else {
+          setInlineStatus('Content read. Add your API key to auto-detect the company name.', true);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setInlineStatus('', false);
+      showError('Failed to read the PPT file.');
+    }
+  }
+
+  function setInlineStatus(msg, done) {
+    const el = document.getElementById('pptStatus');
+    if (!msg) { el.classList.remove('show', 'done'); el.textContent = ''; return; }
+    el.classList.add('show');
+    el.classList.toggle('done', !!done);
+    el.innerHTML = '<span class="spinner"></span><span>' + msg.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) + '</span>';
+  }
+
+  function applyAutoMeta() {
+    const titleIn = document.getElementById('presTitle');
+    const subtitleIn = document.getElementById('presSubtitle');
+    // Don't overwrite if the user has typed a real value other than the filename placeholder
+    const filenameGuess = pptFileName.replace(/\.pptx$/i, '').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    if (autoTitle && (!titleIn.value || titleIn.value === filenameGuess || titleIn.dataset.auto === '1')) {
+      titleIn.value = autoTitle;
+      titleIn.dataset.auto = '1';
+      flashAutoBadge('titleAutoBadge');
+    }
+    if (autoSubtitle && (!subtitleIn.value || subtitleIn.dataset.auto === '1')) {
+      subtitleIn.value = autoSubtitle;
+      subtitleIn.dataset.auto = '1';
+      flashAutoBadge('subtitleAutoBadge');
+    }
+  }
+
+  function flashAutoBadge(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('show');
+  }
+
+  // Mark form fields as manually edited when the user types
+  document.getElementById('presTitle').addEventListener('input', (e) => {
+    e.target.dataset.auto = '0';
+    document.getElementById('titleAutoBadge')?.classList.remove('show');
+  });
+  document.getElementById('presSubtitle').addEventListener('input', (e) => {
+    e.target.dataset.auto = '0';
+    document.getElementById('subtitleAutoBadge')?.classList.remove('show');
+  });
+
+  function autoPickLogoFrom(slides) {
+    if (logoDataUrl && !autoLogoFromPpt) return; // user already uploaded their own logo
+    const firstSlide = slides[0];
+    if (!firstSlide?.images?.length) return;
+
+    // Prefer PNG/SVG, then smallest (logos are typically small files)
+    const candidates = firstSlide.images
+      .filter(img => /^(png|jpg|jpeg|svg|gif|webp)$/i.test(img.ext))
+      .filter(img => img.size > 500) // skip tiny 1px decorations
+      .sort((a, b) => {
+        // Prefer png/svg
+        const rank = (e) => (/^(png|svg)$/i.test(e) ? 0 : 1);
+        const r = rank(a.ext) - rank(b.ext);
+        if (r !== 0) return r;
+        return a.size - b.size;
+      });
+
+    const pick = candidates[0] || firstSlide.images[0];
+    if (!pick) return;
+
+    logoDataUrl = pick.dataUrl;
+    autoLogoFromPpt = true;
+    document.getElementById('logoImg').src = logoDataUrl;
+    document.getElementById('logoName').textContent = 'Auto-detected from PPT (' + pick.ext.toUpperCase() + ', ' + Math.round(pick.size/1024) + ' KB)';
+    document.getElementById('logoPreview').style.display = 'flex';
+    document.getElementById('logoAutoBadge')?.classList.add('show');
+  }
+
+  document.getElementById('logoFile').addEventListener('change', (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = (ev) => {
+      logoDataUrl = ev.target.result;
+      autoLogoFromPpt = false;
+      document.getElementById('logoImg').src = logoDataUrl;
+      document.getElementById('logoName').textContent = f.name;
+      document.getElementById('logoPreview').style.display = 'flex';
+      document.getElementById('logoAutoBadge')?.classList.remove('show');
+    };
+    r.readAsDataURL(f);
+  });
+
+  function clearLogo() {
+    logoDataUrl = null;
+    autoLogoFromPpt = false;
+    document.getElementById('logoFile').value = '';
+    document.getElementById('logoPreview').style.display = 'none';
+    document.getElementById('logoAutoBadge')?.classList.remove('show');
+  }
+
+  // ── Image gallery ──────────────────────────────────────
+  // galleryImages: [{ dataUrl, originSlide, ext, size, selected }]
+  let galleryImages = [];
+  const MIN_GALLERY_BYTES = 4000; // skip tiny icons/bullets
+  const MAX_GALLERY_BYTES_PER_IMG = 6_000_000; // skip absurdly huge originals
+
+  function buildImageGallery(slides) {
+    const seen = new Set();
+    const items = [];
+    for (const s of slides) {
+      for (const img of (s.images || [])) {
+        if (!img.dataUrl) continue;
+        if (img.size < MIN_GALLERY_BYTES) continue;
+        if (img.size > MAX_GALLERY_BYTES_PER_IMG) continue;
+        if (/^svg$/i.test(img.ext)) continue; // SVGs often used as icons; skip from gallery
+        // Dedupe — if the same image appears on many slides, keep the first
+        const key = img.dataUrl.slice(0, 96) + ':' + img.size;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        items.push({
+          dataUrl: img.dataUrl,
+          originSlide: s.n,
+          ext: img.ext,
+          size: img.size,
+          // Default-select everything except the auto-picked logo
+          selected: !(autoLogoFromPpt && img.dataUrl === logoDataUrl),
+        });
+      }
+    }
+    galleryImages = items;
+    renderGallery();
+  }
+
+  function renderGallery() {
+    const card = document.getElementById('galleryCard');
+    const grid = document.getElementById('galleryGrid');
+    if (!galleryImages.length) {
+      card.classList.remove('show');
+      grid.innerHTML = '';
+      return;
+    }
+    card.classList.add('show');
+    grid.innerHTML = galleryImages.map((img, i) => (
+      '<div class="gallery-item' + (img.selected ? ' selected' : '') + '" data-i="' + i + '">' +
+        '<img src="' + img.dataUrl + '" alt="slide ' + img.originSlide + ' image"/>' +
+        '<div class="gallery-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>' +
+        '<div class="gallery-origin">Slide ' + img.originSlide + '</div>' +
+      '</div>'
+    )).join('');
+    grid.querySelectorAll('.gallery-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const i = parseInt(el.dataset.i, 10);
+        galleryImages[i].selected = !galleryImages[i].selected;
+        el.classList.toggle('selected', galleryImages[i].selected);
+        updateGalleryCount();
+      });
+    });
+    updateGalleryCount();
+  }
+
+  function updateGalleryCount() {
+    const sel = galleryImages.filter(g => g.selected);
+    document.getElementById('galleryCount').textContent =
+      sel.length + ' of ' + galleryImages.length;
+    const totalBytes = sel.reduce((a, g) => a + g.size, 0);
+    const mb = (totalBytes / 1024 / 1024).toFixed(1);
+    const sizeEl = document.getElementById('gallerySize');
+    sizeEl.textContent = sel.length ? '(~' + mb + ' MB original — will be compressed)' : '';
+    sizeEl.classList.toggle('gallery-size-warn', totalBytes > 30 * 1024 * 1024);
+  }
+
+  function selectAllImages() {
+    galleryImages.forEach(g => g.selected = true);
+    renderGallery();
+  }
+  function deselectAllImages() {
+    galleryImages.forEach(g => g.selected = false);
+    renderGallery();
+  }
+
+  // Compress a dataUrl by drawing to canvas and re-encoding as JPEG.
+  // Keeps aspect ratio, scales longest side to `maxSide` px.
+  function compressImage(dataUrl, { maxSide = 1400, quality = 0.82 } = {}) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width: w, height: h } = img;
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        w = Math.round(w * scale); h = Math.round(h * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        // White background for images with alpha channel (prevents black JPEG fill)
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        try {
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch (e) { reject(e); }
+      };
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }
+
+  // ── Stored API key ─────────────────────────────────────
+  const apiKeyIn = document.getElementById('apiKey');
+  apiKeyIn.value = localStorage.getItem('aiApiKey') || '';
+  apiKeyIn.addEventListener('change', async () => {
+    const k = apiKeyIn.value.trim();
+    localStorage.setItem('aiApiKey', k);
+    // If PPT is already parsed but we haven't auto-detected yet, do it now
+    if (k && parsedSlides && !autoTitle) {
+      try {
+        setInlineStatus('Detecting company name with AI…');
+        const meta = await detectCompanyMeta(k, parsedSlides);
+        if (meta) {
+          autoTitle = meta.title || '';
+          autoSubtitle = meta.subtitle || '';
+          applyAutoMeta();
+        }
+        setInlineStatus('Ready — auto-detected. Feel free to edit.', true);
+      } catch { setInlineStatus('Ready', true); }
+    }
+  });
+
+  // ── Progress / errors ──────────────────────────────────
+  function setProgress(pct, text) {
+    const p = document.getElementById('progress');
+    p.classList.add('show');
+    document.getElementById('progressFill').style.width = Math.min(100, pct) + '%';
+    document.getElementById('progressText').textContent = text || '';
+  }
+  function hideProgress() { document.getElementById('progress').classList.remove('show'); }
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 8000);
+  }
+  function hideError() { document.getElementById('errorMsg').classList.remove('show'); }
+
+  // ── PPTX parsing ───────────────────────────────────────
+  // Extracts per-slide text AND embedded images with data URLs.
+  async function extractPptData(arrayBuffer) {
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const slideFiles = Object.keys(zip.files)
+      .filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+      .sort((a, b) => {
+        const na = parseInt(a.match(/slide(\d+)\.xml/)[1], 10);
+        const nb = parseInt(b.match(/slide(\d+)\.xml/)[1], 10);
+        return na - nb;
+      });
+
+    const slides = [];
+    for (const name of slideFiles) {
+      const xml = await zip.files[name].async('string');
+      const texts = [];
+      const re = /<a:t[^>]*>([\s\S]*?)<\/a:t>/g;
+      let m;
+      while ((m = re.exec(xml)) !== null) {
+        const t = decodeXml(m[1]).trim();
+        if (t) texts.push(t);
+      }
+
+      // Extract rIds of embedded images/pictures
+      const rids = [];
+      const bre = /<a:blip[^>]*r:embed="([^"]+)"/g;
+      while ((m = bre.exec(xml)) !== null) rids.push(m[1]);
+
+      // Load the rels file to resolve rId → media path
+      const relsName = 'ppt/slides/_rels/' + name.split('/').pop() + '.rels';
+      const relsFile = zip.files[relsName];
+      const relMap = {};
+      if (relsFile) {
+        const relsXml = await relsFile.async('string');
+        const rre = /<Relationship\b[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"/g;
+        let r;
+        while ((r = rre.exec(relsXml)) !== null) relMap[r[1]] = r[2];
+      }
+
+      // Read image blobs
+      const images = [];
+      for (const rid of rids) {
+        const target = relMap[rid];
+        if (!target) continue;
+        let mediaPath = target.replace(/^\.\.\//, 'ppt/');
+        if (!mediaPath.startsWith('ppt/')) mediaPath = 'ppt/' + mediaPath;
+        const f = zip.files[mediaPath];
+        if (!f) continue;
+        const extMatch = mediaPath.match(/\.([a-z0-9]+)$/i);
+        const ext = extMatch ? extMatch[1].toLowerCase() : '';
+        // Skip formats browsers can't render
+        if (ext && !/^(png|jpg|jpeg|gif|svg|webp|bmp)$/.test(ext)) continue;
+
+        const blob = await f.async('blob');
+        const dataUrl = await blobToDataUrl(blob);
+        images.push({ path: mediaPath, ext, size: blob.size, dataUrl });
+      }
+
+      if (texts.length || images.length) {
+        slides.push({ n: slides.length + 1, text: texts.join('\n'), images });
+      }
+    }
+    return slides;
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  }
+
+  function decodeXml(s) {
+    return s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+  }
+
+  // ── OpenAI Responses API helper ─────────────────────────
+  // Uses the new /v1/responses endpoint (recommended for all new integrations
+  // since late 2025) with the latest GPT-5.4 family. Falls back to GPT-4.1-mini
+  // automatically if a given org doesn't yet have access to GPT-5.4.
+  const OPENAI_MODEL_MAIN  = 'gpt-5.4-mini';  // structuring the whole deck
+  const OPENAI_MODEL_QUICK = 'gpt-5.4-nano';  // quick metadata / name detection
+  const OPENAI_MODEL_FALLBACK = 'gpt-4.1-mini';
+
+  async function openaiJson(key, { model, system, user, reasoningEffort }) {
+    const body = {
+      model,
+      input: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      text: { format: { type: 'json_object' } },
+      store: false,
+    };
+    // GPT-5 family supports reasoning effort; use "minimal" for latency/cost.
+    if (reasoningEffort && /^gpt-5/i.test(model)) {
+      body.reasoning = { effort: reasoningEffort };
+    }
+
+    let res = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key,
+      },
+      body: JSON.stringify(body),
+    });
+
+    // If the model isn't available for this org yet, retry with the 4.1-mini fallback
+    if (!res.ok && (res.status === 404 || res.status === 400)) {
+      const errText = await res.clone().text();
+      if (/model|not\s*found|does\s*not\s*have\s*access/i.test(errText)) {
+        body.model = OPENAI_MODEL_FALLBACK;
+        delete body.reasoning;
+        res = await fetch('https://api.openai.com/v1/responses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + key,
+          },
+          body: JSON.stringify(body),
+        });
+      }
+    }
+
+    if (!res.ok) {
+      const t = await res.text();
+      const err = new Error('OpenAI error ' + res.status + ': ' + t.slice(0, 240));
+      err.status = res.status;
+      err.raw = t;
+      throw err;
+    }
+
+    const j = await res.json();
+    // Responses API returns an `output` array of Items. Find the message item
+    // and pull its first output_text content chunk. `output_text` convenience
+    // field is sometimes included by the API too.
+    let text = j.output_text || '';
+    if (!text && Array.isArray(j.output)) {
+      const msg = j.output.find(o => o.type === 'message');
+      text = msg?.content?.find(c => c.type === 'output_text')?.text || '';
+    }
+    if (!text) throw new Error('Empty response from OpenAI');
+    try { return JSON.parse(text); }
+    catch { throw new Error('OpenAI did not return valid JSON'); }
+  }
+
+  // ── Quick AI metadata detection (company name, subtitle) ──
+  async function detectCompanyMeta(key, slides) {
+    const sample = slides.slice(0, 3).map(s => `--- Slide ${s.n} ---\n${s.text}`).join('\n\n').slice(0, 3000);
+    if (!sample.trim()) return null;
+    const sys = 'You extract presentation metadata from the first slides of a PowerPoint. Respond with JSON only: { "title": "<company name or main title, short, max 60 chars, in the same language as the source>", "subtitle": "<1-line description for a sidebar, max 100 chars, in the same language>" }. Use the strongest signal for the title (company name if present, otherwise the cover slide title).';
+    try {
+      return await openaiJson(key, {
+        model: OPENAI_MODEL_QUICK,
+        system: sys,
+        user: sample,
+        reasoningEffort: 'minimal',
+      });
+    } catch (err) {
+      console.warn('detectCompanyMeta failed:', err);
+      return null;
+    }
+  }
+
+  // ── GPT call ───────────────────────────────────────────
+  // `availableImages` (optional) is the list of user-selected images the GPT may
+  // reference in `figure` blocks by zero-based `index`.
+  async function gptStructure(key, pptText, title, subtitle, availableImages) {
+    const sys = `You convert raw PowerPoint slide text into a structured single-screen "website presentation" in JSON.
+
+The output must match the Csaba Metál reference style: 4–6 topic sections, each fitting one screen without scrolling. Sections have a short eyebrow tag, a big heading, optional lead paragraph, and 2–4 content blocks.
+
+Return ONLY valid JSON (no markdown, no prose) with this exact schema:
+
+{
+  "title": "short presentation title",
+  "subtitle": "1-line description for the sidebar",
+  "sections": [
+    {
+      "id": "kebab-case-id",
+      "label": "Short sidebar label (1-3 words)",
+      "eyebrow": "Tiny topic tag (1-3 words, same as label is fine)",
+      "heading": "Big headline for this section (MAX ~70 chars)",
+      "lead": "Optional short intro paragraph (1-2 sentences). Empty string if none.",
+      "blocks": [ ...2 to 4 blocks from the list below... ]
+    }
+  ]
+}
+
+Available block types (use 2–4 per section, varied):
+
+1) { "type": "hero",
+     "quote": "big bold statement (max 110 chars)",
+     "subquote": "1 sentence context",
+     "stats": [ { "strong": "700+", "span": "employees" }, ... 2-4 items ] }
+
+2) { "type": "stats",
+     "items": [ { "strong": "40M€", "span": "turnover" }, ... 2-4 items ] }
+
+3) { "type": "cards",
+     "cols": 2 | 3,
+     "cards": [ { "h3": "Short title", "p": "1-2 sentences" }, ... ] }
+
+4) { "type": "two-col",
+     "left":  { "h3": "...", "p": "...", "features": [ { "strong": "Name", "span": "Short detail" }, ... 2-4 items ] },
+     "right": { "h3": "...", "ul": [ "Bullet 1", "Bullet 2", ... 3-6 items ] } }
+
+5) { "type": "timeline",
+     "cols": 4 | 5 | 6,
+     "steps": [ { "strong": "1993", "span": "Foundation" }, ... ] }
+
+6) { "type": "pills",
+     "items": [ "Pill 1", "Pill 2", ... 3-6 items ] }
+
+7) { "type": "contact",
+     "items": [ "email@x.com", "+36 66 430 881", "www.x.com" ] }
+
+8) { "type": "figure",
+     "index": <0-based index into AVAILABLE_IMAGES>,
+     "caption": "1 short line describing it (optional)" }
+
+9) { "type": "image-text",
+     "index": <0-based index into AVAILABLE_IMAGES>,
+     "side": "left" | "right",
+     "h3": "Short title",
+     "p": "1-2 sentences of supporting copy",
+     "ul": [ "Optional bullet 1", "Optional bullet 2" ] }
+
+Rules:
+- Keep all text concise; each section must fit one 16:9 screen.
+- First section should use "hero" + "stats" or "pills" to introduce the company/topic.
+- Last section can use "timeline" + "contact" if contact info is available.
+- Only use "contact" block if the source actually contains contact info.
+- If AVAILABLE_IMAGES is provided and non-empty, spread the images across sections
+  using "figure" or "image-text" blocks. Each image "index" should be used AT MOST
+  ONCE across the whole deck. Pick images that match the section's topic based on
+  the slide they originated from (originSlide).
+- Do NOT invent image indices: only use values that exist in AVAILABLE_IMAGES.
+- If AVAILABLE_IMAGES is empty or missing, do not emit "figure" or "image-text" blocks.
+- Preserve key numbers, names, facts from the source as accurately as possible.
+- Detect the language of the source and write sections in that language.
+- Output JSON only. No markdown fences, no commentary.`;
+
+    // Build the user message, truncating very large PPTs so we stay under the
+    // per-minute token limit. Rough heuristic: ~4 chars per token.
+    // Keep input at most ~60k chars (~15k tokens), leaving room for the system
+    // prompt (~1k) and the structured JSON output (~3-5k).
+    const MAX_INPUT_CHARS = 60000;
+    const PER_SLIDE_CHARS = 1800; // cap per slide so one huge slide can't dominate
+    let totalChars = 0;
+    const truncatedSlides = [];
+    let wasTruncated = false;
+    for (const s of pptText) {
+      let text = s.text;
+      if (text.length > PER_SLIDE_CHARS) {
+        text = text.slice(0, PER_SLIDE_CHARS) + '…';
+        wasTruncated = true;
+      }
+      if (totalChars + text.length > MAX_INPUT_CHARS) {
+        wasTruncated = true;
+        const remaining = MAX_INPUT_CHARS - totalChars;
+        if (remaining > 200) truncatedSlides.push({ n: s.n, text: text.slice(0, remaining) + '…' });
+        break;
+      }
+      truncatedSlides.push({ n: s.n, text });
+      totalChars += text.length;
+    }
+
+    // Compact, token-cheap description of which images the model can use.
+    let imagesBlock = '';
+    if (Array.isArray(availableImages) && availableImages.length) {
+      const lines = availableImages.map((im, i) =>
+        `  [${i}] originSlide=${im.originSlide}${im.hint ? ` hint="${im.hint.slice(0, 60)}"` : ''}`
+      ).join('\n');
+      imagesBlock = `\n\nAVAILABLE_IMAGES (${availableImages.length} total; reference by index):\n${lines}`;
+    } else {
+      imagesBlock = '\n\nAVAILABLE_IMAGES: (none — do not emit figure or image-text blocks)';
+    }
+
+    const user = `Title: ${title || '(unspecified)'}
+Subtitle: ${subtitle || '(unspecified)'}${imagesBlock}
+
+Slide content (separated by ===)${wasTruncated ? ' — NOTE: input was truncated to fit token limits; produce the best possible summary from what you have.' : ''}:
+
+${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
+
+    let data;
+    try {
+      data = await openaiJson(key, {
+        model: OPENAI_MODEL_MAIN,
+        system: sys,
+        user,
+        reasoningEffort: 'minimal',
+      });
+    } catch (err) {
+      if (err.status === 429) {
+        throw new Error('OpenAI rate limit reached. Try again in a minute, or use a smaller PPT.');
+      }
+      if (err.status === 401) {
+        throw new Error('OpenAI rejected the API key. Double-check it and try again.');
+      }
+      throw err;
+    }
+    if (!Array.isArray(data.sections) || !data.sections.length) {
+      throw new Error('GPT did not return any sections');
+    }
+    return data;
+  }
+
+  // ── Generate ───────────────────────────────────────────
+  async function generate() {
+    hideError();
+    const key = apiKeyIn.value.trim();
+    const title = document.getElementById('presTitle').value.trim();
+    const subtitle = document.getElementById('presSubtitle').value.trim();
+
+    if (!pptFileData) { showError('Please select a .pptx file first.'); return; }
+    if (!key) { showError('Please enter your OpenAI API key.'); return; }
+
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+
+    try {
+      setProgress(10, 'Reading slide content…');
+      const slides = parsedSlides || await extractPptData(pptFileData);
+      if (!parsedSlides) parsedSlides = slides;
+      if (!slides.length) throw new Error('No text found in the PowerPoint file.');
+
+      // If the API key wasn't available at upload time, detect company meta now
+      if (!autoTitle && !document.getElementById('presTitle').dataset.auto) {
+        try {
+          const meta = await detectCompanyMeta(key, slides);
+          if (meta) {
+            autoTitle = meta.title || '';
+            autoSubtitle = meta.subtitle || '';
+            applyAutoMeta();
+          }
+        } catch {}
+      }
+
+      // Prepare the set of images the user chose (if any). Each image carries
+      // a short "hint" derived from its origin slide's text so GPT can place
+      // it in a topically-appropriate section.
+      const selected = galleryImages.filter(g => g.selected);
+      const imageHints = selected.map((g, idx) => {
+        const originText = (parsedSlides.find(s => s.n === g.originSlide)?.text || '')
+          .replace(/\s+/g, ' ').trim().slice(0, 80);
+        return { index: idx, originSlide: g.originSlide, hint: originText };
+      });
+
+      setProgress(35, `Analyzing ${slides.length} slide(s) with AI…`);
+      const structured = await gptStructure(
+        key, slides,
+        document.getElementById('presTitle').value.trim(),
+        document.getElementById('presSubtitle').value.trim(),
+        imageHints
+      );
+
+      // Compress the selected images for the final payload (keeps us under
+      // the save-web size limit and speeds up viewer load)
+      let compressedImages = [];
+      if (selected.length) {
+        setProgress(70, `Compressing ${selected.length} image(s)…`);
+        for (let i = 0; i < selected.length; i++) {
+          const g = selected[i];
+          try {
+            const dataUrl = await compressImage(g.dataUrl, { maxSide: 1400, quality: 0.82 });
+            compressedImages.push({ dataUrl, originSlide: g.originSlide });
+          } catch (err) {
+            console.warn('Image compression failed, using original:', err);
+            compressedImages.push({ dataUrl: g.dataUrl, originSlide: g.originSlide });
+          }
+        }
+        // Sanitize figure/image-text blocks to only reference valid indices
+        for (const sec of (structured.sections || [])) {
+          sec.blocks = (sec.blocks || []).filter(b => {
+            if (b?.type !== 'figure' && b?.type !== 'image-text') return true;
+            const ok = Number.isInteger(b.index) && b.index >= 0 && b.index < compressedImages.length;
+            return ok;
+          });
+        }
+      } else {
+        // No images selected — strip any figure/image-text blocks GPT may have emitted
+        for (const sec of (structured.sections || [])) {
+          sec.blocks = (sec.blocks || []).filter(b => b?.type !== 'figure' && b?.type !== 'image-text');
+        }
+      }
+
+      setProgress(88, 'Building preview…');
+      const finalTitle = document.getElementById('presTitle').value.trim();
+      const finalSubtitle = document.getElementById('presSubtitle').value.trim();
+      generated = {
+        type: 'web',
+        title: finalTitle || structured.title || pptFileName.replace(/\.pptx$/i, ''),
+        subtitle: finalSubtitle || structured.subtitle || '',
+        logoDataUrl: logoDataUrl || null,
+        sections: structured.sections,
+        images: compressedImages,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Auto-fill slug if empty
+      const slugIn = document.getElementById('slugInput');
+      if (!slugIn.value) {
+        slugIn.value = slugify(generated.title);
+      }
+
+      setProgress(100, 'Done!');
+      setTimeout(hideProgress, 600);
+
+      // Render preview
+      renderPreview();
+      document.getElementById('previewCard').classList.add('show');
+      document.getElementById('previewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      console.error(err);
+      showError(err.message || 'Something went wrong.');
+      hideProgress();
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function slugify(s) {
+    return (s || 'presentation').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'presentation';
+  }
+
+  // ── Preview rendering ─────────────────────────────────
+  function renderPreview() {
+    const iframe = document.getElementById('previewFrame');
+    const html = buildPreviewHtml(generated, true);
+    iframe.srcdoc = html;
+  }
+
+  function openPreviewFullscreen() {
+    const html = buildPreviewHtml(generated, true);
+    const w = window.open('', '_blank');
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
+  // Shared HTML builder used only for local preview.
+  // The "real" viewer (at /w/<slug>) renders from saved JSON using the same template.
+  function buildPreviewHtml(data, showSidebar) {
+    const payload = JSON.stringify(data).replace(/<\/scr/gi, '<\\/scr');
+    // NOTE: the strings below are split to avoid creating a literal closing
+    // tag string inside this outer script block (which would close it early).
+    const openScript  = '<' + 'script>';
+    const closeScript = '<' + '/script>';
+    return '<!DOCTYPE html>\n' +
+      '<html><head><meta charset="UTF-8"/>\n' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0"/>\n' +
+      '<title>' + escapeHtml(data.title || 'Preview') + '</title>\n' +
+      '<style>' + WEB_VIEWER_CSS + '</style>\n' +
+      '</head><body>\n' +
+      '<div id="app"></div>\n' +
+      openScript + '\n' +
+      '  const DATA = ' + payload + ';\n' +
+      '  const SHOW_SIDEBAR = ' + (showSidebar ? 'true' : 'false') + ';\n' +
+      '  ' + WEB_VIEWER_JS + '\n' +
+      closeScript + '\n' +
+      '</body></html>';
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ── Publish ───────────────────────────────────────────
+  async function publish() {
+    const slug = document.getElementById('slugInput').value.trim().toLowerCase();
+    if (!/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(slug)) {
+      showError('Invalid name — use 3-50 characters, letters/numbers/hyphens.');
+      return;
+    }
+    if (!generated) { showError('Generate first.'); return; }
+
+    const presenterToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    generated.presenterToken = presenterToken;
+
+    const btn = document.getElementById('publishBtn');
+    btn.disabled = true;
+    btn.textContent = 'Publishing…';
+
+    try {
+      const res = await fetch('/api/save-web', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, data: generated, presenterToken, overwrite: false }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        throw new Error(j.error || 'Failed to publish.');
+      }
+      const base = location.origin;
+      const viewUrl = `${base}/w/${slug}`;
+      const presentUrl = `${base}/w/${slug}?present=1&token=${presenterToken}`;
+
+      lastViewerUrl = viewUrl;
+      lastPresenterUrl = presentUrl;
+
+      document.getElementById('successViewerUrl').textContent    = viewUrl;
+      document.getElementById('successPresenterUrl').textContent = presentUrl;
+      document.getElementById('openViewerLink').href             = viewUrl;
+
+      renderQRCode(presentUrl);
+
+      document.getElementById('successMsg').classList.remove('show');
+      document.getElementById('successPanel').classList.add('show');
+
+      btn.textContent = 'Published ✓';
+      setTimeout(() => {
+        document.getElementById('successPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    } catch (err) {
+      showError(err.message);
+      btn.disabled = false;
+      btn.textContent = 'Publish & get share link';
+    }
+  }
+
+  // ── Share URL helpers ─────────────────────────────────
+  let lastViewerUrl = '';
+  let lastPresenterUrl = '';
+
+  function copyShareUrl(which) {
+    const url = which === 'presenter' ? lastPresenterUrl : lastViewerUrl;
+    const btn = document.getElementById(which === 'presenter' ? 'copyPresenterBtn' : 'copyViewerBtn');
+    if (!url || !btn) return;
+    navigator.clipboard.writeText(url).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
+    });
+  }
+
+  function renderQRCode(url) {
+    const box = document.getElementById('qrBox');
+    if (!box) return;
+    box.innerHTML = '';
+    if (typeof QRCode === 'undefined') {
+      box.textContent = 'QR unavailable';
+      return;
+    }
+    try {
+      new QRCode(box, {
+        text: url,
+        width: 130,
+        height: 130,
+        colorDark: '#1e1e2e',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+      const c = box.querySelector('canvas');
+      if (c) c.style.cssText = 'border-radius:6px;display:block;max-width:100%;height:auto;';
+      const img = box.querySelector('img');
+      if (img) img.style.cssText = 'border-radius:6px;display:block;max-width:100%;height:auto;';
+    } catch (e) {
+      console.warn('QR render failed:', e);
+      box.textContent = 'QR unavailable';
+    }
+  }
+
+  // ── Viewer template (used for preview + can be reused by viewer page) ──
+  const WEB_VIEWER_CSS = `
+    :root{
+      --bg:#f3f5f8;
+      --panel:#ffffff;
+      --text:#44546A;
+      --text-strong:#1f2a37;
+      --muted:#6f7f96;
+      --line:#d9e0e7;
+      --accent:#4472C4;
+      --accent-soft:#eaf1fb;
+      --accent-2:#ED7D31;
+      --shadow:0 16px 44px rgba(68,84,106,.10);
+      --navw:280px;
+      --max:1500px;
+      --page-pad:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(180deg,#f7f9fc 0%,#eef2f7 100%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif}
+    .page{height:100dvh;padding:var(--page-pad)}
+    .shell{height:100%;max-width:var(--max);margin:0 auto;border:1px solid var(--line);border-radius:42px;overflow:hidden;background:rgba(255,255,255,.72);backdrop-filter:blur(12px);box-shadow:0 26px 70px rgba(68,84,106,.12);display:grid;grid-template-rows:72px 1fr}
+    .windowbar{border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 28px;background:linear-gradient(180deg,#fcfdff 0%,#f5f8fc 100%)}
+    .dots{display:flex;gap:12px}.dots span{width:16px;height:16px;border-radius:50%;background:#c7d0db;display:inline-block}
+    .layout{min-height:0;display:grid;grid-template-columns:var(--navw) minmax(0,1fr);gap:18px;padding:18px}
+    .layout.no-sidebar{grid-template-columns:minmax(0,1fr)}
+    .sidebar{min-height:0;border:1px solid var(--line);border-radius:32px;background:linear-gradient(180deg,#fdfefe 0%,#f7f9fc 100%);padding:20px;display:flex;flex-direction:column}
+    .brand{padding:2px 2px 18px;border-bottom:1px solid var(--line);margin-bottom:18px}
+    .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px}
+    .brand .title{font-size:clamp(20px,1.6vw,26px);line-height:1.02;letter-spacing:-.04em;color:var(--text-strong);font-weight:800}
+    .brand .subtitle{margin-top:8px;font-size:13px;line-height:1.4;color:var(--muted)}
+    .brand .logo{max-height:60px;max-width:180px;margin-bottom:10px;display:block}
+    .nav{display:flex;flex-direction:column;gap:10px;margin-top:2px}
+    .navbtn{border:1px solid transparent;background:#f5f7fb;color:var(--text);text-align:left;border-radius:20px;padding:16px 18px;font-size:clamp(16px,1.15vw,20px);font-weight:600;cursor:pointer;transition:.18s ease;font-family:inherit}
+    .navbtn:hover{background:#fff;border-color:var(--line)}
+    .navbtn.active{background:linear-gradient(135deg,var(--accent) 0%,#5b8cdd 100%);color:#fff;box-shadow:0 12px 28px rgba(68,114,196,.25)}
+    .sidebar-foot{margin-top:auto;border:1px solid var(--line);border-radius:20px;padding:14px 16px;background:#fff;font-size:13px;line-height:1.45;color:var(--muted)}
+    .content{min-height:0;position:relative}
+    .section{position:absolute;inset:0;display:none;animation:fade .22s ease}.section.active{display:block}
+    @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .panel{height:100%;border:1px solid var(--line);border-radius:32px;background:linear-gradient(180deg,#ffffff 0%,#f9fbfe 100%);box-shadow:var(--shadow);padding:26px;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+    .panel > .head { flex: 0 0 auto; }
+    .panel > .body { flex: 1 1 auto; min-height:0; display:flex; flex-direction:column; gap:16px; }
+    h1,h2,h3,h4,p{margin:0}
+    h1{font-size:clamp(40px,4.2vw,70px);line-height:.94;letter-spacing:-.06em;color:var(--text-strong);max-width:860px}
+    h2{font-size:clamp(30px,2.8vw,48px);line-height:.98;letter-spacing:-.05em;color:var(--text-strong)}
+    h3{font-size:clamp(22px,1.5vw,28px);line-height:1.02;letter-spacing:-.04em;color:var(--text-strong);margin-bottom:10px}
+    .lead{font-size:clamp(18px,1.3vw,24px);line-height:1.38;color:var(--muted);max-width:980px}
+    .logo-inline{max-height:56px;max-width:200px;margin-bottom:14px;display:block}
+    .hero-grid{min-height:0;display:grid;grid-template-columns:1.05fr .95fr;gap:16px;flex:1 1 auto}
+    .card,.visual-card,.mini{min-height:0;border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:0 12px 30px rgba(68,84,106,.07)}
+    .visual-card{padding:26px;display:flex;flex-direction:column;justify-content:space-between;background:radial-gradient(circle at top left,#ffffff 0%,#f5f8fd 40%,#edf3fb 100%)}
+    .quote{font-size:clamp(28px,2.4vw,42px);line-height:1.01;letter-spacing:-.05em;color:var(--text-strong);font-weight:800;max-width:520px}
+    .subquote{color:var(--muted);font-size:clamp(15px,1vw,17px);line-height:1.5;max-width:470px}
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .stats.cols-1{grid-template-columns:1fr}.stats.cols-3{grid-template-columns:repeat(3,1fr)}.stats.cols-4{grid-template-columns:repeat(4,1fr)}
+    .stat{padding:22px;border:1px solid var(--line);border-radius:22px;background:#fff}
+    .stat strong{display:block;font-size:clamp(28px,2.4vw,42px);line-height:.96;color:var(--accent);letter-spacing:-.05em;margin-bottom:8px}
+    .stat span{color:var(--muted);font-size:clamp(14px,0.95vw,16px);line-height:1.45;display:block}
+    .grid-cards{display:grid;gap:14px}
+    .grid-cards.cols-2{grid-template-columns:repeat(2,1fr)}
+    .grid-cards.cols-3{grid-template-columns:repeat(3,1fr)}
+    .card{padding:22px}
+    .card p,.card li,.muted{color:var(--muted);font-size:clamp(14px,0.95vw,16px);line-height:1.48}
+    ul.clean{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+    .pillrow{display:flex;flex-wrap:wrap;gap:10px}
+    .pill{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700}
+    .timeline{display:grid;gap:12px}
+    .timeline.cols-3{grid-template-columns:repeat(3,1fr)}
+    .timeline.cols-4{grid-template-columns:repeat(4,1fr)}
+    .timeline.cols-5{grid-template-columns:repeat(5,1fr)}
+    .timeline.cols-6{grid-template-columns:repeat(6,1fr)}
+    .step{padding:18px;border:1px solid var(--line);border-radius:22px;background:#fff}
+    .step strong{display:block;margin-bottom:8px;color:var(--accent-2);font-size:14px;text-transform:uppercase;letter-spacing:.08em}
+    .step span{display:block;color:var(--muted);font-size:13px;line-height:1.42}
+    .feature-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}
+    .feature{padding:16px;border:1px solid var(--line);border-radius:18px;background:#f9fbfe}
+    .feature strong{display:block;color:var(--text-strong);font-size:18px;margin-bottom:6px;letter-spacing:-.03em}
+    .feature span{color:var(--muted);font-size:14px;line-height:1.42}
+    .two-col{display:grid;grid-template-columns:1.08fr .92fr;gap:14px}
+    .contact{display:flex;gap:12px;flex-wrap:wrap}
+    .contact .pill{background:#fff;color:var(--text);font-weight:600}
+    .footer-line{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+    .figure{min-height:0;flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:0 12px 30px rgba(68,84,106,.07);padding:14px;gap:10px;overflow:hidden}
+    .figure img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:14px;display:block;flex:1 1 auto;min-height:0}
+    .figure .caption{font-size:13px;color:var(--muted);line-height:1.4;text-align:center}
+    .image-text{display:grid;gap:16px;min-height:0;flex:1 1 auto;grid-template-columns:1fr 1fr}
+    .image-text.side-right{grid-template-columns:1fr 1fr}
+    .image-text .it-image{min-height:0;border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:0 12px 30px rgba(68,84,106,.07);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px}
+    .image-text .it-image img{max-width:100%;max-height:100%;object-fit:contain;border-radius:14px;display:block}
+    .image-text .it-body{min-height:0;padding:22px;border:1px solid var(--line);border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:10px;overflow:auto}
+    @media (max-width:1180px){:root{--navw:240px}.layout{gap:14px;padding:14px}.panel{padding:20px}.card,.visual-card,.stat{padding:18px}}
+    @media (max-width:980px){html,body{overflow:auto}.page{height:auto;min-height:100dvh}.shell{height:auto;min-height:100dvh;border-radius:0}.layout{grid-template-columns:1fr}.sidebar{padding:16px}.content{min-height:780px}.hero-grid,.grid-cards,.timeline,.two-col,.feature-list,.stats,.image-text{grid-template-columns:1fr !important}.panel{height:auto;min-height:780px}}
+  `;
+
+  const WEB_VIEWER_JS = `
+    function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    function renderBlock(b){
+      if(!b||!b.type) return '';
+      if (b.type==='hero'){
+        const stats = (b.stats||[]).map(s=>'<div class="stat"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('');
+        const cols = Math.min(4, Math.max(1, (b.stats||[]).length || 2));
+        return '<div class="hero-grid"><div class="visual-card"><div class="quote">'+esc(b.quote||'')+'</div><div class="subquote">'+esc(b.subquote||'')+'</div></div>'
+               +(stats?'<div class="stats cols-'+(cols<=2?2:(cols<=4?'4':'4'))+'">'+stats+'</div>':'')+'</div>';
+      }
+      if (b.type==='stats'){
+        const items = (b.items||[]).map(s=>'<div class="stat"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('');
+        const n = (b.items||[]).length;
+        const cls = n===4?'cols-4':n===3?'cols-3':'';
+        return '<div class="stats '+cls+'">'+items+'</div>';
+      }
+      if (b.type==='cards'){
+        const cols = (b.cols===3||(b.cards||[]).length%3===0&&(b.cards||[]).length>2)?3:2;
+        const cards = (b.cards||[]).map(c=>'<div class="card compact"><h3>'+esc(c.h3||'')+'</h3><p>'+esc(c.p||'')+'</p></div>').join('');
+        return '<div class="grid-cards cols-'+cols+'">'+cards+'</div>';
+      }
+      if (b.type==='two-col'){
+        const L=b.left||{}; const R=b.right||{};
+        const features=(L.features||[]).map(f=>'<div class="feature"><strong>'+esc(f.strong)+'</strong><span>'+esc(f.span)+'</span></div>').join('');
+        const ul=(R.ul||[]).map(x=>'<li>• '+esc(x)+'</li>').join('');
+        return '<div class="two-col"><div class="card"><h3>'+esc(L.h3||'')+'</h3>'+(L.p?'<p>'+esc(L.p)+'</p>':'')+(features?'<div class="feature-list">'+features+'</div>':'')+'</div><div class="card"><h3>'+esc(R.h3||'')+'</h3>'+(R.p?'<p>'+esc(R.p)+'</p>':'')+(ul?'<ul class="clean">'+ul+'</ul>':'')+'</div></div>';
+      }
+      if (b.type==='timeline'){
+        const cols = b.cols || Math.min(6, Math.max(3,(b.steps||[]).length));
+        const steps = (b.steps||[]).map(s=>'<div class="step"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('');
+        return '<div class="timeline cols-'+cols+'">'+steps+'</div>';
+      }
+      if (b.type==='pills'){
+        const pills = (b.items||[]).map(p=>'<div class="pill">'+esc(p)+'</div>').join('');
+        return '<div class="pillrow">'+pills+'</div>';
+      }
+      if (b.type==='contact'){
+        const pills = (b.items||[]).map(p=>'<div class="pill">'+esc(p)+'</div>').join('');
+        return '<div class="footer-line"><div class="pillrow">'+pills+'</div></div>';
+      }
+      if (b.type==='figure'){
+        const imgs = DATA.images || [];
+        const src = (Number.isInteger(b.index) && imgs[b.index]) ? imgs[b.index].dataUrl : null;
+        if (!src) return '';
+        return '<div class="figure"><img src="'+esc(src)+'" alt="figure"/>'
+          +(b.caption?'<div class="caption">'+esc(b.caption)+'</div>':'')+'</div>';
+      }
+      if (b.type==='image-text'){
+        const imgs = DATA.images || [];
+        const src = (Number.isInteger(b.index) && imgs[b.index]) ? imgs[b.index].dataUrl : null;
+        if (!src) return '';
+        const ul = (b.ul||[]).map(x=>'<li>• '+esc(x)+'</li>').join('');
+        const bodyHtml = '<div class="it-body">'+(b.h3?'<h3>'+esc(b.h3)+'</h3>':'')
+          +(b.p?'<p class="muted">'+esc(b.p)+'</p>':'')
+          +(ul?'<ul class="clean">'+ul+'</ul>':'')+'</div>';
+        const imgHtml = '<div class="it-image"><img src="'+esc(src)+'" alt=""/></div>';
+        return b.side==='right'
+          ? '<div class="image-text side-right">'+bodyHtml+imgHtml+'</div>'
+          : '<div class="image-text">'+imgHtml+bodyHtml+'</div>';
+      }
+      return '';
+    }
+    function renderSection(sec, first){
+      let html = '<section class="section'+(first?' active':'')+'" id="'+esc(sec.id)+'"><div class="panel">';
+      html += '<div class="head">';
+      if (first && DATA.logoDataUrl) html += '<img class="logo-inline" src="'+esc(DATA.logoDataUrl)+'" alt="logo"/>';
+      if (sec.eyebrow) html += '<div class="eyebrow">'+esc(sec.eyebrow)+'</div>';
+      html += '<h'+(first?'1':'2')+'>'+esc(sec.heading||'')+'</h'+(first?'1':'2')+'>';
+      if (sec.lead) html += '<p class="lead" style="margin-top:10px;">'+esc(sec.lead)+'</p>';
+      html += '</div><div class="body">';
+      for (const b of (sec.blocks||[])) html += renderBlock(b);
+      html += '</div></div></section>';
+      return html;
+    }
+    function render(){
+      const sections = DATA.sections || [];
+      const layoutCls = SHOW_SIDEBAR ? 'layout' : 'layout no-sidebar';
+      let html = '<div class="page"><div class="shell"><div class="windowbar"><div class="dots"><span></span><span></span><span></span></div></div><div class="'+layoutCls+'">';
+      if (SHOW_SIDEBAR){
+        html += '<aside class="sidebar"><div class="brand">';
+        if (DATA.logoDataUrl) html += '<img class="logo" src="'+esc(DATA.logoDataUrl)+'" alt="logo"/>';
+        html += '<div class="eyebrow">'+esc(DATA.subtitle||'Interactive presentation')+'</div>';
+        html += '<div class="title">'+esc(DATA.title||'Presentation')+'</div>';
+        html += '</div><div class="nav">';
+        sections.forEach((s,i)=>{ html += '<button class="navbtn'+(i===0?' active':'')+'" data-section="'+esc(s.id)+'">'+esc(s.label||s.eyebrow||('Section '+(i+1)))+'</button>'; });
+        html += '</div><div class="sidebar-foot">Use the arrow buttons on the connected presenter remote, or click a topic above.</div></aside>';
+      }
+      html += '<main class="content">';
+      sections.forEach((s,i)=>{ html += renderSection(s, i===0); });
+      html += '</main></div></div></div>';
+      document.getElementById('app').innerHTML = html;
+
+      const btns = document.querySelectorAll('.navbtn');
+      const secs = document.querySelectorAll('.section');
+      function show(id){
+        btns.forEach(b=>b.classList.toggle('active', b.dataset.section===id));
+        secs.forEach(s=>s.classList.toggle('active', s.id===id));
+        window.__currentSectionId = id;
+        if (location.hash !== '#'+id) history.replaceState(null,'','#'+id);
+      }
+      btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.section)));
+      window.__showSection = show;
+      window.__sectionIds = sections.map(s=>s.id);
+      const h = location.hash.replace('#','');
+      if (h && document.getElementById(h)) show(h);
+    }
+    render();
+  `;
+</script>
+</body>
+</html>

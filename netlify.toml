@@ -33,6 +33,24 @@
   to     = "/app.html"
   status = 200
 
+# PPT -> web presentation generator
+[[redirects]]
+  from   = "/ppt"
+  to     = "/ppt.html"
+  status = 200
+
+# AI prompt -> web presentation generator
+[[redirects]]
+  from   = "/ai"
+  to     = "/ai.html"
+  status = 200
+
+# Web-style presentation viewer: /w/<slug>
+[[redirects]]
+  from   = "/w/*"
+  to     = "/viewer-web.html"
+  status = 200
+
 # Viewer: /s/<slug>
 [[redirects]]
   from   = "/s/*"

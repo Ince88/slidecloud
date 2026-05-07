@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Flipcloud — Web Presentation</title>
+<style>
+  :root{
+    --bg:#f3f5f8;
+    --panel:#ffffff;
+    --text:#44546A;
+    --text-strong:#1f2a37;
+    --muted:#6f7f96;
+    --line:#d9e0e7;
+    --accent:#4472C4;
+    --accent-soft:#eaf1fb;
+    --accent-2:#ED7D31;
+    --shadow:0 16px 44px rgba(68,84,106,.10);
+    --navw:280px;
+    --max:1500px;
+    --page-pad:18px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;height:100%;overflow:hidden;
+    background:linear-gradient(180deg,#f7f9fc 0%,#eef2f7 100%);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+
+  /* Loading screen */
+  .loader{
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:#fff;z-index:999;flex-direction:column;gap:14px;color:var(--muted);
+  }
+  .loader .ring{
+    width:42px;height:42px;border-radius:50%;border:3px solid #e5e7eb;border-top-color:var(--accent);
+    animation:spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader.err { color: #991b1b; }
+
+  .page{height:100dvh;padding:var(--page-pad)}
+  .shell{
+    height:100%;max-width:var(--max);margin:0 auto;
+    border:1px solid var(--line);border-radius:42px;overflow:hidden;
+    background:rgba(255,255,255,.72);backdrop-filter:blur(12px);
+    box-shadow:0 26px 70px rgba(68,84,106,.12);
+    display:grid;grid-template-rows:72px 1fr;
+  }
+  .windowbar{
+    border-bottom:1px solid var(--line);display:flex;align-items:center;
+    padding:0 28px;background:linear-gradient(180deg,#fcfdff 0%,#f5f8fc 100%);
+    justify-content:space-between; gap:12px;
+  }
+  .dots{display:flex;gap:12px}
+  .dots span{width:16px;height:16px;border-radius:50%;background:#c7d0db;display:inline-block}
+  .wb-meta {
+    font-size:12px; color: var(--muted); display:flex; gap: 14px; align-items:center;
+  }
+  .wb-meta .dot{ width:8px;height:8px;border-radius:50%;background:#cbd5e1;display:inline-block;margin-right:6px;}
+  .wb-meta.live .dot{ background:#10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.18);}
+
+  .layout{min-height:0;display:grid;grid-template-columns:var(--navw) minmax(0,1fr);gap:18px;padding:18px}
+  .layout.no-sidebar{grid-template-columns:minmax(0,1fr)}
+
+  .sidebar{
+    min-height:0;border:1px solid var(--line);border-radius:32px;
+    background:linear-gradient(180deg,#fdfefe 0%,#f7f9fc 100%);
+    padding:20px;display:flex;flex-direction:column;
+  }
+  .brand{padding:2px 2px 18px;border-bottom:1px solid var(--line);margin-bottom:18px}
+  .brand .logo{max-height:60px;max-width:180px;margin-bottom:10px;display:block}
+  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px}
+  .brand .title{font-size:clamp(20px,1.6vw,26px);line-height:1.02;letter-spacing:-.04em;color:var(--text-strong);font-weight:800}
+  .brand .subtitle{margin-top:8px;font-size:13px;line-height:1.4;color:var(--muted)}
+  .nav{display:flex;flex-direction:column;gap:10px;margin-top:2px; overflow-y:auto;}
+  .navbtn{
+    border:1px solid transparent;background:#f5f7fb;color:var(--text);
+    text-align:left;border-radius:20px;padding:16px 18px;
+    font-size:clamp(16px,1.15vw,20px);font-weight:600;cursor:pointer;
+    transition:.18s ease;font-family:inherit;
+  }
+  .navbtn:hover{background:#fff;border-color:var(--line)}
+  .navbtn.active{
+    background:linear-gradient(135deg,var(--accent) 0%,#5b8cdd 100%);
+    color:#fff;box-shadow:0 12px 28px rgba(68,114,196,.25);
+  }
+  .sidebar-foot{margin-top:auto;border:1px solid var(--line);border-radius:20px;padding:14px 16px;background:#fff;font-size:13px;line-height:1.45;color:var(--muted)}
+  .sidebar-ctrls{
+    display:flex; gap: 8px; margin-top: 12px;
+  }
+  .sidebar-ctrls button{
+    flex:1; padding: 12px; border-radius: 14px; border:1px solid var(--line);
+    background:#fff; cursor:pointer; font-family:inherit; font-weight:600; font-size:14px; color: var(--text);
+  }
+  .sidebar-ctrls button:hover{ background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+  .content{min-height:0;position:relative}
+  .section{position:absolute;inset:0;display:none;animation:fade .22s ease}
+  .section.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+  .panel{
+    height:100%;border:1px solid var(--line);border-radius:32px;
+    background:linear-gradient(180deg,#ffffff 0%,#f9fbfe 100%);
+    box-shadow:var(--shadow);padding:26px;
+    display:flex;flex-direction:column;gap:18px;overflow:hidden;
+  }
+  .panel > .head { flex: 0 0 auto; }
+  .panel > .body { flex: 1 1 auto; min-height: 0; display:flex; flex-direction:column; gap:16px; }
+
+  h1,h2,h3,h4,p{margin:0}
+  h1{font-size:clamp(40px,4.2vw,70px);line-height:.94;letter-spacing:-.06em;color:var(--text-strong);max-width:860px}
+  h2{font-size:clamp(30px,2.8vw,48px);line-height:.98;letter-spacing:-.05em;color:var(--text-strong)}
+  h3{font-size:clamp(22px,1.5vw,28px);line-height:1.02;letter-spacing:-.04em;color:var(--text-strong);margin-bottom:10px}
+  .lead{font-size:clamp(18px,1.3vw,24px);line-height:1.38;color:var(--muted);max-width:980px}
+  .logo-inline{max-height:56px;max-width:200px;margin-bottom:14px;display:block}
+
+  .hero-grid{min-height:0;display:grid;grid-template-columns:1.05fr .95fr;gap:16px;flex:1 1 auto}
+  .card,.visual-card,.mini{min-height:0;border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:0 12px 30px rgba(68,84,106,.07)}
+  .visual-card{padding:26px;display:flex;flex-direction:column;justify-content:space-between;background:radial-gradient(circle at top left,#ffffff 0%,#f5f8fd 40%,#edf3fb 100%)}
+  .quote{font-size:clamp(28px,2.4vw,42px);line-height:1.01;letter-spacing:-.05em;color:var(--text-strong);font-weight:800;max-width:520px}
+  .subquote{color:var(--muted);font-size:clamp(15px,1vw,17px);line-height:1.5;max-width:470px}
+
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .stats.cols-3{grid-template-columns:repeat(3,1fr)}
+  .stats.cols-4{grid-template-columns:repeat(4,1fr)}
+  .stat{padding:22px;border:1px solid var(--line);border-radius:22px;background:#fff}
+  .stat strong{display:block;font-size:clamp(28px,2.4vw,42px);line-height:.96;color:var(--accent);letter-spacing:-.05em;margin-bottom:8px}
+  .stat span{color:var(--muted);font-size:clamp(14px,0.95vw,16px);line-height:1.45;display:block}
+
+  .grid-cards{display:grid;gap:14px}
+  .grid-cards.cols-2{grid-template-columns:repeat(2,1fr)}
+  .grid-cards.cols-3{grid-template-columns:repeat(3,1fr)}
+  .card{padding:22px}
+  .card p,.card li,.muted{color:var(--muted);font-size:clamp(14px,0.95vw,16px);line-height:1.48}
+
+  ul.clean{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+
+  .pillrow{display:flex;flex-wrap:wrap;gap:10px}
+  .pill{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700}
+
+  .timeline{display:grid;gap:12px}
+  .timeline.cols-3{grid-template-columns:repeat(3,1fr)}
+  .timeline.cols-4{grid-template-columns:repeat(4,1fr)}
+  .timeline.cols-5{grid-template-columns:repeat(5,1fr)}
+  .timeline.cols-6{grid-template-columns:repeat(6,1fr)}
+  .step{padding:18px;border:1px solid var(--line);border-radius:22px;background:#fff}
+  .step strong{display:block;margin-bottom:8px;color:var(--accent-2);font-size:14px;text-transform:uppercase;letter-spacing:.08em}
+  .step span{display:block;color:var(--muted);font-size:13px;line-height:1.42}
+
+  .feature-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}
+  .feature{padding:16px;border:1px solid var(--line);border-radius:18px;background:#f9fbfe}
+  .feature strong{display:block;color:var(--text-strong);font-size:18px;margin-bottom:6px;letter-spacing:-.03em}
+  .feature span{color:var(--muted);font-size:14px;line-height:1.42}
+
+  .two-col{display:grid;grid-template-columns:1.08fr .92fr;gap:14px}
+  .contact{display:flex;gap:12px;flex-wrap:wrap}
+  .contact .pill{background:#fff;color:var(--text);font-weight:600}
+  .footer-line{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+
+  .figure{
+    min-height:0;flex:1 1 auto;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border:1px solid var(--line);border-radius:24px;background:#fff;
+    box-shadow:0 12px 30px rgba(68,84,106,.07);
+    padding:14px;gap:10px;overflow:hidden;
+  }
+  .figure img{
+    max-width:100%;max-height:100%;width:auto;height:auto;
+    object-fit:contain;border-radius:14px;display:block;
+    flex:1 1 auto;min-height:0;
+  }
+  .figure .caption{font-size:13px;color:var(--muted);line-height:1.4;text-align:center}
+  .image-text{
+    display:grid;gap:16px;min-height:0;flex:1 1 auto;
+    grid-template-columns:1fr 1fr;
+  }
+  .image-text .it-image{
+    min-height:0;border:1px solid var(--line);border-radius:24px;background:#fff;
+    box-shadow:0 12px 30px rgba(68,84,106,.07);
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;padding:10px;
+  }
+  .image-text .it-image img{
+    max-width:100%;max-height:100%;object-fit:contain;
+    border-radius:14px;display:block;
+  }
+  .image-text .it-body{
+    min-height:0;padding:22px;border:1px solid var(--line);border-radius:24px;
+    background:#fff;display:flex;flex-direction:column;gap:10px;overflow:auto;
+  }
+
+  /* Presenter phone controls */
+  .phone-ctrls {
+    display: none;
+    position: fixed;
+    bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 10px;
+    gap: 10px;
+    box-shadow: 0 16px 40px rgba(0,0,0,.18);
+    z-index: 50;
+  }
+  .phone-ctrls.show { display: flex; }
+  .phone-ctrls button {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: #fff;
+    cursor: pointer;
+    display:flex; align-items:center; justify-content:center;
+    color: var(--text);
+  }
+  .phone-ctrls button:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .phone-ctrls svg { width: 22px; height: 22px; }
+
+  @media (max-width:1180px){
+    :root{--navw:240px}
+    .layout{gap:14px;padding:14px}
+    .panel{padding:20px}
+    .card,.visual-card,.stat{padding:18px}
+  }
+  @media (max-width:980px){
+    html,body{overflow:auto}
+    .page{height:auto;min-height:100dvh}
+    .shell{height:auto;min-height:100dvh;border-radius:0}
+    .layout{grid-template-columns:1fr}
+    .sidebar{padding:16px}
+    .content{min-height:780px}
+    .hero-grid,.grid-cards,.timeline,.two-col,.feature-list,.stats,.image-text{grid-template-columns:1fr !important}
+    .panel{height:auto;min-height:780px}
+  }
+  /* Presenter-phone optimized layout: mobile, big sidebar buttons */
+  body.phone .layout{ grid-template-columns: 1fr; padding: 14px; gap: 14px; }
+  body.phone .content{ display: none; }
+  body.phone .sidebar{ padding: 20px; }
+  body.phone .sidebar .nav{ gap: 12px; }
+  body.phone .navbtn{ padding: 20px; font-size: 17px; }
+  body.phone .sidebar-foot{ display:none; }
+</style>
+</head>
+<body>
+  <div class="loader" id="loader">
+    <div class="ring"></div>
+    <div id="loaderText">Loading presentation…</div>
+  </div>
+
+  <div id="app"></div>
+
+  <div class="phone-ctrls" id="phoneCtrls">
+    <button type="button" onclick="goPrev()" aria-label="Previous">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
+    <button type="button" onclick="goNext()" aria-label="Next">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 6 15 12 9 18"/>
+      </svg>
+    </button>
+  </div>
+
+<script>
+(() => {
+  // ── Parse URL ────────────────────────────────────────────
+  const path = location.pathname;
+  const m = path.match(/^\/w\/([^\/?#]+)/);
+  const slug = m ? m[1] : null;
+  const params = new URLSearchParams(location.search);
+  const presenterToken = params.get('token') || '';
+  const presentMode = params.get('present') === '1' || params.get('present') === 'true';
+
+  if (!slug) {
+    showLoaderError('No presentation specified.');
+    return;
+  }
+
+  let DATA = null;
+  let currentIndex = 0;
+  let socket = null;
+  let wsUrl = null;
+
+  // Detect phone screen for presenter mode
+  const isPhone = matchMedia('(max-width: 820px)').matches;
+  if (presentMode && isPhone) document.body.classList.add('phone');
+
+  // ── Helpers ────────────────────────────────────────────
+  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function showLoaderError(msg){
+    const L = document.getElementById('loader');
+    L.innerHTML = '<div style="font-weight:700;font-size:18px;margin-bottom:6px;color:#991b1b">Error</div><div>'+esc(msg)+'</div>';
+    L.classList.add('err');
+  }
+
+  // ── Load data ──────────────────────────────────────────
+  async function load(){
+    try {
+      const [dataRes, cfgRes] = await Promise.all([
+        fetch('/api/load?slug=' + encodeURIComponent(slug)).then(r=>r.json()),
+        fetch('/api/config').then(r=>r.json()).catch(()=>({})),
+      ]);
+      if (dataRes.error) { showLoaderError(dataRes.error); return; }
+      wsUrl = cfgRes?.wsUrl || null;
+
+      // Web-presentation payload (saved via /api/save-web)
+      DATA = dataRes.data || dataRes;
+      if (!DATA?.sections || !Array.isArray(DATA.sections)) {
+        showLoaderError('This link is not a web-style presentation.');
+        return;
+      }
+      render();
+      connectSocket();
+      document.getElementById('loader').style.display = 'none';
+    } catch (err) {
+      console.error(err);
+      showLoaderError('Could not load the presentation.');
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────
+  function renderBlock(b){
+    if(!b||!b.type) return '';
+    if (b.type==='hero'){
+      const items = (b.stats||[]);
+      const stats = items.map(s=>'<div class="stat"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('');
+      return '<div class="hero-grid"><div class="visual-card"><div class="quote">'+esc(b.quote||'')+'</div><div class="subquote">'+esc(b.subquote||'')+'</div></div>'
+             +(stats?'<div class="stats '+(items.length>=4?'':items.length===3?'cols-3':'')+'">'+stats+'</div>':'')+'</div>';
+    }
+    if (b.type==='stats'){
+      const items = (b.items||[]);
+      const n = items.length;
+      const cls = n===4?'cols-4':n===3?'cols-3':'';
+      return '<div class="stats '+cls+'">'+items.map(s=>'<div class="stat"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('')+'</div>';
+    }
+    if (b.type==='cards'){
+      const len = (b.cards||[]).length;
+      const cols = b.cols===3 || (b.cols!==2 && len >= 3 && len%3 === 0) ? 3 : 2;
+      return '<div class="grid-cards cols-'+cols+'">'+(b.cards||[]).map(c=>'<div class="card compact"><h3>'+esc(c.h3||'')+'</h3><p>'+esc(c.p||'')+'</p></div>').join('')+'</div>';
+    }
+    if (b.type==='two-col'){
+      const L=b.left||{}; const R=b.right||{};
+      const features=(L.features||[]).map(f=>'<div class="feature"><strong>'+esc(f.strong)+'</strong><span>'+esc(f.span)+'</span></div>').join('');
+      const ul=(R.ul||[]).map(x=>'<li>• '+esc(x)+'</li>').join('');
+      return '<div class="two-col"><div class="card"><h3>'+esc(L.h3||'')+'</h3>'+(L.p?'<p>'+esc(L.p)+'</p>':'')+(features?'<div class="feature-list">'+features+'</div>':'')+'</div><div class="card"><h3>'+esc(R.h3||'')+'</h3>'+(R.p?'<p>'+esc(R.p)+'</p>':'')+(ul?'<ul class="clean">'+ul+'</ul>':'')+'</div></div>';
+    }
+    if (b.type==='timeline'){
+      const cols = b.cols || Math.min(6, Math.max(3,(b.steps||[]).length));
+      return '<div class="timeline cols-'+cols+'">'+(b.steps||[]).map(s=>'<div class="step"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('')+'</div>';
+    }
+    if (b.type==='pills'){
+      return '<div class="pillrow">'+(b.items||[]).map(p=>'<div class="pill">'+esc(p)+'</div>').join('')+'</div>';
+    }
+    if (b.type==='contact'){
+      return '<div class="footer-line"><div class="pillrow">'+(b.items||[]).map(p=>'<div class="pill">'+esc(p)+'</div>').join('')+'</div></div>';
+    }
+    if (b.type==='figure'){
+      const imgs = DATA.images || [];
+      const src = (Number.isInteger(b.index) && imgs[b.index]) ? imgs[b.index].dataUrl : null;
+      if (!src) return '';
+      return '<div class="figure"><img src="'+esc(src)+'" alt="figure"/>'
+        +(b.caption?'<div class="caption">'+esc(b.caption)+'</div>':'')+'</div>';
+    }
+    if (b.type==='image-text'){
+      const imgs = DATA.images || [];
+      const src = (Number.isInteger(b.index) && imgs[b.index]) ? imgs[b.index].dataUrl : null;
+      if (!src) return '';
+      const ul = (b.ul||[]).map(x=>'<li>• '+esc(x)+'</li>').join('');
+      const bodyHtml = '<div class="it-body">'+(b.h3?'<h3>'+esc(b.h3)+'</h3>':'')
+        +(b.p?'<p class="muted">'+esc(b.p)+'</p>':'')
+        +(ul?'<ul class="clean">'+ul+'</ul>':'')+'</div>';
+      const imgHtml = '<div class="it-image"><img src="'+esc(src)+'" alt=""/></div>';
+      return b.side==='right'
+        ? '<div class="image-text side-right">'+bodyHtml+imgHtml+'</div>'
+        : '<div class="image-text">'+imgHtml+bodyHtml+'</div>';
+    }
+    return '';
+  }
+
+  function renderSection(sec, first){
+    const hlvl = first ? 'h1' : 'h2';
+    let html = '<section class="section'+(first?' active':'')+'" id="'+esc(sec.id)+'"><div class="panel">';
+    html += '<div class="head">';
+    if (first && DATA.logoDataUrl) html += '<img class="logo-inline" src="'+esc(DATA.logoDataUrl)+'" alt="logo"/>';
+    if (sec.eyebrow) html += '<div class="eyebrow">'+esc(sec.eyebrow)+'</div>';
+    html += '<'+hlvl+'>'+esc(sec.heading||'')+'</'+hlvl+'>';
+    if (sec.lead) html += '<p class="lead" style="margin-top:10px;">'+esc(sec.lead)+'</p>';
+    html += '</div><div class="body">';
+    for (const b of (sec.blocks||[])) html += renderBlock(b);
+    html += '</div></div></section>';
+    return html;
+  }
+
+  function render(){
+    // Sidebar visibility: only the presenter sees it
+    const showSidebar = presentMode;
+    const layoutCls = showSidebar ? 'layout' : 'layout no-sidebar';
+    const sections = DATA.sections || [];
+
+    let html = '<div class="page"><div class="shell"><div class="windowbar"><div class="dots"><span></span><span></span><span></span></div>';
+    html += '<div class="wb-meta" id="wbMeta"><span><span class="dot"></span><span id="wbConn">Standalone</span></span></div>';
+    html += '</div><div class="'+layoutCls+'" id="layoutRoot">';
+
+    if (showSidebar){
+      html += '<aside class="sidebar"><div class="brand">';
+      if (DATA.logoDataUrl) html += '<img class="logo" src="'+esc(DATA.logoDataUrl)+'" alt="logo"/>';
+      html += '<div class="eyebrow">'+esc(DATA.subtitle||'Interactive presentation')+'</div>';
+      html += '<div class="title">'+esc(DATA.title||'Presentation')+'</div>';
+      html += '</div><div class="nav">';
+      sections.forEach((s,i)=>{ html += '<button class="navbtn'+(i===0?' active':'')+'" data-section="'+esc(s.id)+'" data-idx="'+i+'">'+esc(s.label||s.eyebrow||('Section '+(i+1)))+'</button>'; });
+      html += '</div>';
+      html += '<div class="sidebar-ctrls"><button onclick="goPrev()">◀ Prev</button><button onclick="goNext()">Next ▶</button></div>';
+      html += '<div class="sidebar-foot">Tap a topic or use Next/Prev. Viewers see the content without this sidebar.</div>';
+      html += '</aside>';
+    }
+
+    html += '<main class="content">';
+    sections.forEach((s,i)=>{ html += renderSection(s, i===0); });
+    html += '</main></div></div></div>';
+
+    document.getElementById('app').innerHTML = html;
+
+    // Hook up nav clicks
+    document.querySelectorAll('.navbtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx, 10) || 0;
+        goToIndex(idx, /*fromPresenter*/ true);
+      });
+    });
+
+    // Show phone controls only in phone presenter mode
+    if (presentMode) document.getElementById('phoneCtrls').classList.add('show');
+
+    // Restore from hash or websocket later
+    const h = location.hash.replace('#','');
+    const initIdx = sections.findIndex(s => s.id === h);
+    if (initIdx >= 0) showIndex(initIdx);
+  }
+
+  function showIndex(idx){
+    const sections = DATA.sections || [];
+    if (idx < 0 || idx >= sections.length) return;
+    currentIndex = idx;
+    const id = sections[idx].id;
+    document.querySelectorAll('.navbtn').forEach((b,i)=>b.classList.toggle('active', i===idx));
+    document.querySelectorAll('.section').forEach(sec => sec.classList.toggle('active', sec.id === id));
+    if (location.hash !== '#'+id) history.replaceState(null,'','#'+id);
+  }
+
+  function goToIndex(idx, fromPresenter){
+    showIndex(idx);
+    if (fromPresenter && socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'slide', index: idx }));
+    }
+  }
+
+  window.goNext = function(){
+    const next = Math.min((DATA.sections||[]).length - 1, currentIndex + 1);
+    if (next !== currentIndex) goToIndex(next, true);
+  };
+  window.goPrev = function(){
+    const prev = Math.max(0, currentIndex - 1);
+    if (prev !== currentIndex) goToIndex(prev, true);
+  };
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); goNext(); }
+    if (e.key === 'ArrowLeft'  || e.key === 'PageUp') { e.preventDefault(); goPrev(); }
+  });
+
+  // ── WebSocket sync ─────────────────────────────────────
+  function connectSocket(){
+    if (!wsUrl) return; // standalone mode
+    try {
+      socket = new WebSocket(wsUrl);
+      socket.addEventListener('open', () => {
+        const meta = document.getElementById('wbMeta');
+        if (meta) meta.classList.add('live');
+        document.getElementById('wbConn').textContent = presentMode ? 'Presenter connected' : 'Live';
+        socket.send(JSON.stringify({
+          type: 'join',
+          slug,
+          role: presentMode ? 'presenter' : 'viewer',
+          token: presenterToken,
+        }));
+      });
+      socket.addEventListener('message', (e) => {
+        let msg; try { msg = JSON.parse(e.data); } catch { return; }
+        if (msg.type === 'slide' && typeof msg.index === 'number' && !presentMode) {
+          showIndex(msg.index);
+        }
+        if (msg.type === 'next' && !presentMode) {
+          const next = Math.min((DATA.sections||[]).length - 1, currentIndex + 1);
+          showIndex(next);
+        }
+        if (msg.type === 'prev' && !presentMode) {
+          const prev = Math.max(0, currentIndex - 1);
+          showIndex(prev);
+        }
+        if (msg.type === 'error') { console.warn('WS error:', msg.message); }
+      });
+      socket.addEventListener('close', () => {
+        const meta = document.getElementById('wbMeta');
+        if (meta) meta.classList.remove('live');
+        const el = document.getElementById('wbConn');
+        if (el) el.textContent = 'Disconnected';
+        // Reconnect after 3s
+        setTimeout(connectSocket, 3000);
+      });
+      socket.addEventListener('error', () => {});
+    } catch (err) { console.warn(err); }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

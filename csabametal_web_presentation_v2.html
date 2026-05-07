@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Csaba Metál – Web Presentation</title>
+  <style>
+    :root{
+      --bg:#f3f5f8;
+      --panel:#ffffff;
+      --text:#44546A;
+      --text-strong:#1f2a37;
+      --muted:#6f7f96;
+      --line:#d9e0e7;
+      --accent:#4472C4;
+      --accent-soft:#eaf1fb;
+      --accent-2:#ED7D31;
+      --shadow:0 16px 44px rgba(68,84,106,.10);
+      --radius-xl:34px;
+      --radius-lg:24px;
+      --navw:280px;
+      --max:1500px;
+      --page-pad:18px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      height:100%;
+      overflow:hidden;
+      background:linear-gradient(180deg,#f7f9fc 0%,#eef2f7 100%);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    }
+    a{text-decoration:none;color:inherit}
+
+    .page{
+      height:100dvh;
+      padding:var(--page-pad);
+    }
+
+    .shell{
+      height:100%;
+      max-width:var(--max);
+      margin:0 auto;
+      border:1px solid var(--line);
+      border-radius:42px;
+      overflow:hidden;
+      background:rgba(255,255,255,.72);
+      backdrop-filter:blur(12px);
+      box-shadow:0 26px 70px rgba(68,84,106,.12);
+      display:grid;
+      grid-template-rows:72px 1fr;
+    }
+
+    .windowbar{
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      padding:0 28px;
+      background:linear-gradient(180deg,#fcfdff 0%,#f5f8fc 100%);
+    }
+    .dots{display:flex;gap:12px}
+    .dots span{
+      width:16px;height:16px;border-radius:50%;
+      background:#c7d0db; display:inline-block;
+    }
+
+    .layout{
+      min-height:0;
+      display:grid;
+      grid-template-columns:var(--navw) minmax(0,1fr);
+      gap:18px;
+      padding:18px;
+    }
+
+    .sidebar{
+      min-height:0;
+      border:1px solid var(--line);
+      border-radius:32px;
+      background:linear-gradient(180deg,#fdfefe 0%,#f7f9fc 100%);
+      padding:20px;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .brand{
+      padding:2px 2px 18px;
+      border-bottom:1px solid var(--line);
+      margin-bottom:18px;
+    }
+    .eyebrow{
+      font-size:11px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:var(--muted);
+      font-weight:700;
+      margin-bottom:8px;
+    }
+    .brand .title{
+      font-size:clamp(20px,1.6vw,26px);
+      line-height:1.02;
+      letter-spacing:-.04em;
+      color:var(--text-strong);
+      font-weight:800;
+    }
+    .brand .subtitle{
+      margin-top:8px;
+      font-size:13px;
+      line-height:1.4;
+      color:var(--muted);
+    }
+
+    .nav{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      margin-top:2px;
+    }
+
+    .navbtn{
+      border:1px solid transparent;
+      background:#f5f7fb;
+      color:var(--text);
+      text-align:left;
+      border-radius:20px;
+      padding:16px 18px;
+      font-size:clamp(16px,1.15vw,20px);
+      font-weight:600;
+      cursor:pointer;
+      transition:.18s ease;
+    }
+    .navbtn:hover{
+      background:#fff;
+      border-color:var(--line);
+    }
+    .navbtn.active{
+      background:linear-gradient(135deg,var(--accent) 0%, #5b8cdd 100%);
+      color:#fff;
+      box-shadow:0 12px 28px rgba(68,114,196,.25);
+    }
+
+    .sidebar-foot{
+      margin-top:auto;
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:14px 16px;
+      background:#fff;
+      font-size:13px;
+      line-height:1.45;
+      color:var(--muted);
+    }
+
+    .content{
+      min-height:0;
+      position:relative;
+    }
+
+    .section{
+      position:absolute;
+      inset:0;
+      display:none;
+      animation:fade .22s ease;
+    }
+    .section.active{display:block}
+    @keyframes fade{
+      from{opacity:0;transform:translateY(6px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+
+    .panel{
+      height:100%;
+      border:1px solid var(--line);
+      border-radius:32px;
+      background:linear-gradient(180deg,#ffffff 0%,#f9fbfe 100%);
+      box-shadow:var(--shadow);
+      padding:26px;
+      display:grid;
+      grid-template-rows:auto 1fr auto;
+      gap:18px;
+      overflow:hidden;
+    }
+
+    h1,h2,h3,h4,p{margin:0}
+    h1{
+      font-size:clamp(40px,4.2vw,70px);
+      line-height:.94;
+      letter-spacing:-.06em;
+      color:var(--text-strong);
+      max-width:860px;
+    }
+    h2{
+      font-size:clamp(30px,2.8vw,48px);
+      line-height:.98;
+      letter-spacing:-.05em;
+      color:var(--text-strong);
+    }
+    h3{
+      font-size:clamp(22px,1.5vw,28px);
+      line-height:1.02;
+      letter-spacing:-.04em;
+      color:var(--text-strong);
+      margin-bottom:10px;
+    }
+    .lead{
+      font-size:clamp(18px,1.3vw,24px);
+      line-height:1.38;
+      color:var(--muted);
+      max-width:980px;
+    }
+
+    .hero-grid{
+      min-height:0;
+      display:grid;
+      grid-template-columns:1.05fr .95fr;
+      gap:16px;
+    }
+
+    .card, .visual-card, .mini{
+      min-height:0;
+      border:1px solid var(--line);
+      border-radius:24px;
+      background:#fff;
+      box-shadow:0 12px 30px rgba(68,84,106,.07);
+    }
+
+    .visual-card{
+      padding:26px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      background:
+        radial-gradient(circle at top left, #ffffff 0%, #f5f8fd 40%, #edf3fb 100%);
+    }
+    .quote{
+      font-size:clamp(28px,2.4vw,42px);
+      line-height:1.01;
+      letter-spacing:-.05em;
+      color:var(--text-strong);
+      font-weight:800;
+      max-width:520px;
+    }
+    .subquote{
+      color:var(--muted);
+      font-size:clamp(15px,1vw,17px);
+      line-height:1.5;
+      max-width:470px;
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:14px;
+    }
+    .stat{
+      padding:22px;
+      border:1px solid var(--line);
+      border-radius:22px;
+      background:#fff;
+    }
+    .stat strong{
+      display:block;
+      font-size:clamp(28px,2.4vw,42px);
+      line-height:.96;
+      color:var(--accent);
+      letter-spacing:-.05em;
+      margin-bottom:8px;
+    }
+    .stat span{
+      color:var(--muted);
+      font-size:clamp(14px,0.95vw,16px);
+      line-height:1.45;
+      display:block;
+    }
+
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .card{padding:22px}
+    .card p, .card li, .muted{
+      color:var(--muted);
+      font-size:clamp(14px,0.95vw,16px);
+      line-height:1.48;
+    }
+    .card.compact p{line-height:1.42}
+
+    ul.clean{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:grid;
+      gap:8px;
+    }
+
+    .pillrow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    .pill{
+      padding:10px 14px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:var(--accent-soft);
+      color:var(--accent);
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .timeline{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:12px;
+    }
+    .step{
+      padding:18px;
+      border:1px solid var(--line);
+      border-radius:22px;
+      background:#fff;
+    }
+    .step strong{
+      display:block;
+      margin-bottom:8px;
+      color:var(--accent-2);
+      font-size:14px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .step span{
+      display:block;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.42;
+    }
+
+    .feature-list{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:12px;
+      margin-top:12px;
+    }
+    .feature{
+      padding:16px;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:#f9fbfe;
+    }
+    .feature strong{
+      display:block;
+      color:var(--text-strong);
+      font-size:18px;
+      margin-bottom:6px;
+      letter-spacing:-.03em;
+    }
+    .feature span{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.42;
+    }
+
+    .two-col{
+      display:grid;
+      grid-template-columns:1.08fr .92fr;
+      gap:14px;
+    }
+
+    .footer-line{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .contact{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .contact .pill{
+      background:#fff;
+      color:var(--text);
+      font-weight:600;
+    }
+
+    @media (max-width: 1180px){
+      :root{ --navw:240px; }
+      .layout{gap:14px;padding:14px}
+      .panel{padding:20px}
+      .card,.visual-card,.stat{padding:18px}
+    }
+
+    @media (max-width: 980px){
+      html,body{overflow:auto}
+      .page{height:auto; min-height:100dvh}
+      .shell{height:auto; min-height:100dvh; border-radius:0}
+      .layout{
+        grid-template-columns:1fr;
+      }
+      .sidebar{
+        padding:16px;
+      }
+      .content{
+        min-height:780px;
+      }
+      .hero-grid,.grid-3,.grid-2,.timeline,.two-col,.feature-list,.stats{
+        grid-template-columns:1fr;
+      }
+      .panel{
+        height:auto;
+        min-height:780px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="shell">
+      <div class="windowbar">
+        <div class="dots"><span></span><span></span><span></span></div>
+      </div>
+
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="eyebrow">Interactive company presentation</div>
+            <div class="title">Csaba Metál<br/>Company Presentation</div>
+            <div class="subtitle">Single-screen, responsive, website-style presentation built from the uploaded source deck.</div>
+          </div>
+
+          <div class="nav">
+            <button class="navbtn active" data-section="introduction">Introduction</button>
+            <button class="navbtn" data-section="company">Company Data</button>
+            <button class="navbtn" data-section="technology">Technology & Processes</button>
+            <button class="navbtn" data-section="products">Products & Customers</button>
+            <button class="navbtn" data-section="quality">Quality & Support</button>
+            <button class="navbtn" data-section="future">Future & Sustainability</button>
+          </div>
+
+          <div class="sidebar-foot">
+            The left-side topics behave like website navigation. Each section is optimized to fit into one screen on desktop, without scrolling.
+          </div>
+        </aside>
+
+        <main class="content">
+          <section class="section active" id="introduction">
+            <div class="panel">
+              <div>
+                <div class="eyebrow">Introduction</div>
+                <h1>Cast the future together.</h1>
+                <p class="lead">Csaba Metál is a Hungarian aluminium die-casting company with strong automotive know-how, scalable production, and a future-oriented industrial vision.</p>
+              </div>
+
+              <div class="hero-grid">
+                <div class="visual-card">
+                  <div class="quote">From manufacturing strength to international delivery capability.</div>
+                  <div class="subquote">Plant in Békéscsaba, nationwide industrial footprint, and a production model built for demanding automotive supply chains.</div>
+                </div>
+
+                <div class="stats">
+                  <div class="stat"><strong>700+</strong><span>employees</span></div>
+                  <div class="stat"><strong>40M€+</strong><span>turnover</span></div>
+                  <div class="stat"><strong>8.5M</strong><span>products / year</span></div>
+                  <div class="stat"><strong>170+</strong><span>different products</span></div>
+                </div>
+              </div>
+
+              <div class="pillrow">
+                <div class="pill">Békéscsaba, Hungary</div>
+                <div class="pill">Automotive focus</div>
+                <div class="pill">Tier-1 / Tier-2</div>
+                <div class="pill">Aluminium die casting</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="company">
+            <div class="panel">
+              <div>
+                <div class="eyebrow">Company Data</div>
+                <h2>Industrial heritage with second-generation leadership.</h2>
+              </div>
+
+              <div class="grid-2">
+                <div class="card compact">
+                  <h3>History</h3>
+                  <p>Founded by Mr. Béla Majoros in 1993. The company builds on more than 40 years of casting expertise and continues under the leadership of CEO Mr. Csaba Majoros.</p>
+                </div>
+                <div class="card compact">
+                  <h3>Locations</h3>
+                  <p>Main plant in Békéscsaba with listed locations in Ajka, Apc and Szeghalom, creating a broader operational footprint in Hungary.</p>
+                </div>
+              </div>
+
+              <div class="timeline">
+                <div class="step"><strong>1993</strong><span>Foundation of the company.</span></div>
+                <div class="step"><strong>2002–2005</strong><span>ISO 9000, automotive certification, ISO 14001.</span></div>
+                <div class="step"><strong>2007–2012</strong><span>Product development, industrial washing, strategic partner foundry.</span></div>
+                <div class="step"><strong>2014–2020</strong><span>Area extension and Industry 4.0 direction.</span></div>
+                <div class="step"><strong>Forward</strong><span>Sustainability goals and future development.</span></div>
+              </div>
+
+              <div class="grid-3">
+                <div class="card compact">
+                  <h3>Scale</h3>
+                  <p>High-volume production with diversified product programs.</p>
+                </div>
+                <div class="card compact">
+                  <h3>Profile</h3>
+                  <p>Foundry, machining, washing, assembly and measurement in one industrial flow.</p>
+                </div>
+                <div class="card compact">
+                  <h3>Market</h3>
+                  <p>Automotive-oriented supplier serving OEM and Tier-1 environments.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="technology">
+            <div class="panel">
+              <div>
+                <div class="eyebrow">Technology & Processes</div>
+                <h2>Integrated production flow with broad equipment depth.</h2>
+              </div>
+
+              <div class="two-col">
+                <div class="card">
+                  <h3>Production chain</h3>
+                  <p>Melting, casting, trimming, tumbling, shot blasting, machining, washing, leakage testing, assembly, laser engraving and packaging are integrated into one connected manufacturing system.</p>
+                  <div class="feature-list">
+                    <div class="feature"><strong>Melting</strong><span>4 furnaces, 8 tons/hour capacity.</span></div>
+                    <div class="feature"><strong>Casting</strong><span>33 die-casting cells from 225t to 3200t.</span></div>
+                    <div class="feature"><strong>Machining</strong><span>Turning, vertical and horizontal centers.</span></div>
+                    <div class="feature"><strong>Washing</strong><span>Water-based systems for strict cleanliness needs.</span></div>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <h3>Equipment snapshot</h3>
+                  <ul class="clean">
+                    <li>• CNC turning machines: 4 pcs</li>
+                    <li>• Vertical machining centers: 11 pcs</li>
+                    <li>• Horizontal machining centers: 19 pcs</li>
+                    <li>• Leakage testers: 10+ pcs</li>
+                    <li>• Laser marking devices: 4 pcs</li>
+                    <li>• Major foundry brands: IDRA, BÜHLER, FRECH, OMS, MAICO</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="grid-3">
+                <div class="card compact">
+                  <h3>Alloys</h3>
+                  <p>EN AC 46000, 44300, 47100, 43500 and openness for new alloy introduction.</p>
+                </div>
+                <div class="card compact">
+                  <h3>Automation</h3>
+                  <p>Automatized cells with minimal spraying and integrated peripheral processes.</p>
+                </div>
+                <div class="card compact">
+                  <h3>Industrial readiness</h3>
+                  <p>Built to fulfill complex automotive and industrial customer needs in-house.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="products">
+            <div class="panel">
+              <div>
+                <div class="eyebrow">Products & Customers</div>
+                <h2>Broad product portfolio across automotive systems.</h2>
+              </div>
+
+              <div class="grid-2">
+                <div class="card">
+                  <h3>Customer structure</h3>
+                  <p>Csaba Metál serves OEM and Tier-1 customer environments with a product portfolio ranging from electronics housings to structural and drivetrain-related components.</p>
+                </div>
+                <div class="card">
+                  <h3>Representative products</h3>
+                  <p>Oil pans, ECU housings, brake assist flanges, camera housings, transmission housings, driver assistance controller housings and electric-drive rear housings.</p>
+                </div>
+              </div>
+
+              <div class="grid-3">
+                <div class="card compact">
+                  <h3>Electronics</h3>
+                  <p>High-volume control housings and light control unit components in million-piece ranges.</p>
+                </div>
+                <div class="card compact">
+                  <h3>Powertrain</h3>
+                  <p>Oil pans, transmission parts, brackets and motor/rear housings for automotive platforms.</p>
+                </div>
+                <div class="card compact">
+                  <h3>Program diversity</h3>
+                  <p>Multiple part numbers and flexible annual volumes from niche to large-scale serial production.</p>
+                </div>
+              </div>
+
+              <div class="pillrow">
+                <div class="pill">BMW</div>
+                <div class="pill">VW</div>
+                <div class="pill">Porsche</div>
+                <div class="pill">Tier-1 electronics</div>
+                <div class="pill">ADAS housings</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="quality">
+            <div class="panel">
+              <div>
+                <div class="eyebrow">Quality & Support</div>
+                <h2>Quality built into the process, not added at the end.</h2>
+              </div>
+
+              <div class="grid-3">
+                <div class="card compact">
+                  <h3>Measurement systems</h3>
+                  <p>CMM, GOM, X-ray, spectroscope, cleanliness inspection, contourograph and surface finish testing.</p>
+                </div>
+                <div class="card compact">
+                  <h3>Engineering support</h3>
+                  <p>Product development support with CATIA, casting simulation and finite element analysis through a German cooperation partner.</p>
+                </div>
+                <div class="card compact">
+                  <h3>Design-phase value</h3>
+                  <p>2D/3D support, filling checks, mechanical property guidance and early issue prevention before first shot.</p>
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div class="card">
+                  <h3>Certificates</h3>
+                  <ul class="clean">
+                    <li>• IATF 16949</li>
+                    <li>• ISO 14001</li>
+                    <li>• ISO 45001</li>
+                    <li>• TISAX referenced in the source deck</li>
+                  </ul>
+                </div>
+                <div class="card">
+                  <h3>Quality promise</h3>
+                  <p>Material control, porosity control, optical inspection and cleanliness assurance support confidence for demanding automotive supply requirements.</p>
+                </div>
+              </div>
+
+              <div class="pillrow">
+                <div class="pill">CMM</div>
+                <div class="pill">GOM</div>
+                <div class="pill">X-ray</div>
+                <div class="pill">Spectroscope</div>
+                <div class="pill">Cleanliness inspection</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="future">
+            <div class="panel">
+              <div>
+                <div class="eyebrow">Future & Sustainability</div>
+                <h2>Strong heritage, structured sustainability path.</h2>
+              </div>
+
+              <div class="grid-2">
+                <div class="card">
+                  <h3>Direction</h3>
+                  <p>Sustainability is positioned as both compliance necessity and business differentiation point, supported by ESG assessment, leadership and future reporting readiness.</p>
+                </div>
+                <div class="card">
+                  <h3>Status quo</h3>
+                  <p>Environmental management, furnace modernization, energy optimization, lighting modernization, reduced auxiliary materials and governance steps are already underway.</p>
+                </div>
+              </div>
+
+              <div class="timeline" style="grid-template-columns:repeat(6,1fr);">
+                <div class="step"><strong>Assessment</strong><span>External ESG review of current activities.</span></div>
+                <div class="step"><strong>Materiality</strong><span>Double materiality analysis.</span></div>
+                <div class="step"><strong>Communication</strong><span>Awareness campaign for activities.</span></div>
+                <div class="step"><strong>Training</strong><span>Organization-wide ESG learning.</span></div>
+                <div class="step"><strong>Strategy</strong><span>Formal sustainability strategy build.</span></div>
+                <div class="step"><strong>Reporting</strong><span>Updated reporting to show progress.</span></div>
+              </div>
+
+              <div class="footer-line">
+                <div class="pillrow">
+                  <div class="pill">csabametal@csabametal.hu</div>
+                  <div class="pill">+36 66 430 881</div>
+                  <div class="pill">www.csabametal.hu</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const buttons = document.querySelectorAll('.navbtn');
+    const sections = document.querySelectorAll('.section');
+
+    function showSection(id){
+      buttons.forEach(btn => btn.classList.toggle('active', btn.dataset.section === id));
+      sections.forEach(sec => sec.classList.toggle('active', sec.id === id));
+      history.replaceState(null, '', '#' + id);
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => showSection(btn.dataset.section));
+    });
+
+    const hash = location.hash.replace('#','');
+    if(hash && document.getElementById(hash)){ showSection(hash); }
+  </script>
+</body>
+</html>

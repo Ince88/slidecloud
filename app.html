@@ -1171,12 +1171,18 @@
     .ps-slide-area {
       flex: 1; display: flex; align-items: center; justify-content: center;
       padding: 24px; overflow: hidden; position: relative;
-      /* whole area is also a swipe zone */
+    }
+    .ps-slide-wrap {
+      position: relative; max-width: 100%; max-height: 100%;
+      aspect-ratio: 16/9; border-radius: 10px; overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
     }
     .ps-slide-img {
-      max-width: 100%; max-height: 100%; object-fit: contain;
-      border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      width: 100%; height: 100%; object-fit: contain; display: block;
       pointer-events: none; user-select: none;
+    }
+    .ps-slide-wrap .ss-text-layer, .ps-slide-wrap .ss-image-layer, .ps-slide-wrap .ss-youtube-layer {
+      position: absolute; pointer-events: none;
     }
     .ps-slide-hint {
       position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
@@ -1631,7 +1637,9 @@
     </header>
 
     <div class="ps-slide-area" id="psSlideArea">
-      <img class="ps-slide-img" id="psSlideImg" src="" alt="Current slide" />
+      <div class="ps-slide-wrap" id="psSlideWrap">
+        <img class="ps-slide-img" id="psSlideImg" src="" alt="Current slide" />
+      </div>
       <div class="ps-slide-hint">← swipe or tap buttons →</div>
     </div>
 
@@ -1668,6 +1676,30 @@
         <div class="ai-field">
           <label>Website URL</label>
           <input id="aiUrlInput" type="url" placeholder="https://yourwebsite.com" oninput="_onAiFormChange()" />
+        </div>
+        <div class="ai-field">
+          <label>Brand logo <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+          <input id="aiLogoInput" type="file" accept="image/*" onchange="_onAiLogoPick(this.files?.[0])" />
+          <div class="ai-key-hint">
+            Upload your logo to extract brand colors. No logo = white background.
+            <span id="aiLogoColorsHint" style="display:none">Extracted: <span id="aiLogoFromSw" style="display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,0.15);vertical-align:-2px"></span> → <span id="aiLogoToSw" style="display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,0.15);vertical-align:-2px"></span></span>
+          </div>
+        </div>
+        <div class="ai-field" id="aiGradientDominanceField">
+          <label>Gradient dominancia</label>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:4px">
+            <select id="aiGradDominantColor" onchange="_onAiGradDominanceChange()" style="padding:6px 10px;border-radius:6px;border:1.5px solid #e2e2e6;font-size:13px">
+              <option value="none">Egyenlő</option>
+              <option value="from">From (bal felső) domináns</option>
+              <option value="to">To (jobb alsó) domináns</option>
+            </select>
+            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:140px">
+              <span style="font-size:12px;color:#6b7280">Erősség:</span>
+              <input type="range" id="aiGradDominanceAmount" min="0" max="100" value="50" oninput="_onAiGradDominanceChange()" style="flex:1;max-width:120px" />
+              <span id="aiGradDominanceVal" style="font-size:11px;color:#9ca3af;min-width:28px">50%</span>
+            </div>
+          </div>
+          <div class="ai-key-hint">Melyik szín legyen dominánsabb az átmenetben és mennyire.</div>
         </div>
         <div class="ai-field">
           <label>OpenAI API Key</label>
@@ -1925,7 +1957,6 @@
   let isPresenterMode = false;
   let presenterIdx    = 0;
   let presenterLayerIdx = 0;
-  let presenterLayerIdx = 0;
   let socket          = null;
   let wsUrl           = null;
   let genViewerUrlStr    = '';
@@ -2156,7 +2187,7 @@
 
     slides = slidesResult.value.data.slides.map(s => ({ ...s, id: uid() }));
     presenterIdx = 0;
-    presenterLayerIdx = 0;
+    presenterLayerIdx = _step0LayerCount(slides[0]?.layers || []);
 
     // Switch from loading to control UI
     document.getElementById('psLoading').style.display  = 'none';
@@ -2185,7 +2216,7 @@
       setPsStatus('live', 'Live');
       document.getElementById('psViewerCount').textContent = msg.viewerCount ?? 0;
       presenterIdx = Math.max(0, Math.min(msg.currentSlide ?? 0, slides.length - 1));
-      presenterLayerIdx = 0;
+      presenterLayerIdx = _step0LayerCount(slides[presenterIdx]?.layers || []);
       updatePresenterSlide();
     });
     socket.on('viewers', msg => {
@@ -2207,7 +2238,7 @@
         socket?.send({ type: 'next' });
       } else if (presenterIdx < slides.length - 1) {
         presenterIdx++;
-        presenterLayerIdx = 0;
+        presenterLayerIdx = _step0LayerCount(slides[presenterIdx]?.layers || []);
         socket?.send({ type: 'next' });
         socket?.send({ type: 'slide', index: presenterIdx });
       } else return;
@@ -2228,16 +2259,108 @@
     updatePresenterSlide();
   }
 
-  function updatePresenterSlide() {
+  async function updatePresenterSlide() {
     const slide = slides[presenterIdx];
     if (!slide) return;
-    document.getElementById('psSlideImg').src = slide.dataUrl;
+    await _setPresenterSlide(slide);
     document.getElementById('psCounter').textContent = `${presenterIdx + 1} / ${slides.length}`;
     const layers = slide.layers || [];
-    const atStart = presenterIdx === 0 && presenterLayerIdx === 0;
+    const atStart = presenterIdx === 0 && presenterLayerIdx === _step0LayerCount(layers);
     const atEnd = presenterIdx === slides.length - 1 && presenterLayerIdx >= layers.length;
     document.getElementById('psPrevBtn').disabled = atStart;
     document.getElementById('psNextBtn').disabled = atEnd;
+  }
+
+  async function _setPresenterSlide(slide) {
+    const wrap = document.getElementById('psSlideWrap');
+    const img = document.getElementById('psSlideImg');
+    if (!wrap || !img) return;
+    const layers0 = slide.layers || [];
+    const hasBase = layers0.length > 0 && slide.baseDataUrl;
+    img.src = hasBase ? slide.baseDataUrl : slide.dataUrl;
+    wrap.querySelectorAll('.ss-text-layer, .ss-image-layer, .ss-youtube-layer').forEach(el => el.remove());
+    for (let n = 0; n < presenterLayerIdx && n < layers0.length; n++) {
+      const layer = layers0[n];
+      const div = document.createElement('div');
+      div.className = layer.type === 'youtube' ? 'ss-youtube-layer' : (layer.type === 'image' ? 'ss-image-layer' : 'ss-text-layer');
+      div.classList.add('revealed', `anim-${layer.animation || 'fade'}`);
+      div.style.pointerEvents = 'none';
+      if (layer.type === 'youtube') {
+        div.style.left = `${(layer.xFrac ?? 0.5) * 100}%`;
+        div.style.top = `${(layer.yFrac ?? 0.5) * 100}%`;
+        div.style.width = `${(layer.widthFrac ?? 0.5) * 100}%`;
+        div.style.paddingBottom = `${(layer.widthFrac ?? 0.5) * 56.25}%`;
+        div.style.height = '0';
+        const iframe = document.createElement('iframe');
+        iframe.allow = 'autoplay; fullscreen';
+        iframe.allowFullscreen = true;
+        iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:6px;';
+        iframe.src = `https://www.youtube.com/embed/${layer.videoId}?autoplay=1&mute=0&rel=0`;
+        div.appendChild(iframe);
+      } else if (layer.type === 'image') {
+        if (layer.coverRight) {
+          div.style.cssText = 'position:absolute;right:0;top:0;width:33.333%;height:100%;overflow:hidden;';
+          const media = layer.videoSrc
+            ? Object.assign(document.createElement('video'), {
+                src: layer.videoSrc, autoplay: layer.videoAutoplay !== false, muted: true, loop: false, playsInline: true
+              })
+            : Object.assign(document.createElement('img'), { src: layer.src, alt: '' });
+          media.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+          if ((layer.opacity ?? 1) < 1) media.style.opacity = layer.opacity;
+          if (layer.fogLeft) {
+            media.style.maskImage = media.style.webkitMaskImage = 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.3) 25%, rgba(0,0,0,0.7) 50%, black 70%)';
+            media.style.maskSize = media.style.webkitMaskSize = '100% 100%';
+          }
+          div.appendChild(media);
+          if (layer.videoSrc && layer.videoAutoplay !== false) media.play().catch(() => {});
+        } else {
+          div.style.left = `${(layer.xFrac ?? 0.5) * 100}%`;
+          div.style.top = `${(layer.yFrac ?? 0.5) * 100}%`;
+          div.style.transform = 'translate(-50%, -50%)';
+          div.style.width = `${(layer.widthFrac ?? 0.25) * 100}%`;
+          if (layer.videoSrc) {
+            const vid = document.createElement('video');
+            vid.src = layer.videoSrc;
+            vid.autoplay = layer.videoAutoplay !== false;
+            vid.muted = true;
+            vid.loop = false;
+            vid.playsInline = true;
+            vid.style.cssText = 'width:100%;height:auto;max-height:90%;display:block;';
+            if (layer.clipShape === 'circle') {
+              div.style.aspectRatio = '1/1';
+              div.style.borderRadius = '50%';
+              div.style.overflow = 'hidden';
+              vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+            }
+            div.appendChild(vid);
+            if (layer.videoAutoplay !== false) vid.play().catch(() => {});
+          } else {
+            const layerImg = document.createElement('img');
+            layerImg.src = layer.src;
+            layerImg.alt = '';
+            layerImg.style.cssText = 'width:100%;height:auto;max-height:90%;display:block;';
+            if (layer.clipShape === 'circle') {
+              div.style.aspectRatio = '1/1';
+              div.style.borderRadius = '50%';
+              div.style.overflow = 'hidden';
+              layerImg.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+            }
+            div.appendChild(layerImg);
+          }
+        }
+      } else {
+        div.style.left = '0';
+        div.style.top = '0';
+        div.style.width = '100%';
+        div.style.height = '100%';
+        const layerImg = document.createElement('img');
+        layerImg.alt = '';
+        layerImg.style.cssText = 'width:100%;height:100%;display:block;';
+        layerImg.src = await _preRenderLayer(layer, slide);
+        div.appendChild(layerImg);
+      }
+      wrap.appendChild(div);
+    }
   }
 
   function setPsStatus(type, label) {
@@ -2509,6 +2632,9 @@
     const gradTo   = slide.bgGradient?.to   || _autoGradient2(gradFrom);
     const curColor = slide.bgColor || gradFrom;
 
+    const dom = slide.bgGradientDominance || { color: 'none', amount: 50 };
+    const domColor = dom.color || 'none';
+    const domAmount = dom.amount ?? 50;
     // Shared gradient & apply-all section
     const gradSection = `
       <div class="bg-popover-title" style="margin-top:6px">Gradient background</div>
@@ -2527,6 +2653,17 @@
           <input type="color" value="${gradTo}"
             onclick="event.stopPropagation()" oninput="event.stopPropagation();_onGradPick(${slideIdx},'${slide.id}','to',this.value)">
         </div>
+      </div>
+      <div class="bg-popover-title" style="margin-top:8px;font-size:11px">Dominancia</div>
+      <div class="bg-grad-row" style="flex-wrap:wrap;gap:6px">
+        <select id="bgDomColor-${slide.id}" onchange="event.stopPropagation();_onGradDominancePick(${slideIdx},'${slide.id}')" style="padding:4px 8px;font-size:11px;border-radius:4px;border:1px solid #e2e2e6">
+          <option value="none"${domColor==='none'?' selected':''}>Egyenlő</option>
+          <option value="from"${domColor==='from'?' selected':''}>From domináns</option>
+          <option value="to"${domColor==='to'?' selected':''}>To domináns</option>
+        </select>
+        <span style="font-size:11px;color:#888">Erő:</span>
+        <input type="range" id="bgDomAmount-${slide.id}" min="0" max="100" value="${domAmount}" oninput="event.stopPropagation();_onGradDominancePick(${slideIdx},'${slide.id}')" style="flex:1;min-width:60px;max-width:80px" />
+        <span id="bgDomVal-${slide.id}" style="font-size:10px;color:#9ca3af;min-width:28px">${domAmount}%</span>
       </div>
       <button class="bg-apply-all" onclick="event.stopPropagation();applyBgToAll(${slideIdx})">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -2622,15 +2759,37 @@
     if (!slide) return;
     slide.bgColor = color;
     if (slide.grid) {
-      flattenGridSlide(slide).then(() => _updateSlideThumbnail(slide));
+      flattenGridSlide(slide).then(() => { _updateSlideThumbnail(slide); _refreshTextEditorBaseIfOpen(slideIdx); });
     } else {
       _renderSolidBg(slide, color);
-      if (slide.layers?.length) computeFlatDataUrl(slide).then(() => _updateSlideThumbnail(slide));
-      else _updateSlideThumbnail(slide);
+      if (slide.layers?.length) computeFlatDataUrl(slide).then(() => { _updateSlideThumbnail(slide); _refreshTextEditorBaseIfOpen(slideIdx); });
+      else { _updateSlideThumbnail(slide); _refreshTextEditorBaseIfOpen(slideIdx); }
     }
   }
 
   let _gradPickTimer = null;
+
+  function _onGradDominancePick(slideIdx, slideId) {
+    const slide = slides[slideIdx];
+    if (!slide) return;
+    const sel = document.getElementById(`bgDomColor-${slideId}`);
+    const range = document.getElementById(`bgDomAmount-${slideId}`);
+    const valSpan = document.getElementById(`bgDomVal-${slideId}`);
+    if (!sel || !range) return;
+    const color = sel.value;
+    const amount = parseInt(range.value, 10) || 50;
+    slide.bgGradientDominance = { color, amount };
+    if (valSpan) valSpan.textContent = amount + '%';
+    if (!slide.bgGradient) return;
+    clearTimeout(_gradPickTimer);
+    _gradPickTimer = setTimeout(async () => {
+      _renderGradientBg(slide, slide.bgGradient.from, slide.bgGradient.to);
+      if (slide.grid) await flattenGridSlide(slide);
+      else if (slide.layers?.length) await computeFlatDataUrl(slide);
+      _updateSlideThumbnail(slide);
+      _refreshTextEditorBaseIfOpen(slideIdx);
+    }, 150);
+  }
 
   // Single handler called from oninput on both gradient color pickers.
   // Updates live preview immediately; debounces the actual canvas render.
@@ -2661,6 +2820,7 @@
         if (slide.layers?.length) await computeFlatDataUrl(slide);
       }
       _updateSlideThumbnail(slide);
+      _refreshTextEditorBaseIfOpen(slideIdx);
     }, 150);
   }
 
@@ -2676,6 +2836,7 @@
       await computeFlatDataUrl(slide);
     }
     _updateSlideThumbnail(slide);
+    _refreshTextEditorBaseIfOpen(slideIdx);
   }
 
   // Apply current bg (gradient or color) to all slides that have bgGradient or bgColor set
@@ -2692,10 +2853,11 @@
         const sl = srcLayers[j];
         const tl = tgtLayers[j];
         if (sl.style) {
-          const { fontSize, ...rest } = sl.style;
-          tl.style = { ...(tl.style || {}), ...rest };
+          const { font, color } = sl.style;
+          if (font !== undefined || color !== undefined) {
+            tl.style = { ...(tl.style || {}), ...(font !== undefined && { font }), ...(color !== undefined && { color }) };
+          }
         }
-        if (sl.animation !== undefined) tl.animation = sl.animation;
       }
       computeFlatDataUrl(t).then(() => { _updateSlideThumbnail(t); });
     }
@@ -2714,6 +2876,7 @@
       if (!s.bgColor && !s.bgGradient) continue;
       if (hasGrad) {
         s.bgGradient = { ...src.bgGradient };
+        s.bgGradientDominance = src.bgGradientDominance ? { ...src.bgGradientDominance } : undefined;
         delete s.bgColor;
         _renderGradientBg(s, s.bgGradient.from, s.bgGradient.to);
       } else {
@@ -2735,6 +2898,17 @@
     if (sbThumb) sbThumb.src = slide.dataUrl;
   }
 
+  function _refreshTextEditorBaseIfOpen(slideIdx) {
+    if (_textEditIdx !== slideIdx || !_stBaseImg) return;
+    const slide = slides[slideIdx];
+    if (!slide) return;
+    const baseUrl = slide.baseDataUrl || slide.dataUrl;
+    try {
+      _stBaseImg.onload = () => _drawTextCanvas();
+      _stBaseImg.src = baseUrl;
+    } catch { /* ignore */ }
+  }
+
   function _renderSolidBg(slide, color) {
     const c = document.createElement('canvas');
     c.width = 1920; c.height = 1080;
@@ -2750,7 +2924,8 @@
     const c = document.createElement('canvas');
     c.width = 1920; c.height = 1080;
     const ctx = c.getContext('2d');
-    _aiBgSolid(ctx, from, to, 1920, 1080);
+    const dom = slide?.bgGradientDominance || _aiGradientDominance;
+    _aiBgSolid(ctx, from, to, 1920, 1080, dom);
     const url = c.toDataURL('image/jpeg', 0.92);
     slide.dataUrl = url;
     slide.baseDataUrl = url;
@@ -2764,6 +2939,14 @@
       else { if (i > 0) step++; steps.push(step); }
     }
     return steps;
+  }
+
+  function _step0LayerCount(layers) {
+    if (!layers?.length) return 0;
+    const steps = _layerSteps(layers);
+    let n = 0;
+    while (n < layers.length && steps[n] === 0) n++;
+    return n;
   }
 
   function buildLayersPanel(slide, slideIdx) {
@@ -2834,10 +3017,17 @@
           ${exitBtn}
           ${isYT
             ? `<button class="yt-autoplay-btn${l.autoplay !== false ? ' active' : ''}"
-                title="${l.autoplay !== false ? 'Autoplay: videó azonnal indul a slide-dal' : 'On reveal: sorban jelenik meg'}"
+                title="${l.autoplay !== false ? 'Autoplay: starts with slide' : 'On reveal: appears in sequence'}"
                 onclick="toggleYouTubeAutoplay(${slideIdx},'${l.id}')">
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 ${l.autoplay !== false ? 'Autoplay' : 'On reveal'}
+               </button>`
+            : isAnimated
+            ? `<button class="yt-autoplay-btn${l.videoAutoplay !== false ? ' active' : ''}"
+                title="${l.videoAutoplay !== false ? 'Autoplay: video plays immediately' : 'Manual: video does not autoplay'}"
+                onclick="toggleVideoAutoplay(${slideIdx},'${l.id}')">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                ${l.videoAutoplay !== false ? 'Autoplay' : 'Manual'}
                </button>`
             : `<select class="layer-anim-select" title="Animation"
                 onchange="setLayerAnimation(${slideIdx},'${l.id}',this.value)">${opts}</select>`
@@ -3171,6 +3361,7 @@
       div.dataset.idx = n;
       div.dataset.anim = layer.animation || 'fade';
       div.dataset.type = layer.type || 'text';
+      if (layer.videoSrc && layer.videoAutoplay === false) div.dataset.videoAutoplay = 'false';
       if (layer.exitOnNext) div.dataset.exitOnNext = 'true';
 
       if (layer.type === 'youtube') {
@@ -3209,21 +3400,16 @@
 
           const media = layer.videoSrc
             ? Object.assign(document.createElement('video'), {
-                src: layer.videoSrc, autoplay: true, muted: true, loop: false, playsInline: true
+                src: layer.videoSrc, autoplay: layer.videoAutoplay !== false, muted: true, loop: false, playsInline: true
               })
             : Object.assign(document.createElement('img'), { src: layer.src, alt: '' });
           media.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
           if ((layer.opacity ?? 1) < 1) media.style.opacity = layer.opacity;
-          div.appendChild(media);
-
           if (layer.fogLeft) {
-            const fog = document.createElement('div');
-            const fogStops = _fogGradientStops(slide);
-            fog.style.cssText =
-              'position:absolute;inset:0;pointer-events:none;' +
-              'background:linear-gradient(to right,' + fogStops + ');';
-            div.appendChild(fog);
+            media.style.maskImage = media.style.webkitMaskImage = 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.3) 25%, rgba(0,0,0,0.7) 50%, black 70%)';
+            media.style.maskSize = media.style.webkitMaskSize = '100% 100%';
           }
+          div.appendChild(media);
         } else {
           // ── Standard image layer (centered, width-based) ───────
           div.style.left = `${(layer.xFrac ?? 0.5) * 100}%`;
@@ -3235,7 +3421,7 @@
           if (layer.videoSrc) {
             const vid = document.createElement('video');
             vid.src = layer.videoSrc;
-            vid.autoplay = true; vid.muted = true; vid.loop = false; vid.playsInline = true;
+            vid.autoplay = layer.videoAutoplay !== false; vid.muted = true; vid.loop = false; vid.playsInline = true;
             if ((layer.opacity ?? 1) < 1) vid.style.opacity = layer.opacity;
             if (layer.clipShape === 'circle') {
               div.style.aspectRatio = '1/1'; div.style.borderRadius = '50%';
@@ -3333,7 +3519,7 @@
       }
     }
 
-    // fal.ai video: autoplay can be blocked without user gesture — try play() when revealed
+    // fal.ai video: always play when the layer is revealed by user action
     const vid = div.querySelector?.('video');
     if (vid && vid.paused) vid.play().catch(() => {});
 
@@ -3585,6 +3771,7 @@
           baseDataUrl: s.baseDataUrl || s.dataUrl,
           layers:     s.layers || [],
           bgGradient: s.bgGradient || null,
+          bgGradientDominance: s.bgGradientDominance || null,
           bgColor:    s.bgColor ?? null,
         })),
       });
@@ -4838,22 +5025,52 @@
               sx = 0; sy = (img.naturalHeight - sh) / 2;
             }
             ctx.drawImage(img, sx, sy, sw, sh, panelX, 0, panelW, panelH);
-            // ── Fog: soft, wide gradient to avoid sharp image/text edge
+            // ── Fog: offscreen canvas reproduces exact background gradient slice, then alpha-fades it
             if (layer.fogLeft) {
               ctx.globalAlpha = 1;
-              const hasGrad = slide?.bgGradient?.from && slide?.bgGradient?.to;
-              const hex = _normalizeHex(hasGrad ? slide.bgGradient.to : (slide?.bgGradient?.from || slide?.bgColor || '#ffffff'));
-              const { r, g, b } = _hexToRgb(hex);
-              const fogW = panelW * 0.85;
-              const fog = ctx.createLinearGradient(panelX, 0, panelX + fogW, 0);
-              fog.addColorStop(0,    `rgba(${r},${g},${b},1)`);
-              fog.addColorStop(0.24, `rgba(${r},${g},${b},0.92)`);
-              fog.addColorStop(0.47, `rgba(${r},${g},${b},0.65)`);
-              fog.addColorStop(0.65, `rgba(${r},${g},${b},0.35)`);
-              fog.addColorStop(0.82, `rgba(${r},${g},${b},0.12)`);
-              fog.addColorStop(1,    `rgba(${r},${g},${b},0)`);
-              ctx.fillStyle = fog;
-              ctx.fillRect(panelX, 0, fogW, panelH);
+              ctx.globalCompositeOperation = 'source-over';
+              const bgFrom = slide?.bgGradient?.from || slide?.bgColor || '#0f172a';
+              const bgTo   = slide?.bgGradient?.to   || bgFrom;
+              const dom    = slide?.bgGradientDominance || _aiGradientDominance || {};
+              const fadeW  = Math.round(panelW * 0.65);
+
+              // Offscreen: paint the same diagonal gradient at the correct x-offset
+              const fogC   = document.createElement('canvas');
+              fogC.width   = fadeW; fogC.height = H;
+              const fogCtx = fogC.getContext('2d');
+
+              const makeDiagGrad = (c, ox) => {
+                const g = c.createLinearGradient(-ox, 0, W - ox, H);
+                if (dom.color === 'from' && dom.amount > 0) {
+                  const p = dom.amount / 100;
+                  g.addColorStop(0, bgFrom); g.addColorStop(p, bgFrom); g.addColorStop(1, bgTo);
+                } else if (dom.color === 'to' && dom.amount > 0) {
+                  const p = 1 - dom.amount / 100;
+                  g.addColorStop(0, bgFrom); g.addColorStop(p, bgTo); g.addColorStop(1, bgTo);
+                } else {
+                  g.addColorStop(0, bgFrom); g.addColorStop(1, bgTo);
+                }
+                return g;
+              };
+              fogCtx.fillStyle = makeDiagGrad(fogCtx, panelX);
+              fogCtx.fillRect(0, 0, fadeW, H);
+              // Subtle brightness overlay (same as _aiBgSolid)
+              const ov = fogCtx.createLinearGradient(-panelX, 0, W - panelX, H);
+              ov.addColorStop(0, 'rgba(255,255,255,0.04)'); ov.addColorStop(1, 'rgba(0,0,0,0.18)');
+              fogCtx.fillStyle = ov; fogCtx.fillRect(0, 0, fadeW, H);
+
+              // Horizontal alpha fade on the offscreen canvas
+              const alphaG = fogCtx.createLinearGradient(0, 0, fadeW, 0);
+              alphaG.addColorStop(0,    'rgba(0,0,0,1)');
+              alphaG.addColorStop(0.45, 'rgba(0,0,0,0.5)');
+              alphaG.addColorStop(0.80, 'rgba(0,0,0,0.08)');
+              alphaG.addColorStop(1,    'rgba(0,0,0,0)');
+              fogCtx.globalCompositeOperation = 'destination-out';
+              fogCtx.fillStyle = alphaG;
+              fogCtx.fillRect(0, 0, fadeW, H);
+
+              // Composite fog onto main canvas (transparent offscreen pixels = image shows through)
+              ctx.drawImage(fogC, panelX, 0);
             }
           } else {
             const wFrac = layer.widthFrac ?? (layer.type === 'youtube' ? 0.5 : 0.25);
@@ -4996,12 +5213,48 @@
     }
   }
 
+  // Composite base + layers 0..maxLayerIdx (exclusive) — for presenter preview to match viewer.
+  async function computeFlatDataUrlUpTo(slide, maxLayerIdx) {
+    const layers = slide.layers || [];
+    if (maxLayerIdx >= layers.length) return slide.dataUrl;
+    const W = 1920, H = 1080;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const ctx = c.getContext('2d');
+    const baseSrc = slide.grid
+      ? await _renderGridToDataUrl(slide)
+      : (slide.baseDataUrl || slide.dataUrl);
+    if (!baseSrc) return slide.dataUrl;
+    await new Promise(res => {
+      const img = new Image();
+      img.onload = () => { ctx.drawImage(img, 0, 0, W, H); res(); };
+      img.onerror = res;
+      img.src = baseSrc;
+    });
+    for (let i = 0; i < maxLayerIdx; i++) {
+      const p = _drawLayerOnCtx(ctx, layers[i], slide);
+      if (p && typeof p.then === 'function') await p;
+    }
+    try { return c.toDataURL('image/jpeg', 0.92); } catch (_) { return slide.dataUrl; }
+  }
+
   // Recompute slide.dataUrl as a flat composite. For grid slides: always render grid fresh.
   async function computeFlatDataUrl(slide) {
     const W = 1920, H = 1080;
     const c   = document.createElement('canvas');
     c.width = W; c.height = H;
     const ctx = c.getContext('2d');
+    // If baseDataUrl missing but slide has image layers + gradient source, regenerate base with logo gradient
+    if (!slide.grid && !slide.baseDataUrl && slide.layers?.some(l => l.type === 'image') && (slide.bgGradient || slide._aiDef || _aiBrandBaseGradient)) {
+      const g = slide.bgGradient?.from && slide.bgGradient?.to ? slide.bgGradient : _defGrad(slide._aiDef || {});
+      const bgCanvas = document.createElement('canvas');
+      bgCanvas.width = W; bgCanvas.height = H;
+      const bgCtx = bgCanvas.getContext('2d');
+      const dom = slide.bgGradientDominance || _aiGradientDominance;
+      _aiBgSolid(bgCtx, g.from, g.to, W, H, dom);
+      slide.baseDataUrl = bgCanvas.toDataURL('image/jpeg', 0.92);
+      slide.bgGradient = g;
+    }
     const baseSrc = slide.grid
       ? await _renderGridToDataUrl(slide)
       : (slide.baseDataUrl || slide.dataUrl);
@@ -5921,6 +6174,14 @@
     renderSidebar();
   }
 
+  function toggleVideoAutoplay(slideIdx, layerId) {
+    const layer = slides[slideIdx]?.layers?.find(l => l.id === layerId);
+    if (!layer || !layer.videoSrc) return;
+    layer.videoAutoplay = layer.videoAutoplay === false ? true : false;
+    renderSidebar();
+    renderStack();
+  }
+
   // ══════════════════════════════════════════════════════════
   // ── fal.ai Image Animation ────────────────────────────────
   // ══════════════════════════════════════════════════════════
@@ -6009,27 +6270,16 @@
     promptInput.placeholder = 'Generating smart prompt…';
 
     try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + openaiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          max_tokens: 80,
-          temperature: 0.5,
-          messages: [{
-            role: 'user',
-            content:
-              'Write a short fal.ai video motion prompt (max 25 words) for animating this image VERY SUBTLY. ' +
-              'The image is about: "' + context + '". ' +
-              'Rules: only tiny natural movements (people barely move, machinery hums gently, ' +
-              'water ripples, leaves sway, lights flicker). No camera movement. No dramatic action. ' +
-              'Output ONLY the prompt text, nothing else.'
-          }]
-        })
+      const generated = await _openaiResponse(openaiKey, {
+        maxTokens: 120,
+        reasoningEffort: 'minimal',
+        prompt:
+          'Write a short fal.ai video motion prompt (max 25 words) for animating this image VERY SUBTLY. ' +
+          'The image is about: "' + context + '". ' +
+          'Rules: only tiny natural movements (people barely move, machinery hums gently, ' +
+          'water ripples, leaves sway, lights flicker). No camera movement. No dramatic action. ' +
+          'Output ONLY the prompt text, nothing else.'
       });
-      if (!res.ok) throw new Error('GPT ' + res.status);
-      const data = await res.json();
-      const generated = data.choices?.[0]?.message?.content?.trim() || '';
       if (generated && promptInput && document.getElementById('falModalBackdrop').classList.contains('open')) {
         promptInput.value = generated;
       }
@@ -6314,6 +6564,10 @@
   // Per-slide uploaded image data: { dataUrl, width, height, aspectRatio, type }
   // type: 'landscape' (ar>1.4) | 'portrait' (ar<0.75) | 'square'
   var _aiSlideImages = {};
+  var _aiLogoGradient = null; // { from, to, source:'logo' }
+  var _aiLogoDataUrl  = null;
+  var _aiBrandBaseGradient = null; // { from, to, source }
+  var _aiGradientDominance = { color: 'none', amount: 50 }; // color: 'from'|'to'|'none', amount: 0-100
 
   function openAiModal() {
     const keyInput      = document.getElementById('aiKeyInput');
@@ -6326,6 +6580,17 @@
     urlInput.value = '';
     _aiSlideDefs   = null;
     _aiSlideImages = {};
+    _aiLogoGradient = null;
+    _aiLogoDataUrl  = null;
+    const logoInp = document.getElementById('aiLogoInput');
+    if (logoInp) logoInp.value = '';
+    const hint = document.getElementById('aiLogoColorsHint');
+    if (hint) hint.style.display = 'none';
+    const domSel = document.getElementById('aiGradDominantColor');
+    const domRange = document.getElementById('aiGradDominanceAmount');
+    if (domSel) domSel.value = _aiGradientDominance.color || 'none';
+    if (domRange) domRange.value = _aiGradientDominance.amount ?? 50;
+    _onAiGradDominanceChange();
     _showAiState('form');
     document.getElementById('aiSubmitBtn').disabled = true;
     document.getElementById('aiModalBackdrop').classList.add('open');
@@ -6343,6 +6608,61 @@
     loading.classList.toggle('active', state === 'loading');
   }
 
+  // ── OpenAI Responses API helper ─────────────────────────
+  // Uses the new /v1/responses endpoint with the latest GPT-5.4 family.
+  // Automatically falls back to GPT-4.1-mini if the org doesn't have access yet.
+  const _OPENAI_MODEL_MAIN     = 'gpt-5.4-mini';
+  const _OPENAI_MODEL_FALLBACK = 'gpt-4.1-mini';
+
+  async function _openaiResponse(key, { model, prompt, json, maxTokens, reasoningEffort }) {
+    const body = {
+      model: model || _OPENAI_MODEL_MAIN,
+      input: typeof prompt === 'string' ? prompt : prompt,
+      store: false,
+    };
+    if (json) body.text = { format: { type: 'json_object' } };
+    if (maxTokens) body.max_output_tokens = maxTokens;
+    if (reasoningEffort && /^gpt-5/i.test(body.model)) {
+      body.reasoning = { effort: reasoningEffort };
+    }
+
+    let res = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok && (res.status === 404 || res.status === 400)) {
+      const errText = await res.clone().text();
+      if (/model|not\s*found|does\s*not\s*have\s*access/i.test(errText)) {
+        body.model = _OPENAI_MODEL_FALLBACK;
+        delete body.reasoning;
+        res = await fetch('https://api.openai.com/v1/responses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+          body: JSON.stringify(body),
+        });
+      }
+    }
+
+    if (!res.ok) {
+      const t = await res.text();
+      let msg;
+      try { msg = JSON.parse(t)?.error?.message; } catch {}
+      const err = new Error(msg || ('OpenAI error ' + res.status));
+      err.status = res.status;
+      throw err;
+    }
+
+    const j = await res.json();
+    let text = j.output_text || '';
+    if (!text && Array.isArray(j.output)) {
+      const m = j.output.find(o => o.type === 'message');
+      text = m?.content?.find(c => c.type === 'output_text')?.text || '';
+    }
+    return (text || '').trim();
+  }
+
   function _setAiProgress(pct, msg) {
     document.getElementById('aiProgressFill').style.width = pct + '%';
     if (msg) document.getElementById('aiStatusMsg').textContent = msg;
@@ -6354,11 +6674,95 @@
     document.getElementById('aiSubmitBtn').disabled = !(url.startsWith('http') && key.startsWith('sk-'));
   }
 
+  function _onAiGradDominanceChange() {
+    const sel = document.getElementById('aiGradDominantColor');
+    const range = document.getElementById('aiGradDominanceAmount');
+    const valSpan = document.getElementById('aiGradDominanceVal');
+    if (!sel || !range) return;
+    _aiGradientDominance = {
+      color: sel.value,
+      amount: parseInt(range.value, 10) || 50
+    };
+    if (valSpan) valSpan.textContent = _aiGradientDominance.amount + '%';
+  }
+
+  async function _onAiLogoPick(file) {
+    _aiLogoGradient = null;
+    _aiLogoDataUrl  = null;
+    const hint = document.getElementById('aiLogoColorsHint');
+    if (hint) hint.style.display = 'none';
+    if (!file) return;
+    try {
+      const dataUrl = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      _aiLogoDataUrl = dataUrl;
+      _aiLogoGradient = await _extractBrandGradientFromDataUrl(dataUrl);
+      if (_aiLogoGradient?.from && _aiLogoGradient?.to) {
+        const fromSw = document.getElementById('aiLogoFromSw');
+        const toSw   = document.getElementById('aiLogoToSw');
+        if (fromSw) fromSw.style.background = _aiLogoGradient.from;
+        if (toSw)   toSw.style.background   = _aiLogoGradient.to;
+        if (hint) hint.style.display = '';
+      }
+    } catch (e) {
+      console.warn('[aiLogo] failed:', e);
+    }
+  }
+
+  function _extractBrandGradientFromDataUrl(dataUrl) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        const W = 80, H = 80;
+        c.width = W; c.height = H;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(img, 0, 0, W, H);
+        const { data } = ctx.getImageData(0, 0, W, H);
+        const buckets = new Map();
+        for (let i = 0; i < data.length; i += 4) {
+          const a = data[i + 3];
+          if (a < 200) continue;
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          const br = (r + g + b) / 3;
+          if (br > 245 || br < 12) continue;
+          const qr = Math.round(r / 16) * 16;
+          const qg = Math.round(g / 16) * 16;
+          const qb = Math.round(b / 16) * 16;
+          const key = (qr << 16) | (qg << 8) | qb;
+          buckets.set(key, (buckets.get(key) || 0) + 1);
+        }
+        const top = [...buckets.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+        const toHex = (k) => '#' + k.toString(16).padStart(6, '0');
+        if (top.length === 0) return resolve({ from: '#0f172a', to: '#1e293b', source: 'logo-fallback' });
+        const c1 = top[0][0];
+        let c2 = top.length > 1 ? top[1][0] : c1;
+        const dist = (k1, k2) => {
+          const r1 = (k1 >> 16) & 255, g1 = (k1 >> 8) & 255, b1 = k1 & 255;
+          const r2 = (k2 >> 16) & 255, g2 = (k2 >> 8) & 255, b2 = k2 & 255;
+          return Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+        };
+        for (let i = 1; i < top.length; i++) {
+          if (dist(c1, top[i][0]) > 90) { c2 = top[i][0]; break; }
+        }
+        resolve({ from: toHex(c1), to: toHex(c2), source: 'logo' });
+      };
+      img.onerror = () => resolve({ from: '#0f172a', to: '#1e293b', source: 'logo-fallback' });
+      img.src = dataUrl;
+    });
+  }
+
   // ── Step 1: Analyze website, get slide plan + image suggestions ──────────────
   async function _runAiAnalyze() {
     const url = document.getElementById('aiUrlInput').value.trim();
     const key = document.getElementById('aiKeyInput').value.trim();
     if (!url || !key) return;
+    _onAiGradDominanceChange(); // Store gradient dominance from form
     localStorage.setItem('aiApiKey', key);
     const unsplashKey = document.getElementById('aiUnsplashKeyInput').value.trim();
     if (unsplashKey) localStorage.setItem('aiUnsplashKey', unsplashKey);
@@ -6370,23 +6774,23 @@
     _setAiProgress(0, 'Fetching website content…');
 
     try {
-      // Fetch content + extract dominant colors from screenshot (parallel)
+      // Fetch website content only — colors always from logo (or white if no logo)
       _setAiProgress(5, 'Fetching website content…');
-      const [jinaRes, colorsRes] = await Promise.all([
-        fetch(`https://r.jina.ai/${url}`, {
-          mode: 'cors',
-          headers: { 'Accept': 'text/markdown', 'X-Return-Format': 'markdown' }
-        }),
-        fetch(`/api/extract-colors?url=${encodeURIComponent(url)}`)
-          .then(r => r.ok ? r.json() : { from: '#0f172a', to: '#1e293b', source: 'fallback' })
-          .catch(() => ({ from: '#0f172a', to: '#1e293b', source: 'fallback' }))
-      ]);
+      const jinaRes = await fetch(`https://r.jina.ai/${url}`, {
+        mode: 'cors',
+        headers: { 'Accept': 'text/markdown', 'X-Return-Format': 'markdown' }
+      });
 
       if (!jinaRes.ok) throw new Error('Could not fetch the website. Check the URL.');
       const markdown = await jinaRes.text();
 
-      const brandColors = colorsRes?.from && colorsRes?.to && colorsRes?.source === 'screenshot'
-        ? `\n\nIMPORTANT — Brand colors extracted from the website screenshot. Use these as the PRIMARY gradient base (darken slightly for slides): from=${colorsRes.from} to=${colorsRes.to}. Create 5 variations of this palette for each slide.`
+      // Always use logo colors; if no logo, use white
+      const chosenColors = (_aiLogoGradient?.from && _aiLogoGradient?.to)
+        ? { ..._aiLogoGradient, source: 'logo' }
+        : { from: '#ffffff', to: '#f5f5f7', source: 'no-logo' };
+      _aiBrandBaseGradient = chosenColors;
+      const brandColors = chosenColors?.from && chosenColors?.to
+        ? `\n\nIMPORTANT — Brand colors from ${chosenColors.source === 'logo' ? 'the uploaded logo' : 'default (white)'}. Use as gradient base: from=${chosenColors.from} to=${chosenColors.to}. Create 5 variations for each slide.${chosenColors.source === 'no-logo' ? ' Use dark text (textColor: #1e293b or #374151) for white/light backgrounds.' : ''}`
         : '';
 
       // Try to also scrape a second relevant page (e.g. /about or /services) for richer context
@@ -6456,25 +6860,12 @@ Quality rules:
 Website content:
 ${truncated}`;
 
-      const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          response_format: { type: 'json_object' },
-          temperature: 0.7,
-          max_tokens: 1400
-        })
+      const content = await _openaiResponse(key, {
+        prompt,
+        json: true,
+        maxTokens: 1400,
+        reasoningEffort: 'minimal',
       });
-
-      if (!gptRes.ok) {
-        const err = await gptRes.json().catch(() => ({}));
-        throw new Error(err.error?.message || `OpenAI error ${gptRes.status}`);
-      }
-
-      const gptData  = await gptRes.json();
-      const content  = gptData.choices?.[0]?.message?.content;
       const parsed   = JSON.parse(content);
       _aiSlideDefs   = parsed.slides || parsed;
       _aiSlideImages = {};
@@ -6730,14 +7121,6 @@ ${truncated}`;
     return '#ffffff';
   }
 
-  // Fog gradient stops for layer.fogLeft — soft, wide fade to avoid sharp edge
-  function _fogGradientStops(slide) {
-    const hasGrad = slide?.bgGradient?.from && slide?.bgGradient?.to;
-    const hex = _normalizeHex(hasGrad ? slide.bgGradient.to : (slide?.bgGradient?.from || slide?.bgColor || '#ffffff'));
-    const { r, g, b } = _hexToRgb(hex);
-    return `rgba(${r},${g},${b},1) 0%,rgba(${r},${g},${b},0.92) 20%,rgba(${r},${g},${b},0.65) 40%,rgba(${r},${g},${b},0.35) 55%,rgba(${r},${g},${b},0.12) 70%,rgba(${r},${g},${b},0) 85%`;
-  }
-
   // ── Background-only design helpers (NO image drawn) ──────────────────────────
 
   // "Minimal dark" — used when no image or as base for split/circle
@@ -6751,23 +7134,35 @@ ${truncated}`;
     return _rgbToHex(r+10, g+10, Math.min(255,b+28));                        // default → add blue
   }
 
-  // Get { from, to } gradient from def — uses bgGradient if present, else auto-derives
+  // Get { from, to } gradient from def — logo colors always win, then def.bgGradient, then white
   function _defGrad(def) {
+    if (_aiBrandBaseGradient?.from && _aiBrandBaseGradient?.to)
+      return { from: _aiBrandBaseGradient.from, to: _aiBrandBaseGradient.to };
     if (def.bgGradient?.from && def.bgGradient?.to)
       return { from: def.bgGradient.from, to: def.bgGradient.to };
-    const base = def.bgColor || '#0f172a';
-    return { from: base, to: _autoGradient2(base) };
+    // No logo → white gradient
+    return { from: '#ffffff', to: '#f5f5f7' };
   }
 
   // Draw a diagonal gradient fill (top-left → bottom-right)
-  function _aiFillGrad(ctx, from, to, W, H) {
+  // dominance: { color: 'from'|'to'|'none', amount: 0-100 } — which color dominates and how much
+  function _aiFillGrad(ctx, from, to, W, H, dominance) {
+    const d = dominance || _aiGradientDominance;
     const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, from); g.addColorStop(1, to);
+    if (d.color === 'from' && d.amount > 0) {
+      const pos = d.amount / 100;
+      g.addColorStop(0, from); g.addColorStop(pos, from); g.addColorStop(1, to);
+    } else if (d.color === 'to' && d.amount > 0) {
+      const pos = 1 - d.amount / 100;
+      g.addColorStop(0, from); g.addColorStop(pos, to); g.addColorStop(1, to);
+    } else {
+      g.addColorStop(0, from); g.addColorStop(1, to);
+    }
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   }
 
-  function _aiBgSolid(ctx, from, to, W, H) {
-    _aiFillGrad(ctx, from, to, W, H);
+  function _aiBgSolid(ctx, from, to, W, H, dominance) {
+    _aiFillGrad(ctx, from, to, W, H, dominance);
     // Subtle noise-like brightness overlay
     const g = ctx.createLinearGradient(0,0,W,H);
     g.addColorStop(0,'rgba(255,255,255,0.04)'); g.addColorStop(1,'rgba(0,0,0,0.18)');
@@ -6786,11 +7181,12 @@ ${truncated}`;
   }
 
   // ── Main background coordinator — returns image layer config ─────────────────
-  // All AI slides now use a clean white background with image on the right 1/3.
+  // Background uses def.bgGradient (or derived fallback).
   function _drawAiBackground(ctx, def, imgData, slideIndex) {
     const W=1920, H=1080;
     const hasImg = !!imgData;
-    _aiBgWhite(ctx, W, H);
+    const g = _defGrad(def);
+    _aiBgSolid(ctx, g.from, g.to, W, H, _aiGradientDominance);
 
     if (!hasImg) {
       return { hasImg:false, textX:0.5, textAlign:'center', textWrapWidth:0.82 };
@@ -6848,15 +7244,16 @@ ${truncated}`;
         id: uid(), fileName: 'AI Generated',
         pageNum: 1, totalPages: 1,
         dataUrl: null, baseDataUrl: null, layers: [],
-        bgGradient: { from: '#ffffff', to: '#ffffff' },
+        bgGradient: _defGrad(def),
+        bgGradientDominance: { ..._aiGradientDominance },
         _aiDef: def,   // keep original def for per-slide regeneration
       };
 
       _setAiProgress(10 + i * 18, `Building slide ${i + 1} of ${defs.length}…`);
 
       const imgData = slideImages[i] || null;
-      const tc      = '#1e293b';   // dark slate — readable on white
-      const tcBody  = '#475569';   // slightly lighter for body text
+      const tc      = def.textColor || '#ffffff';
+      const tcBody  = def.textColor || '#e2e8f0';
       const isHero  = def.layout === 'title-only';
 
       // ── Draw background skeleton (NO image baked in) ─────
@@ -6870,6 +7267,19 @@ ${truncated}`;
       slide.baseDataUrl = bgDataUrl;
 
       const { textX, textAlign, textWrapWidth } = imgCfg;
+
+      // ── Logo layer — always on first slide (top-left corner) ──
+      if (i === 0 && _aiLogoDataUrl) {
+        slide.layers.unshift({
+          type: 'image', id: uid(),
+          src: _aiLogoDataUrl,
+          xFrac: 0.10, yFrac: 0.10,
+          widthFrac: 0.14,
+          clipShape: 'none',
+          opacity: 1,
+          animation: 'fade',
+        });
+      }
 
       // ── Image layer — right 1/3, full height, with left fog ──
       if (imgCfg.hasImg && imgData) {
@@ -6969,27 +7379,33 @@ Return ONLY valid JSON (no fences):
   "unsplashQuery": "2-4 English Unsplash keywords for a real photo (English only)"
 }`;
 
-      const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          response_format: { type: 'json_object' },
-          temperature: 0.6,
-          max_tokens: 500
-        })
+      const content = await _openaiResponse(openaiKey, {
+        prompt, json: true, maxTokens: 500, reasoningEffort: 'minimal',
       });
-      if (!gptRes.ok) {
-        const err = await gptRes.json().catch(() => ({}));
-        throw new Error(err.error?.message || `OpenAI error ${gptRes.status}`);
-      }
-      const newDef = JSON.parse(gptRes.choices?.[0]?.message?.content);
+      const newDef = JSON.parse(content);
       const tc = '#1e293b', tcBody = '#475569';
       const textX = 0.06; const textAlign = 'left'; const textWrapWidth = 0.58;
 
-      slide.bgGradient = { from: '#ffffff', to: '#ffffff' };
+      slide.bgGradient = _defGrad(newDef);
+      slide.bgGradientDominance = { ..._aiGradientDominance };
       slide._aiDef = { ...newDef, layout: 'text-image', wantsImage: true };
+
+      if (slideIdx === 0 && _aiLogoDataUrl) {
+        slide.layers = slide.layers || [];
+        slide.layers.unshift({
+          type: 'image', id: uid(), src: _aiLogoDataUrl,
+          xFrac: 0.10, yFrac: 0.10, widthFrac: 0.14, clipShape: 'none',
+          opacity: 1, animation: 'fade',
+        });
+      }
+
+      // Rebuild base with gradient
+      const bgCanvas = document.createElement('canvas');
+      bgCanvas.width = 1920; bgCanvas.height = 1080;
+      const bgCtx = bgCanvas.getContext('2d');
+      _aiBgSolid(bgCtx, slide.bgGradient.from, slide.bgGradient.to, 1920, 1080, slide.bgGradientDominance);
+      slide.baseDataUrl = bgCanvas.toDataURL('image/jpeg', 0.92);
+      slide.dataUrl = slide.baseDataUrl;
 
       let imgData = null;
       const unsplashKey = localStorage.getItem('aiUnsplashKey');
@@ -7103,23 +7519,10 @@ Return ONLY valid JSON (no fences):
   "imageSuggestion": "5-8 words"
 }`;
 
-      const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          response_format: { type: 'json_object' },
-          temperature: 0.6,
-          max_tokens: 650
-        })
+      const content = await _openaiResponse(openaiKey, {
+        prompt, json: true, maxTokens: 650, reasoningEffort: 'minimal',
       });
-      if (!gptRes.ok) {
-        const err = await gptRes.json().catch(() => ({}));
-        throw new Error(err.error?.message || `OpenAI error ${gptRes.status}`);
-      }
-      const gptData = await gptRes.json();
-      const newDef  = JSON.parse(gptData.choices?.[0]?.message?.content);
+      const newDef  = JSON.parse(content);
       newDef.layout = oldDef.layout; // keep original layout
 
       // Rebuild this single slide
@@ -7151,6 +7554,13 @@ Return ONLY valid JSON (no fences):
       slide._aiDef      = newDef;
       slide.layers      = [];
 
+      if (slideIdx === 0 && _aiLogoDataUrl) {
+        slide.layers.push({
+          type: 'image', id: uid(), src: _aiLogoDataUrl,
+          xFrac: 0.10, yFrac: 0.10, widthFrac: 0.14, clipShape: 'none',
+          opacity: 1, animation: 'fade',
+        });
+      }
       if (imgCfg.hasImg && imgData) {
         slide.layers.push({
           type: 'image', id: uid(), src: imgData.dataUrl,
@@ -7294,7 +7704,16 @@ Return ONLY valid JSON (no fences):
 
       slide._aiDef.unsplashQuery = query;
       slide._aiDef.wantsImage = true;
-      slide.bgGradient = slide.bgGradient || { from: '#ffffff', to: '#ffffff' };
+      // Use logo gradient (not white/black fallback) when adding image — same as slides without images
+      const g = _defGrad(slide._aiDef);
+      slide.bgGradient = g;
+      // Regenerate baseDataUrl with gradient so background uses logo colors (not black)
+      const bgCanvas = document.createElement('canvas');
+      bgCanvas.width = 1920; bgCanvas.height = 1080;
+      const bgCtx = bgCanvas.getContext('2d');
+      const dom = slide.bgGradientDominance || _aiGradientDominance;
+      _aiBgSolid(bgCtx, g.from, g.to, 1920, 1080, dom);
+      slide.baseDataUrl = bgCanvas.toDataURL('image/jpeg', 0.92);
 
       const imgLayer = {
         type: 'image', id: uid(), src: imgData.dataUrl,
@@ -7354,25 +7773,13 @@ Return ONLY valid JSON (no fences):
   "unsplashQuery": "2-4 English Unsplash keywords for a real photo (English only, no brand names)"
 }`;
 
-      const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          response_format: { type: 'json_object' },
-          temperature: 0.6,
-          max_tokens: 500
-        })
+      const content = await _openaiResponse(openaiKey, {
+        prompt, json: true, maxTokens: 500, reasoningEffort: 'minimal',
       });
-      if (!gptRes.ok) {
-        const err = await gptRes.json().catch(() => ({}));
-        throw new Error(err.error?.message || `OpenAI error ${gptRes.status}`);
-      }
-      const newDef = JSON.parse(gptRes.choices?.[0]?.message?.content);
+      const newDef = JSON.parse(content);
 
-      // White background
-      slide.bgGradient = { from: '#ffffff', to: '#ffffff' };
+      slide.bgGradient = _defGrad(newDef);
+      slide.bgGradientDominance = { ..._aiGradientDominance };
       const bgCanvas = document.createElement('canvas');
       bgCanvas.width = 1920; bgCanvas.height = 1080;
       const bgCtx = bgCanvas.getContext('2d');
@@ -7394,6 +7801,13 @@ Return ONLY valid JSON (no fences):
       const { textX, textAlign, textWrapWidth } = imgCfg;
       slide.layers = [];
 
+      if (slideIdx === 0 && _aiLogoDataUrl) {
+        slide.layers.push({
+          type: 'image', id: uid(), src: _aiLogoDataUrl,
+          xFrac: 0.10, yFrac: 0.10, widthFrac: 0.14, clipShape: 'none',
+          opacity: 1, animation: 'fade',
+        });
+      }
       if (imgCfg.hasImg && imgData) {
         slide.layers.push({
           type: 'image', id: uid(), src: imgData.dataUrl,

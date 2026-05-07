@@ -189,6 +189,122 @@
       display: block;
     }
 
+    /* ── Choice Modal ────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      animation: modalFade .2s ease;
+    }
+    .modal-backdrop.open { display: flex; }
+    @keyframes modalFade { from { opacity: 0 } to { opacity: 1 } }
+
+    .modal-card {
+      background: #fff;
+      border-radius: 28px;
+      padding: 40px;
+      max-width: 920px;
+      width: 100%;
+      box-shadow: 0 32px 80px rgba(15,23,42,.28);
+      position: relative;
+      animation: modalPop .25s cubic-bezier(.2,.9,.3,1.2);
+    }
+    @keyframes modalPop { from { transform: translateY(16px) scale(.96); opacity: 0 } to { transform: translateY(0) scale(1); opacity: 1 } }
+
+    .modal-title {
+      font-size: clamp(22px, 2.2vw, 30px);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .modal-sub {
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    .choice-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .choice-grid { grid-template-columns: 1fr; }
+    }
+
+    .choice-card {
+      border: 1.5px solid #e5e7eb;
+      border-radius: 20px;
+      padding: 26px 22px;
+      background: #fafbfd;
+      cursor: pointer;
+      text-align: left;
+      transition: .18s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+      font-family: inherit;
+    }
+    .choice-card:hover {
+      border-color: var(--blue);
+      background: #fff;
+      transform: translateY(-3px);
+      box-shadow: 0 16px 40px rgba(54,150,240,.15);
+    }
+    .choice-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--grad);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    .choice-icon svg { width: 22px; height: 22px; }
+    .choice-name {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+    .choice-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: #f3f4f6;
+      color: var(--muted);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+      transition: .15s;
+    }
+    .modal-close:hover { background: #e5e7eb; color: var(--text); }
+
+    @media (max-width: 620px) {
+      .modal-card { padding: 28px 20px; }
+    }
+
     /* ── Mobile ──────────────────────────────────────────── */
     @media (max-width: 860px) {
       nav { padding: 18px 24px; }
@@ -221,7 +337,7 @@
       <li><a href="/about">About</a></li>
       <li><a href="/app">Login</a></li>
     </ul>
-    <a class="btn-get-started" href="/app">Get Started</a>
+    <button class="btn-get-started" type="button" onclick="openChoiceModal()">Get Started</button>
   </nav>
 
   <!-- ── Hero ────────────────────────────────────────── -->
@@ -233,12 +349,12 @@
       <p class="hero-sub">
         Create, share, and present interactive slideshows seamlessly with Flipcloud's powerful platform.
       </p>
-      <a class="btn-hero" href="/app">
+      <button class="btn-hero" type="button" onclick="openChoiceModal()" style="border:none;cursor:pointer;font-family:inherit;">
         Get Started Free
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
-      </a>
+      </button>
     </div>
 
     <div class="hero-right">
@@ -247,6 +363,60 @@
       </div>
     </div>
   </section>
+
+  <!-- ── Choice Modal ────────────────────────────────── -->
+  <div class="modal-backdrop" id="choiceModal" onclick="closeChoiceModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeChoiceModal()" aria-label="Close">×</button>
+      <div class="modal-title">How would you like to start?</div>
+      <div class="modal-sub">Pick a source and we'll generate a beautiful presentation for you.</div>
+      <div class="choice-grid">
+        <a class="choice-card" href="/ai">
+          <div class="choice-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+          </div>
+          <div class="choice-name">From a prompt</div>
+          <div class="choice-desc">Describe your idea in a sentence — AI drafts a polished deck in under a minute.</div>
+        </a>
+
+        <a class="choice-card" href="/app">
+          <div class="choice-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+          </div>
+          <div class="choice-name">From a website</div>
+          <div class="choice-desc">Paste a URL and we'll analyze the site to build a tailored slide deck.</div>
+        </a>
+
+        <a class="choice-card" href="/ppt">
+          <div class="choice-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="8" y1="13" x2="16" y2="13"/>
+              <line x1="8" y1="17" x2="16" y2="17"/>
+            </svg>
+          </div>
+          <div class="choice-name">From a PowerPoint</div>
+          <div class="choice-desc">Upload an existing .pptx and we'll turn it into a modern web presentation.</div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openChoiceModal(){ document.getElementById('choiceModal').classList.add('open'); }
+    function closeChoiceModal(e){
+      if (e && e.target && e.currentTarget && e.target !== e.currentTarget && !e.target.classList.contains('modal-close')) return;
+      document.getElementById('choiceModal').classList.remove('open');
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') document.getElementById('choiceModal').classList.remove('open');
+    });
+  </script>
 
 </body>
 </html>

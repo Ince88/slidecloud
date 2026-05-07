@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flipcloud — Generate with AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="/assets/pptx-parser.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue:   #3696f0;
+    --purple: #8654ab;
+    --grad:   linear-gradient(90deg, var(--blue), var(--purple));
+    --grad-soft: linear-gradient(135deg, rgba(54,150,240,.10), rgba(134,84,171,.10));
+    --text:   #1a1a2e;
+    --muted:  #5a5a72;
+    --line:   #e5e7eb;
+    --panel:  #ffffff;
+    --soft:   #f7f9fc;
+  }
+  html, body {
+    min-height: 100%;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(180deg,#f7f9fc 0%,#eef2f7 100%);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Navbar (matches ppt.html / index.html) */
+  nav {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 60px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    position: sticky; top:0; z-index:50;
+  }
+  .nav-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+  .nav-logo img { height: 56px; width:auto; }
+  .nav-back { color: var(--muted); text-decoration:none; font-size: 14px; font-weight: 500; }
+  .nav-back:hover { color: var(--blue); }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--grad-soft);
+    border: 1px solid rgba(54,150,240,.25);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .pill::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--grad);
+  }
+
+  h1.page-title {
+    font-size: clamp(32px, 3.4vw, 46px);
+    font-weight: 900;
+    letter-spacing: -1.2px;
+    line-height: 1.05;
+    margin-bottom: 12px;
+  }
+  h1 .grad-text {
+    background: var(--grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  p.page-sub {
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+    max-width: 640px;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 12px 40px rgba(15,23,42,.05);
+  }
+
+  label { display:block; font-size:13px; font-weight:600; color: var(--text); margin-bottom: 6px; letter-spacing:-0.1px; }
+
+  textarea, input[type="text"], select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--line);
+    font-family: inherit;
+    font-size: 14px;
+    background: var(--soft);
+    transition: .15s;
+    outline: none;
+    color: var(--text);
+  }
+  textarea:focus, input[type="text"]:focus, select:focus {
+    border-color: var(--blue); background: #fff;
+  }
+  textarea {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.55;
+  }
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='none' stroke='%235a5a72' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5l5 5 5-5'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 38px;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 700px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height:1.4; }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--blue);
+  }
+  .slider-val {
+    min-width: 36px;
+    text-align: right;
+    font-weight: 700;
+    color: var(--blue);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top: 8px; }
+  .btn {
+    border:none; cursor:pointer;
+    padding: 14px 26px;
+    border-radius: 50px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.1px;
+    transition: .15s;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn-primary {
+    background: var(--grad);
+    color: #fff;
+    box-shadow: 0 6px 24px rgba(54,150,240,.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.05); }
+  .btn-primary:disabled {
+    opacity: .6; cursor: not-allowed; transform: none; filter: grayscale(.2);
+  }
+  .btn-secondary {
+    background: #fff;
+    border: 1.5px solid var(--line);
+    color: var(--text);
+  }
+  .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* Progress overlay */
+  .progress-card {
+    display: none;
+    background: #fff;
+    border-radius: 24px;
+    padding: 36px;
+    border: 1px solid var(--line);
+    box-shadow: 0 12px 40px rgba(15,23,42,.05);
+    text-align: center;
+  }
+  .progress-card.show { display: block; }
+  .progress-spinner {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: 4px solid rgba(54,150,240,.18);
+    border-top-color: var(--blue);
+    animation: spin 1s linear infinite;
+    margin: 0 auto 22px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-title {
+    font-size: 18px; font-weight: 800;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+  .progress-msg {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+    margin-bottom: 22px;
+    transition: opacity .25s ease;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0 auto 16px;
+    max-width: 400px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--grad);
+    transition: width .4s ease;
+    width: 4%;
+  }
+  .progress-hint {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .error-msg {
+    display:none;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    color: #991b1b;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .error-msg.show { display: block; }
+  .error-msg a { color: #7f1d1d; font-weight: 700; }
+
+  .examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .example-chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--soft);
+    border: 1.5px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .15s;
+    font-family: inherit;
+  }
+  .example-chip:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: #fff;
+  }
+
+  .footnote {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 24px;
+    line-height: 1.6;
+  }
+  .footnote a { color: var(--blue); text-decoration: none; font-weight: 600; }
+  .footnote a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/">
+    <img src="/assets/logo.png" alt="Flipcloud" />
+  </a>
+  <a class="nav-back" href="/">← Back home</a>
+</nav>
+
+<main class="wrap">
+  <div id="formCard" class="card" style="margin-bottom:0;">
+    <span class="pill">AI Generate</span>
+    <h1 class="page-title">
+      Generate slides from <span class="grad-text">a single prompt</span>
+    </h1>
+    <p class="page-sub">
+      Describe what you want — we'll draft a polished, on-brand presentation in under a minute. Powered by Gamma's AI, then imported as a Flipcloud web presentation you can edit, share and present live.
+    </p>
+
+    <div class="field">
+      <label for="promptIn">What's the presentation about?</label>
+      <textarea id="promptIn" placeholder="e.g. A 10-slide pitch deck for a B2B SaaS that helps construction teams track equipment with AI-powered computer vision. Include market size, problem, solution, traction, and a clear ask."></textarea>
+      <div class="hint">Tip: Be specific about audience, structure and key points you want included.</div>
+      <div class="examples">
+        <button class="example-chip" type="button" data-example="A modern, investor-ready 12-slide pitch deck for a fintech startup that uses AI to automate small-business bookkeeping. Cover the problem, market, product, traction, business model, team and the ask.">Pitch deck</button>
+        <button class="example-chip" type="button" data-example="An 8-slide quarterly business review for a mid-sized e-commerce company. Include revenue trends, top channels, customer acquisition cost, retention, key wins and challenges, and Q4 priorities.">QBR review</button>
+        <button class="example-chip" type="button" data-example="A 10-slide educational presentation aimed at high-school students explaining how large language models work. Use simple analogies, visuals and end with hands-on examples they can try themselves.">Class lecture</button>
+        <button class="example-chip" type="button" data-example="A 6-slide product launch announcement for an internal company all-hands. Cover what's launching, why now, customer impact, go-to-market plan, success metrics and a clear call to action.">Launch update</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="titleIn">Presentation title <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+      <input type="text" id="titleIn" placeholder="Auto-generated from your prompt if left blank" maxlength="120" />
+    </div>
+
+    <div class="grid-3">
+      <div class="field">
+        <label for="numCardsIn">Number of slides</label>
+        <div class="slider-row">
+          <input type="range" id="numCardsIn" min="4" max="20" value="8" />
+          <span class="slider-val" id="numCardsVal">8</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="toneIn">Tone</label>
+        <select id="toneIn">
+          <option value="professional">Professional</option>
+          <option value="casual">Casual</option>
+          <option value="enthusiastic">Enthusiastic</option>
+          <option value="persuasive">Persuasive</option>
+          <option value="educational">Educational</option>
+          <option value="inspirational">Inspirational</option>
+          <option value="playful">Playful</option>
+          <option value="serious">Serious</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="textAmountIn">Detail level</label>
+        <select id="textAmountIn">
+          <option value="brief">Brief</option>
+          <option value="medium" selected>Medium</option>
+          <option value="detailed">Detailed</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label for="audienceIn">Target audience <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+        <input type="text" id="audienceIn" placeholder="e.g. Series A investors, healthcare execs" maxlength="200" />
+      </div>
+      <div class="field">
+        <label for="imageSourceIn">Images</label>
+        <select id="imageSourceIn">
+          <option value="aiGenerated" selected>AI-generated (Gamma)</option>
+          <option value="webFreeToUseCommercially">Free-to-use stock photos</option>
+          <option value="pexels">Pexels stock photos</option>
+          <option value="placeholder">Placeholders only</option>
+          <option value="noImages">No images</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label for="languageIn">Language</label>
+        <select id="languageIn">
+          <option value="en" selected>English</option>
+          <option value="hu">Magyar</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+          <option value="it">Italiano</option>
+          <option value="pt-pt">Português</option>
+          <option value="pt-br">Português (Brasil)</option>
+          <option value="nl">Nederlands</option>
+          <option value="pl">Polski</option>
+          <option value="ro">Română</option>
+          <option value="cs">Čeština</option>
+          <option value="tr">Türkçe</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+          <option value="zh-cn">中文 (简体)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="slugIn">Share name</label>
+        <input type="text" id="slugIn" placeholder="my-pitch-deck" maxlength="50" pattern="[a-z0-9][a-z0-9-]{1,48}[a-z0-9]" />
+        <div class="hint">3–50 chars: lowercase, numbers, hyphens. Will be your share URL: <code>/w/&lt;name&gt;</code></div>
+      </div>
+    </div>
+
+    <div class="actions" style="margin-top: 20px;">
+      <button class="btn btn-primary" id="generateBtn" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+        Generate presentation
+      </button>
+      <a class="btn btn-secondary" href="/ppt">
+        Or upload a .pptx →
+      </a>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <div id="progressCard" class="progress-card">
+    <div class="progress-spinner"></div>
+    <div class="progress-title" id="progressTitle">Working on it…</div>
+    <div class="progress-msg" id="progressMsg">Sending your prompt to the AI</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-hint">This usually takes 30–90 seconds.</div>
+  </div>
+
+  <p class="footnote">
+    Already have a deck? <a href="/ppt">Convert a PowerPoint</a> instead.
+  </p>
+</main>
+
+<script>
+  // ── State ─────────────────────────────────────────────
+  const elPrompt    = document.getElementById('promptIn');
+  const elTitle     = document.getElementById('titleIn');
+  const elNumCards  = document.getElementById('numCardsIn');
+  const elNumVal    = document.getElementById('numCardsVal');
+  const elTone      = document.getElementById('toneIn');
+  const elAudience  = document.getElementById('audienceIn');
+  const elImageSrc  = document.getElementById('imageSourceIn');
+  const elLang      = document.getElementById('languageIn');
+  const elTextAmt   = document.getElementById('textAmountIn');
+  const elSlug      = document.getElementById('slugIn');
+  const elBtn       = document.getElementById('generateBtn');
+  const elFormCard  = document.getElementById('formCard');
+  const elProgress  = document.getElementById('progressCard');
+  const elProgTitle = document.getElementById('progressTitle');
+  const elProgMsg   = document.getElementById('progressMsg');
+  const elProgFill  = document.getElementById('progressFill');
+  const elError     = document.getElementById('errorMsg');
+
+  // Examples
+  document.querySelectorAll('.example-chip').forEach(ch => {
+    ch.addEventListener('click', () => {
+      elPrompt.value = ch.dataset.example;
+      elPrompt.focus();
+      autoSlugFromTitle();
+    });
+  });
+
+  elNumCards.addEventListener('input', () => {
+    elNumVal.textContent = elNumCards.value;
+  });
+
+  elTitle.addEventListener('input', () => {
+    elTitle.dataset.manual = '1';
+    autoSlugFromTitle();
+  });
+  elPrompt.addEventListener('input', () => {
+    if (elTitle.dataset.manual !== '1') autoSlugFromTitle();
+  });
+  elSlug.addEventListener('input', () => {
+    elSlug.dataset.manual = '1';
+  });
+
+  function slugify(s) {
+    return String(s || '')
+      .toLowerCase()
+      .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, ' ')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .slice(0, 50)
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function autoSlugFromTitle() {
+    if (elSlug.dataset.manual === '1') return;
+    const src = elTitle.value.trim() || elPrompt.value.trim().split(/[.\n!?]/)[0];
+    const slug = slugify(src);
+    if (slug && slug.length >= 3) elSlug.value = slug;
+  }
+
+  function showError(msg) {
+    elError.innerHTML = msg;
+    elError.classList.add('show');
+  }
+  function clearError() {
+    elError.classList.remove('show');
+    elError.textContent = '';
+  }
+
+  function setProgress(pct, title, msg) {
+    elProgFill.style.width = Math.max(2, Math.min(100, pct)) + '%';
+    if (title) elProgTitle.textContent = title;
+    if (msg) elProgMsg.textContent = msg;
+  }
+  function showProgress() {
+    elFormCard.style.display = 'none';
+    elProgress.classList.add('show');
+  }
+  function hideProgress() {
+    elProgress.classList.remove('show');
+    elFormCard.style.display = '';
+  }
+
+  // ── Generate ──────────────────────────────────────────
+  elBtn.addEventListener('click', onGenerate);
+
+  async function onGenerate() {
+    clearError();
+
+    const prompt = elPrompt.value.trim();
+    if (prompt.length < 8) {
+      showError('Please describe your presentation in at least a few words.');
+      return;
+    }
+
+    let slug = (elSlug.value || '').trim().toLowerCase();
+    if (!slug) {
+      slug = slugify(elTitle.value.trim() || prompt.split(/[.\n!?]/)[0] || 'ai-deck');
+      if (!slug || slug.length < 3) slug = 'ai-deck-' + Math.random().toString(36).slice(2, 6);
+    }
+    if (!/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(slug)) {
+      showError('Share name must be 3–50 chars: lowercase letters, numbers, or hyphens (no leading/trailing hyphen).');
+      return;
+    }
+    elSlug.value = slug;
+
+    elBtn.disabled = true;
+    showProgress();
+    setProgress(5, 'Sending your prompt…', 'Reaching out to the AI service.');
+
+    let generationId;
+    try {
+      const res = await fetch('/api/ai-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          title: elTitle.value.trim() || undefined,
+          numCards: parseInt(elNumCards.value, 10),
+          tone: elTone.value,
+          audience: elAudience.value.trim() || undefined,
+          imageSource: elImageSrc.value,
+          textAmount: elTextAmt.value,
+          language: elLang.value,
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        throw new Error(j.error || 'Failed to start generation.');
+      }
+      generationId = j.generationId;
+    } catch (err) {
+      hideProgress();
+      elBtn.disabled = false;
+      showError(escapeHtml(err.message || 'Failed to start generation.'));
+      return;
+    }
+
+    setProgress(15, 'Crafting your outline…', 'The AI is structuring your slides.');
+
+    let pptxBase64;
+    try {
+      const result = await pollUntilDone(generationId);
+      pptxBase64 = result.pptxBase64;
+      if (!pptxBase64) {
+        const fallbackUrl = result.gammaUrl || result.exportUrl;
+        const link = fallbackUrl ? ` <a href="${escapeAttr(fallbackUrl)}" target="_blank" rel="noopener">Open it on Gamma →</a>` : '';
+        throw new Error(escapeHtml(result.error || 'Could not import the generated file.') + link);
+      }
+    } catch (err) {
+      hideProgress();
+      elBtn.disabled = false;
+      showError(err.message || 'Generation failed.');
+      return;
+    }
+
+    setProgress(85, 'Importing into Flipcloud…', 'Parsing slides and laying them out.');
+
+    let payload;
+    try {
+      const arrayBuffer = base64ToArrayBuffer(pptxBase64);
+      const slides = await PptxParser.extractPptData(arrayBuffer);
+      if (!slides.length) throw new Error('The AI returned an empty presentation. Please try again.');
+
+      payload = PptxParser.slidesToFlipcloud(slides, {
+        fallbackTitle: elTitle.value.trim() || 'Untitled presentation',
+      });
+      if (elTitle.value.trim()) payload.title = elTitle.value.trim();
+    } catch (err) {
+      console.error('[ai] parse failed:', err);
+      hideProgress();
+      elBtn.disabled = false;
+      showError('We generated the slides but couldn\'t import them automatically. Please try again or contact support.');
+      return;
+    }
+
+    setProgress(94, 'Publishing…', 'Saving your presentation.');
+
+    const presenterToken = randomToken();
+    payload.presenterToken = presenterToken;
+
+    try {
+      const res = await fetch('/api/save-web', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, data: payload, presenterToken, overwrite: false }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        if (res.status === 409) {
+          throw new Error('That share name is already taken — pick another and try again.');
+        }
+        throw new Error(j.error || 'Failed to publish.');
+      }
+    } catch (err) {
+      hideProgress();
+      elBtn.disabled = false;
+      showError(escapeHtml(err.message || 'Could not save the presentation.'));
+      return;
+    }
+
+    setProgress(100, 'Ready!', 'Opening your presentation…');
+    setTimeout(() => {
+      const presentUrl = `/w/${encodeURIComponent(slug)}?present=1&token=${encodeURIComponent(presenterToken)}`;
+      window.location.href = presentUrl;
+    }, 600);
+  }
+
+  // ── Polling ───────────────────────────────────────────
+  // We don't get a real progress signal from Gamma, so we drive a friendly
+  // narrative based on elapsed time and animate the progress bar smoothly.
+  async function pollUntilDone(generationId) {
+    const startedAt = Date.now();
+    const TIMEOUT_MS = 5 * 60 * 1000;
+    let interval = 3000;
+
+    const phases = [
+      { until: 8000,  pct: 25, msg: 'Crafting the outline and slide order…' },
+      { until: 20000, pct: 45, msg: 'Writing slide content with your tone in mind…' },
+      { until: 40000, pct: 65, msg: 'Designing layouts and selecting images…' },
+      { until: 70000, pct: 78, msg: 'Polishing typography and spacing…' },
+      { until: 120000, pct: 82, msg: 'Almost there — finalizing the deck…' },
+    ];
+    let nextPhase = 0;
+
+    while (true) {
+      const elapsed = Date.now() - startedAt;
+      while (nextPhase < phases.length && elapsed >= phases[nextPhase].until) {
+        const p = phases[nextPhase++];
+        setProgress(p.pct, null, p.msg);
+      }
+      if (elapsed > TIMEOUT_MS) {
+        throw new Error('Generation took too long. Please try again with a shorter prompt.');
+      }
+
+      let res;
+      try {
+        res = await fetch('/api/ai-status?id=' + encodeURIComponent(generationId));
+      } catch {
+        await sleep(interval);
+        continue;
+      }
+
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok && res.status !== 413) {
+        if (res.status === 404) throw new Error('Generation not found. Please try again.');
+        if (j?.gammaUrl) {
+          const e = new Error(j.error || 'Could not import the file.');
+          e.gammaUrl = j.gammaUrl;
+          e.exportUrl = j.exportUrl;
+          throw e;
+        }
+      }
+
+      if (j.status === 'failed') {
+        throw new Error(j.error || 'The AI service was unable to generate this presentation.');
+      }
+      if (j.status === 'completed') return j;
+
+      await sleep(interval);
+      // Adaptive backoff: slow polls a little after the first 30s.
+      if (elapsed > 30000 && interval < 5000) interval = 5000;
+      if (elapsed > 90000 && interval < 8000) interval = 8000;
+    }
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function base64ToArrayBuffer(b64) {
+    const bin = atob(b64);
+    const len = bin.length;
+    const buf = new Uint8Array(len);
+    for (let i = 0; i < len; i++) buf[i] = bin.charCodeAt(i);
+    return buf.buffer;
+  }
+
+  function randomToken() {
+    return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escapeAttr(s) {
+    return escapeHtml(s);
+  }
+
+  // Set initial slug placeholder from any pre-filled values
+  autoSlugFromTitle();
+</script>
+
+</body>
+</html>
