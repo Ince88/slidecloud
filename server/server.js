@@ -139,6 +139,24 @@ wss.on('connection', (ws) => {
       if (!room) return;
       broadcast(room.viewers, { type: msg.type });
     }
+
+    // ── Card action (presenter taps a card → audience sees the assigned action)
+    if (msg.type === 'action' && role === 'presenter' && typeof msg.cardPath === 'string') {
+      const room = rooms.get(slug);
+      if (!room) return;
+      // Forward both the cardPath and the inline action object so viewers can
+      // render even if they haven't reloaded the latest saved DATA.
+      const out = { type: 'action', cardPath: msg.cardPath };
+      if (msg.action && typeof msg.action === 'object' && msg.action.type) {
+        out.action = msg.action;
+      }
+      broadcast(room.viewers, out);
+    }
+    if (msg.type === 'action-close' && role === 'presenter') {
+      const room = rooms.get(slug);
+      if (!room) return;
+      broadcast(room.viewers, { type: 'action-close' });
+    }
   });
 
   ws.on('close', () => {

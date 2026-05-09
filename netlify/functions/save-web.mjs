@@ -43,15 +43,56 @@ export default async (req) => {
       .map(img => {
         if (typeof img === 'string') return { dataUrl: img };
         if (img && typeof img === 'object' && typeof img.dataUrl === 'string') {
+          const source = (img.source === 'ppt' || img.source === 'web') ? img.source : null;
           return {
             dataUrl: img.dataUrl,
             caption: typeof img.caption === 'string' ? img.caption.slice(0, 200) : '',
             originSlide: Number.isFinite(img.originSlide) ? img.originSlide : null,
+            source,
+            originUrl: typeof img.originUrl === 'string' ? img.originUrl.slice(0, 500) : null,
           };
         }
         return null;
       })
       .filter(Boolean);
+  }
+
+  // Sanitize per-block actions (block._action). Keep only the supported
+  // shapes: gallery (image indices) or page (eyebrow/heading/lead/body/imageIndex).
+  if (Array.isArray(data.sections)) {
+    const imgCount = images.length;
+    data.sections.forEach(sec => {
+      if (!sec || !Array.isArray(sec.blocks)) return;
+      sec.blocks.forEach(b => {
+        if (!b || typeof b !== 'object' || !b._action) return;
+        const a = b._action;
+        if (a.type === 'gallery' && Array.isArray(a.images)) {
+          const valid = a.images.filter(n => Number.isInteger(n) && n >= 0 && n < imgCount).slice(0, 30);
+          if (valid.length === 0) { delete b._action; return; }
+          b._action = {
+            type: 'gallery',
+            images: valid,
+            intervalMs: Math.max(1500, Math.min(60000, Number(a.intervalMs) || 4000)),
+          };
+        } else if (a.type === 'page' && a.page && typeof a.page === 'object') {
+          const p = a.page;
+          const headingTrim = String(p.heading ?? '').trim().slice(0, 200);
+          if (!headingTrim) { delete b._action; return; }
+          b._action = {
+            type: 'page',
+            page: {
+              eyebrow:    String(p.eyebrow ?? '').slice(0, 80),
+              heading:    headingTrim,
+              lead:       String(p.lead ?? '').slice(0, 280),
+              body:       String(p.body ?? '').slice(0, 2000),
+              imageIndex: (Number.isInteger(p.imageIndex) && p.imageIndex >= 0 && p.imageIndex < imgCount) ? p.imageIndex : null,
+            },
+          };
+        } else {
+          delete b._action;
+        }
+      });
+    });
   }
 
   const json = JSON.stringify({ ...data, images });
@@ -67,6 +108,28 @@ export default async (req) => {
       return Response.json({ error: 'That name is already taken — please choose another' }, { status: 409 });
     }
 
+  // Per-text-element font/style overrides (set by the editor's font panel).
+  // Pass through as a string-keyed map of objects only.
+  let stylesMap = null;
+    if (data._styles && typeof data._styles === 'object' && !Array.isArray(data._styles)) {
+      stylesMap = {};
+      for (const [k, v] of Object.entries(data._styles)) {
+        if (typeof k !== 'string' || k.length > 200) continue;
+        if (!v || typeof v !== 'object') continue;
+        const clean = {};
+        if (typeof v.fontFamily === 'string')   clean.fontFamily   = v.fontFamily.slice(0, 200);
+        if (typeof v.fontSize   === 'string')   clean.fontSize     = v.fontSize.slice(0, 30);
+        if (v.fontWeight != null)               clean.fontWeight   = v.fontWeight;
+        if (v.opacity   != null)                clean.opacity      = Number(v.opacity);
+        if (typeof v.textShadow === 'string')   clean.textShadow   = v.textShadow.slice(0, 200);
+        if (typeof v.color === 'string')        clean.color        = v.color.slice(0, 30);
+        if (typeof v.letterSpacing === 'string')clean.letterSpacing= v.letterSpacing.slice(0, 20);
+        if (typeof v.fontStyle === 'string')    clean.fontStyle    = v.fontStyle.slice(0, 20);
+        if (Object.keys(clean).length) stylesMap[k] = clean;
+      }
+      if (Object.keys(stylesMap).length === 0) stylesMap = null;
+    }
+
     const payload = {
       slug,
       type: 'web',
@@ -77,6 +140,7 @@ export default async (req) => {
         logoDataUrl: typeof data.logoDataUrl === 'string' ? data.logoDataUrl : null,
         sections: data.sections,
         images,
+        _styles: stylesMap,
         createdAt: data.createdAt ?? new Date().toISOString(),
       },
       presenterToken: typeof presenterToken === 'string' ? presenterToken.slice(0, 64) : null,

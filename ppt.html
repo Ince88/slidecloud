@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Flipcloud — Generate from PowerPoint</title>
+<title>Flipcloud — Generate from PowerPoint &amp;/or Website</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -552,6 +552,683 @@
     border-radius: 10px;
   }
 
+  /* ── Source step (PPT + URL side by side) ─────────────── */
+  .src-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .src-dz { padding: 22px 16px; }
+  .src-dz .dz-icon { width: 38px; height: 38px; margin-bottom: 8px; border-radius: 11px; }
+  .src-dz .dz-icon svg { width: 18px; height: 18px; }
+  .src-dz .dz-title { font-size: 13px; }
+  .src-dz .dz-sub { font-size: 12px; }
+  .src-url-wrap {
+    display: flex;
+    align-items: stretch;
+    background: var(--soft);
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color .15s, background .15s;
+  }
+  .src-url-wrap:focus-within {
+    border-color: var(--blue);
+    background: #fff;
+  }
+  .src-url-icon {
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 12px; color: var(--muted);
+    border-right: 1px solid var(--line);
+  }
+  .src-url-wrap input {
+    flex: 1 1 auto; min-width: 0;
+    border: none !important;
+    background: transparent !important;
+    padding: 12px 12px;
+    font-size: 14px;
+    outline: none;
+  }
+  .src-url-btn {
+    flex: 0 0 auto;
+    border-left: 1px solid var(--line);
+    border-radius: 0 !important;
+    padding: 0 18px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    background: #fff;
+    cursor: pointer;
+    color: var(--text);
+    border: none;
+    transition: background .15s, color .15s;
+  }
+  .src-url-btn:hover {
+    background: #eef5ff; color: var(--blue);
+  }
+  .src-url-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  /* ── Gallery summary card ─────────────────────────────── */
+  .gallery-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    flex-wrap: wrap;
+  }
+  .gallery-summary-stats {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex-wrap: wrap;
+  }
+  .gsum-stat strong {
+    display: block;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .gsum-stat span {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  /* ── Gallery modal ────────────────────────────────────── */
+  .gal-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(6px);
+    z-index: 800;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .gal-modal-backdrop.open { display: flex; }
+  .gal-modal {
+    background: #fff;
+    border-radius: 22px;
+    width: 100%;
+    max-width: 1100px;
+    max-height: calc(100vh - 40px);
+    box-shadow: 0 30px 80px rgba(15, 23, 42, .35);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+  }
+  .gal-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--line);
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .gal-modal-head h3 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    margin: 0;
+  }
+  .gal-modal-head p {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 3px 0 0;
+  }
+  .gal-modal-close {
+    background: none; border: none;
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--muted);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .15s, color .15s;
+  }
+  .gal-modal-close:hover { background: var(--soft); color: var(--text); }
+
+  .gal-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--line);
+    background: var(--soft);
+    overflow-x: auto;
+  }
+  .gal-tab {
+    flex: 0 0 auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+  }
+  .gal-tab .tab-count {
+    background: var(--soft);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .gal-tab:hover { border-color: var(--blue); color: var(--blue); }
+  .gal-tab.active {
+    background: var(--grad);
+    border-color: transparent;
+    color: #fff;
+  }
+  .gal-tab.active .tab-count {
+    background: rgba(255,255,255,.22);
+    color: #fff;
+  }
+
+  .gal-modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 18px 24px 4px;
+    background: #fff;
+  }
+  .gal-section {
+    margin-bottom: 22px;
+  }
+  .gal-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .gal-section-title strong {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .gal-section-title .gst-tag {
+    background: linear-gradient(135deg, rgba(54,150,240,.12), rgba(134,84,171,.12));
+    color: var(--blue);
+    border: 1px solid rgba(54,150,240,.3);
+    border-radius: 999px;
+    padding: 2px 9px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 800;
+  }
+  .gal-section-title .gst-tag.web {
+    background: linear-gradient(135deg, rgba(16,185,129,.12), rgba(5,150,105,.12));
+    color: #047857;
+    border-color: rgba(16,185,129,.3);
+  }
+  .gal-section-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .gal-section-actions .btn-ghost {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  .gal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .gal-modal-foot {
+    border-top: 1px solid var(--line);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--soft);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .gal-foot-info {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .gal-foot-info strong { color: var(--text); }
+  .gal-foot-actions { display: flex; gap: 8px; }
+
+  .gal-empty {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .gal-empty svg {
+    width: 48px; height: 48px;
+    color: #cbd5e1;
+    margin-bottom: 12px;
+  }
+
+  /* ── Fullscreen editor overlay ────────────────────────── */
+  .editor-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 700;
+    background: #0b1020;
+    flex-direction: column;
+  }
+  .editor-overlay.open { display: flex; }
+  .editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 12px 22px;
+    background: linear-gradient(180deg, #1c1f33 0%, #14172a 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+    color: #fff;
+  }
+  .editor-back {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #e2e8f8;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    letter-spacing: -0.1px;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .editor-back:hover { background: rgba(255,255,255,0.14); color: #fff; }
+  .editor-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .editor-title strong {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+    color: #fff;
+  }
+  .editor-hint {
+    font-size: 12px;
+    color: rgba(226, 232, 248, 0.55);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .editor-tools {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .editor-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    color: #e2e8f8;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: -0.1px;
+    transition: all .15s;
+  }
+  .editor-tool-btn:hover {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border-color: rgba(255,255,255,0.22);
+  }
+  .editor-tool-btn.editor-save {
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(54,150,240,.32);
+  }
+  .editor-tool-btn.editor-save:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 6px 22px rgba(54,150,240,.4);
+  }
+  .editor-tool-btn.editor-save.has-changes {
+    animation: edSavePulse 2s ease-in-out infinite;
+  }
+  @keyframes edSavePulse {
+    0%, 100% { box-shadow: 0 4px 16px rgba(54,150,240,.32); }
+    50%      { box-shadow: 0 4px 22px rgba(168,85,247,.55); }
+  }
+  .editor-dirty-dot {
+    display: none;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #fbbf24;
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.25);
+  }
+  .editor-frame {
+    flex: 1 1 auto;
+    width: 100%;
+    border: none;
+    display: block;
+    background: #f7f8fc;
+  }
+
+  .editor-add-wrap, .editor-font-wrap, .editor-actions-wrap { position: relative; }
+  .editor-add-btn .editor-add-caret,
+  .editor-font-btn .editor-add-caret,
+  .editor-actions-btn .editor-add-caret { opacity: .8; }
+
+  .editor-actions-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .editor-actions-btn:disabled:hover {
+    background: rgba(255,255,255,0.06);
+    color: #e2e8f8;
+    border-color: rgba(255,255,255,0.12);
+  }
+  .editor-actions-btn.has-action {
+    background: linear-gradient(135deg, rgba(54,150,240,0.32), rgba(134,84,171,0.32));
+    border-color: rgba(54,150,240,0.55);
+  }
+
+  .actions-panel {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    background: #1c2236; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 14px;
+    width: 360px; max-height: calc(100vh - 90px); overflow-y: auto;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.5);
+    display: none; flex-direction: column; gap: 12px;
+    z-index: 10001;
+    color: #e2e8f8; font-size: 13px;
+  }
+  .actions-panel.open { display: flex; }
+  .ap-header {
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;
+  }
+  .ap-header strong { font-size: 13px; font-weight: 700; color: #fff; }
+  .ap-clear {
+    background: transparent; border: 1px solid rgba(220,38,38,0.4);
+    color: #fca5a5; font-size: 11px; font-weight: 600;
+    padding: 4px 10px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; transition: all .12s;
+  }
+  .ap-clear:hover { background: rgba(220,38,38,0.18); color: #fff; border-color: #dc2626; }
+  .ap-clear:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ap-tabs {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+    padding: 3px; background: rgba(255,255,255,0.04); border-radius: 8px;
+  }
+  .ap-tab {
+    padding: 7px 10px; border-radius: 6px;
+    background: transparent; border: none;
+    color: #9aabc7; font-family: inherit; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .12s;
+  }
+  .ap-tab:hover { color: #fff; }
+  .ap-tab.active {
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(54,150,240,.35);
+  }
+  .ap-tab-pane { display: none; flex-direction: column; gap: 10px; }
+  .ap-tab-pane.active { display: flex; }
+  .ap-help { margin: 0; font-size: 12px; line-height: 1.5; color: #9aabc7; }
+  .ap-help strong { color: #cbd5e8; font-weight: 700; }
+  .ap-required { color: #fca5a5; }
+  .ap-row { display: flex; flex-direction: column; gap: 5px; }
+  .ap-row > label {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: #9aabc7;
+  }
+  .ap-val { font-weight: 600; color: #cbd5e8; text-transform: none; letter-spacing: 0; font-size: 11px; }
+  .actions-panel input[type="text"], .actions-panel textarea {
+    width: 100%; padding: 8px 10px; border-radius: 7px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    color: #fff; font-size: 12px; font-family: inherit;
+    outline: none; resize: vertical; box-sizing: border-box;
+  }
+  .actions-panel input[type="text"]:focus, .actions-panel textarea:focus {
+    border-color: rgba(54,150,240,0.55);
+  }
+  .actions-panel input[type="range"] {
+    width: 100%; height: 4px; border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    -webkit-appearance: none; appearance: none; cursor: pointer; outline: none;
+  }
+  .actions-panel input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    cursor: pointer; border: 2px solid #fff;
+  }
+  .actions-panel input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    cursor: pointer; border: 2px solid #fff;
+  }
+  .ap-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    max-height: 220px; overflow-y: auto; padding: 4px;
+    background: rgba(0,0,0,0.18); border-radius: 8px;
+  }
+  .ap-empty { grid-column: 1 / -1; margin: 0; padding: 16px;
+    text-align: center; font-size: 11px; color: #6b7280; }
+  .ap-img-tile {
+    position: relative; padding: 0; border: 2px solid transparent;
+    border-radius: 7px; overflow: hidden; cursor: pointer; background: #0a0e1a;
+    aspect-ratio: 1; transition: all .12s;
+  }
+  .ap-img-tile:hover { border-color: rgba(54,150,240,0.5); }
+  .ap-img-tile.selected { border-color: #3696f0; box-shadow: 0 0 0 1px #3696f0; }
+  .ap-img-tile img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .ap-img-tile-num {
+    position: absolute; top: 4px; right: 4px;
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    color: #fff; font-size: 10px; font-weight: 700;
+    width: 18px; height: 18px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  }
+  .ap-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 4px; }
+  .ap-counter { font-size: 11px; color: #9aabc7; font-weight: 600; }
+  .ap-primary {
+    padding: 8px 16px; border-radius: 8px; border: none;
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    color: #fff; font-family: inherit; font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+    box-shadow: 0 4px 14px rgba(54,150,240,.32);
+  }
+  .ap-primary:hover { filter: brightness(1.1); }
+  .ap-primary:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+  .ap-page-image { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ap-page-image-pick, .ap-page-image-clear {
+    padding: 7px 12px; border-radius: 7px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    color: #cbd5e8; font-family: inherit; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .12s;
+  }
+  .ap-page-image-pick:hover, .ap-page-image-clear:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .ap-page-image-preview {
+    width: 40px; height: 40px; border-radius: 6px; background: #0a0e1a;
+    background-size: cover; background-position: center;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+
+  .editor-font-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .editor-font-btn:disabled:hover {
+    background: rgba(255,255,255,0.06);
+    color: #e2e8f8;
+    border-color: rgba(255,255,255,0.12);
+  }
+  .ed-font-icon {
+    display: inline-flex; align-items: baseline;
+    font-family: Georgia, serif; font-weight: 800; line-height: 1;
+    font-size: 18px; letter-spacing: -0.5px;
+  }
+  .ed-font-icon small { font-size: 11px; font-weight: 700; margin-left: 1px; }
+
+  .font-panel {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    background: #1c2236; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 14px;
+    width: 280px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.5);
+    display: none; flex-direction: column; gap: 12px;
+    z-index: 10001;
+    color: #e2e8f8; font-size: 13px;
+  }
+  .font-panel.open { display: flex; }
+  .fp-header {
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;
+  }
+  .fp-header strong { font-size: 13px; font-weight: 700; color: #fff; }
+  .fp-reset {
+    background: transparent; border: 1px solid rgba(255,255,255,0.18);
+    color: #cbd5e8; font-size: 11px; font-weight: 600;
+    padding: 4px 10px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; transition: all .12s;
+  }
+  .fp-reset:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .fp-row { display: flex; flex-direction: column; gap: 5px; }
+  .fp-row > label {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: #9aabc7;
+  }
+  .fp-val { font-weight: 600; color: #cbd5e8; text-transform: none; letter-spacing: 0; font-size: 11px; }
+  .font-panel select {
+    width: 100%; padding: 7px 9px; border-radius: 7px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    color: #e2e8f8; font-size: 12px; font-family: inherit;
+    cursor: pointer; outline: none;
+  }
+  .font-panel select:focus { border-color: rgba(54,150,240,0.55); }
+  .font-panel input[type="range"] {
+    width: 100%; height: 4px; border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    -webkit-appearance: none; appearance: none; cursor: pointer; outline: none;
+  }
+  .font-panel input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    cursor: pointer; border: 2px solid #fff;
+  }
+  .font-panel input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    cursor: pointer; border: 2px solid #fff;
+  }
+  .fp-shadow-group { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .fp-shadow-group button {
+    padding: 6px 4px; border-radius: 6px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    color: #cbd5e8; font-family: inherit; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all .12s;
+  }
+  .fp-shadow-group button:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .fp-shadow-group button.active {
+    background: linear-gradient(135deg, rgba(54,150,240,0.4), rgba(134,84,171,0.4));
+    border-color: rgba(54,150,240,0.65); color: #fff;
+  }
+  .fp-color-row { display: flex; gap: 6px; align-items: center; }
+  .fp-color-row input[type="color"] {
+    width: 38px; height: 32px; padding: 0; border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 6px; background: transparent; cursor: pointer;
+  }
+  .fp-color-clear {
+    flex: 1; padding: 7px 10px; border-radius: 6px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    color: #cbd5e8; font-family: inherit; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all .12s;
+  }
+  .fp-color-clear:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+  .editor-add-menu {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    background: #1c2236; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 6px; min-width: 240px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.5);
+    display: none; flex-direction: column; gap: 2px;
+    z-index: 10001;
+  }
+  .editor-add-menu.open { display: flex; }
+  .editor-add-menu button {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 8px;
+    background: transparent; border: none; cursor: pointer;
+    color: #e2e8f8; text-align: left; font-family: inherit;
+    transition: background .12s;
+  }
+  .editor-add-menu button:hover { background: rgba(255,255,255,0.08); }
+  .editor-add-menu svg { flex: 0 0 16px; color: #8aa2c7; }
+  .editor-add-menu span { display: flex; flex-direction: column; gap: 1px; }
+  .editor-add-menu span strong { font-size: 13px; font-weight: 700; }
+  .editor-add-menu span em { font-style: normal; font-size: 11px; color: #9aabc7; }
+
+  @media (max-width: 700px) {
+    .editor-toolbar { padding: 10px 14px; gap: 10px; flex-wrap: wrap; }
+    .editor-hint { display: none; }
+    .editor-tool-btn span { display: none; }
+    .editor-tool-btn { padding: 9px 12px; }
+    .editor-add-menu { right: auto; left: 0; min-width: 220px; }
+    .editor-add-menu span { display: flex; }
+    .font-panel { right: auto; left: 0; width: calc(100vw - 32px); max-width: 320px; }
+  }
+
+  /* Saved-success flash on the small preview card */
+  .preview-card.flash-saved {
+    animation: previewFlash 0.9s ease-out;
+  }
+  @keyframes previewFlash {
+    0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    30%  { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.32); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+
   /* Preview iframe */
   .preview-card {
     padding: 0;
@@ -592,31 +1269,68 @@
 </nav>
 
 <div class="wrap">
-  <h1 class="page-title">Turn a PowerPoint into <span class="grad-text">a website presentation</span>.</h1>
+  <h1 class="page-title">Turn a PowerPoint <em style="font-style:normal;font-weight:600">and/or</em> website into <span class="grad-text">a beautiful presentation</span>.</h1>
   <p class="page-sub">
-    Upload a .pptx file and we'll read its content, structure it into topics and generate a clean, single-screen presentation you can share. The sidebar navigation is only visible to the person controlling the presentation from their phone.
-    <br><br>
-    <strong>Don't have a PowerPoint?</strong>
-    <a href="/ai" style="color: var(--blue); font-weight: 700; text-decoration: none;">Generate one from a prompt with AI →</a>
+    Drop a .pptx file, paste a website URL, or both — we'll read the content (and grab images from each source), then GPT structures it into a clean, single-screen presentation you can share. Pick which images to include from the Gallery.
   </p>
 
-  <!-- Step 1: Upload PPT -->
+  <!-- Header tools row -->
+  <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:14px;">
+    <button type="button" id="openGalleryBtn" class="btn btn-secondary" style="display:none;padding:9px 16px;font-size:13px;font-weight:700;border-radius:10px;align-items:center;gap:8px;" onclick="openGalleryModal()">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      <span>Gallery</span>
+      <span id="galleryBadge" style="display:none;background:var(--blue);color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;letter-spacing:.02em;">0</span>
+    </button>
+  </div>
+
+  <!-- Step 1: Sources (PPT and/or Website URL) -->
   <div class="card">
-    <h2>1. Upload your PowerPoint</h2>
-    <label for="pptFile" class="dropzone" id="pptDz">
-      <div class="dz-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
+    <h2>1. Add your source content</h2>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">
+      Provide a <strong>PowerPoint file</strong>, a <strong>website URL</strong>, or both. AI will read everything together and pull images from each source.
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label class="src-label">PowerPoint (.pptx)</label>
+        <label for="pptFile" class="dropzone src-dz" id="pptDz">
+          <div class="dz-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="dz-title">Click to choose a .pptx</div>
+          <div class="dz-sub">or drag and drop</div>
+          <div class="dz-file" id="pptFileName"></div>
+        </label>
+        <input type="file" id="pptFile" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
       </div>
-      <div class="dz-title">Click to choose a .pptx file</div>
-      <div class="dz-sub">or drag and drop here</div>
-      <div class="dz-file" id="pptFileName"></div>
-    </label>
-    <input type="file" id="pptFile" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+
+      <div>
+        <label class="src-label">Website URL</label>
+        <div class="src-url-wrap">
+          <div class="src-url-icon">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+          </div>
+          <input type="text" id="urlInput" placeholder="https://yourwebsite.com" autocomplete="off" />
+          <button type="button" class="btn-secondary src-url-btn" id="urlFetchBtn" onclick="fetchWebsite()">Fetch</button>
+        </div>
+        <div class="hint" id="urlHint">We grab the page text + first ~8 images. <span style="color:var(--muted)">Optional — leave blank if you only have a PPT.</span></div>
+      </div>
+    </div>
+
     <div class="inline-status" id="pptStatus"></div>
+    <div class="inline-status" id="urlStatus"></div>
   </div>
 
   <!-- Step 2: Optional logo + title -->
@@ -661,16 +1375,39 @@
     </div>
   </div>
 
-  <!-- Step 2.5: Image gallery (shown after PPT is parsed) -->
+  <!-- Step 2.5: Image gallery summary (shown after sources are loaded) -->
   <div class="card gallery-card" id="galleryCard">
     <h2>3. Pick images to include</h2>
-    <p class="hint" style="margin:0;">We found these images in your PowerPoint. Highlight the ones you want the AI to place into the generated presentation.</p>
-    <div class="gallery-toolbar">
-      <span class="gallery-count"><span class="n" id="galleryCount">0</span> selected <span id="gallerySize" style="margin-left:6px;"></span></span>
-      <button type="button" class="btn-ghost" onclick="selectAllImages()">Select all</button>
-      <button type="button" class="btn-ghost" onclick="deselectAllImages()">Deselect all</button>
+    <p class="hint" style="margin:0 0 14px;">We collected images from your PPT and the website. Open the Gallery to choose which ones AI should place into the generated presentation — they're categorized by source.</p>
+
+    <div class="gallery-summary">
+      <div class="gallery-summary-stats">
+        <div class="gsum-stat">
+          <strong id="gsumTotal">0</strong>
+          <span>total found</span>
+        </div>
+        <div class="gsum-stat">
+          <strong id="gsumPpt">0</strong>
+          <span>from PPT</span>
+        </div>
+        <div class="gsum-stat">
+          <strong id="gsumWeb">0</strong>
+          <span>from website</span>
+        </div>
+        <div class="gsum-stat">
+          <strong id="gsumSelected" style="color:var(--blue)">0</strong>
+          <span>selected</span>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="openGalleryModal()" style="padding:11px 22px;font-size:14px;border-radius:12px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Open Gallery
+      </button>
     </div>
-    <div class="gallery-grid" id="galleryGrid"></div>
   </div>
 
   <!-- Step 3: API key + Generate -->
@@ -742,6 +1479,224 @@
             <button class="btn-copy-sm" id="copyPresenterBtn" onclick="copyShareUrl('presenter')">Copy</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Editor overlay (fullscreen edit & preview) ───────── -->
+<div class="editor-overlay" id="editorOverlay">
+  <div class="editor-toolbar">
+    <button class="editor-back" type="button" onclick="closeEditorOverlay(false)" title="Back to setup (Esc)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      <span>Back</span>
+    </button>
+    <div class="editor-title">
+      <strong>Edit &amp; preview</strong>
+      <span class="editor-hint">Drag corners to resize · Drag the move handle to reposition · Click ✕ to delete</span>
+    </div>
+    <div class="editor-tools">
+      <div class="editor-add-wrap" id="editorAddWrap">
+        <button class="editor-tool-btn editor-add-btn" type="button" id="editorAddBtn" onclick="toggleAddCardMenu(event)" title="Add a new card to the current slide">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Add card</span>
+          <svg class="editor-add-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="editor-add-menu" id="editorAddMenu" role="menu">
+          <button type="button" role="menuitem" onclick="addCardFromToolbar('text')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+            <span><strong>Text card</strong><em>Heading + paragraph</em></span>
+          </button>
+          <button type="button" role="menuitem" onclick="addCardFromToolbar('stat')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6"  y1="20" x2="6"  y2="14"/></svg>
+            <span><strong>Stat tile</strong><em>Bold number + label</em></span>
+          </button>
+          <button type="button" role="menuitem" onclick="addCardFromToolbar('quote')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>
+            <span><strong>Quote card</strong><em>Featured statement</em></span>
+          </button>
+          <button type="button" role="menuitem" onclick="addCardFromToolbar('image')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span><strong>Image</strong><em>Pick from gallery</em></span>
+          </button>
+          <button type="button" role="menuitem" onclick="addCardFromToolbar('pill')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="6" rx="3"/><line x1="8" y1="12" x2="14" y2="12"/></svg>
+            <span><strong>Pill row</strong><em>Tags / contact line</em></span>
+          </button>
+        </div>
+      </div>
+      <div class="editor-font-wrap" id="editorFontWrap">
+        <button class="editor-tool-btn editor-font-btn" type="button" id="editorFontBtn" disabled onclick="toggleFontPanel(event)" title="Click into a text first, then customize its font">
+          <span class="ed-font-icon" aria-hidden="true">A<small>a</small></span>
+          <span>Font</span>
+          <svg class="editor-add-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="font-panel" id="editorFontPanel" role="dialog" aria-label="Font controls">
+          <div class="fp-header">
+            <strong id="fpTargetLabel">Selected text</strong>
+            <button type="button" class="fp-reset" onclick="resetFontPanel()" title="Reset all font styling on this text">Reset</button>
+          </div>
+          <div class="fp-row">
+            <label for="fpFamily">Font family</label>
+            <select id="fpFamily" onchange="onFontControlChange('fontFamily', this.value)">
+              <option value="">Default</option>
+              <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif">System sans</option>
+              <option value="Inter, sans-serif">Inter</option>
+              <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica</option>
+              <option value="Georgia, 'Times New Roman', serif">Georgia (Serif)</option>
+              <option value="'Playfair Display', Georgia, serif">Playfair Display</option>
+              <option value="'Courier New', Courier, monospace">Courier (Mono)</option>
+              <option value="'Comic Sans MS', cursive">Comic Sans</option>
+              <option value="Impact, sans-serif">Impact</option>
+            </select>
+          </div>
+          <div class="fp-row">
+            <label for="fpWeight">Weight</label>
+            <select id="fpWeight" onchange="onFontControlChange('fontWeight', this.value)">
+              <option value="">Default</option>
+              <option value="300">300 — Light</option>
+              <option value="400">400 — Regular</option>
+              <option value="500">500 — Medium</option>
+              <option value="600">600 — Semibold</option>
+              <option value="700">700 — Bold</option>
+              <option value="800">800 — ExtraBold</option>
+              <option value="900">900 — Black</option>
+            </select>
+          </div>
+          <div class="fp-row">
+            <label>Size <span class="fp-val" id="fpSizeVal">16 px</span></label>
+            <input type="range" id="fpSize" min="8" max="120" step="1" oninput="onFontSizeInput(this.value)"/>
+          </div>
+          <div class="fp-row">
+            <label>Opacity <span class="fp-val" id="fpOpacityVal">100%</span></label>
+            <input type="range" id="fpOpacity" min="10" max="100" step="5" oninput="onFontOpacityInput(this.value)"/>
+          </div>
+          <div class="fp-row">
+            <label>Shadow</label>
+            <div class="fp-shadow-group" id="fpShadowGroup">
+              <button type="button" data-shadow="" onclick="onFontControlChange('textShadow','')">None</button>
+              <button type="button" data-shadow="0 1px 2px rgba(0,0,0,0.18)" onclick="onFontControlChange('textShadow','0 1px 2px rgba(0,0,0,0.18)')">Soft</button>
+              <button type="button" data-shadow="0 2px 6px rgba(0,0,0,0.30)" onclick="onFontControlChange('textShadow','0 2px 6px rgba(0,0,0,0.30)')">Medium</button>
+              <button type="button" data-shadow="0 3px 12px rgba(0,0,0,0.45)" onclick="onFontControlChange('textShadow','0 3px 12px rgba(0,0,0,0.45)')">Strong</button>
+              <button type="button" data-shadow="0 0 14px rgba(54,150,240,0.55)" onclick="onFontControlChange('textShadow','0 0 14px rgba(54,150,240,0.55)')">Glow</button>
+            </div>
+          </div>
+          <div class="fp-row">
+            <label for="fpColor">Color</label>
+            <div class="fp-color-row">
+              <input type="color" id="fpColor" oninput="onFontControlChange('color', this.value)"/>
+              <button type="button" class="fp-color-clear" onclick="onFontControlChange('color', '')" title="Use default color">Default</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="editor-actions-wrap" id="editorActionsWrap">
+        <button class="editor-tool-btn editor-actions-btn" type="button" id="editorActionsBtn" disabled onclick="toggleActionsPanel(event)" title="Click a card first, then assign an action">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>Actions</span>
+          <svg class="editor-add-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="actions-panel" id="editorActionsPanel" role="dialog" aria-label="Card actions" onclick="event.stopPropagation()">
+          <div class="ap-header">
+            <strong id="apTargetLabel">Selected card</strong>
+            <button type="button" class="ap-clear" id="apClearBtn" onclick="clearActionPanel()" title="Remove this card's action">Remove</button>
+          </div>
+          <div class="ap-tabs" role="tablist">
+            <button type="button" role="tab" class="ap-tab ap-tab-none active"     data-tab="none"    onclick="selectActionTab('none')">None</button>
+            <button type="button" role="tab" class="ap-tab ap-tab-gallery"          data-tab="gallery" onclick="selectActionTab('gallery')">Gallery</button>
+            <button type="button" role="tab" class="ap-tab ap-tab-page"             data-tab="page"    onclick="selectActionTab('page')">Page</button>
+          </div>
+          <div class="ap-tab-pane ap-pane-none" data-pane="none">
+            <p class="ap-help">When the audience taps this card during a presentation, nothing extra happens. Choose <strong>Gallery</strong> or <strong>Page</strong> above to assign an action.</p>
+          </div>
+          <div class="ap-tab-pane ap-pane-gallery" data-pane="gallery">
+            <p class="ap-help">Pick one or more images from the gallery. When the presenter taps this card, the chosen images appear full-screen and rotate automatically.</p>
+            <div class="ap-row">
+              <label>Auto-rotate every <span class="ap-val" id="apIntervalVal">4 s</span></label>
+              <input type="range" id="apInterval" min="2" max="15" step="1" value="4" oninput="onActionIntervalInput(this.value)"/>
+            </div>
+            <div class="ap-grid" id="apGalleryGrid">
+              <p class="ap-empty">No images yet. Open the gallery and add some first.</p>
+            </div>
+            <div class="ap-foot">
+              <span class="ap-counter" id="apGalleryCounter">0 selected</span>
+              <button type="button" class="ap-primary" id="apGalleryApply" onclick="applyGalleryAction()" disabled>Apply</button>
+            </div>
+          </div>
+          <div class="ap-tab-pane ap-pane-page" data-pane="page">
+            <p class="ap-help">Design a one-screen detail page. When the presenter taps this card, this page zooms in for the audience.</p>
+            <div class="ap-row">
+              <label for="apPageEyebrow">Eyebrow</label>
+              <input type="text" id="apPageEyebrow" placeholder="e.g. Drill-down" maxlength="60"/>
+            </div>
+            <div class="ap-row">
+              <label for="apPageHeading">Heading <span class="ap-required">*</span></label>
+              <input type="text" id="apPageHeading" placeholder="Big title shown to the audience" maxlength="120"/>
+            </div>
+            <div class="ap-row">
+              <label for="apPageLead">Lead</label>
+              <textarea id="apPageLead" rows="2" placeholder="Short subtitle (optional)" maxlength="280"></textarea>
+            </div>
+            <div class="ap-row">
+              <label for="apPageBody">Body</label>
+              <textarea id="apPageBody" rows="4" placeholder="Longer paragraph or details (optional)" maxlength="2000"></textarea>
+            </div>
+            <div class="ap-row">
+              <label>Background image</label>
+              <div class="ap-page-image" id="apPageImageWrap">
+                <button type="button" class="ap-page-image-pick" onclick="openPageImagePicker()">Choose image…</button>
+                <button type="button" class="ap-page-image-clear" id="apPageImageClear" onclick="clearPageImage()" style="display:none">Clear</button>
+                <div class="ap-page-image-preview" id="apPageImagePreview"></div>
+              </div>
+            </div>
+            <div class="ap-foot">
+              <button type="button" class="ap-primary" onclick="applyPageAction()">Apply</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="editor-tool-btn" type="button" onclick="openEditorGalleryFromToolbar()" title="Open gallery / upload images">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>Gallery</span>
+      </button>
+      <button class="editor-tool-btn editor-save" id="editorSaveBtn" type="button" onclick="saveEditorOverlay()" title="Save changes (Cmd/Ctrl+S)">
+        <span class="editor-dirty-dot" id="editorDirtyDot"></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <span>Save changes</span>
+      </button>
+    </div>
+  </div>
+  <iframe class="editor-frame" id="editorFrame" title="Presentation editor" referrerpolicy="no-referrer"></iframe>
+</div>
+
+<!-- Gallery modal ─────────────────────────────────────── -->
+<div class="gal-modal-backdrop" id="galleryModal" onclick="if(event.target===this)closeGalleryModal()">
+  <div class="gal-modal" role="dialog" aria-modal="true" aria-labelledby="galModalTitle">
+    <div class="gal-modal-head">
+      <div>
+        <h3 id="galModalTitle">Image Gallery</h3>
+        <p>Click an image to toggle whether AI may use it. Images are grouped by source.</p>
+      </div>
+      <button class="gal-modal-close" type="button" onclick="closeGalleryModal()" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="gal-tabs" id="galTabs">
+      <button type="button" class="gal-tab active" data-tab="all" onclick="setGalleryTab('all')">All <span class="tab-count" id="galTabCountAll">0</span></button>
+      <button type="button" class="gal-tab" data-tab="ppt"  onclick="setGalleryTab('ppt')">PowerPoint <span class="tab-count" id="galTabCountPpt">0</span></button>
+      <button type="button" class="gal-tab" data-tab="web"  onclick="setGalleryTab('web')">Website <span class="tab-count" id="galTabCountWeb">0</span></button>
+    </div>
+    <div class="gal-modal-body" id="galBody"></div>
+    <div class="gal-modal-foot">
+      <div class="gal-foot-info">
+        <strong id="galFootSel">0</strong> selected · <span id="galFootSize">~0 MB</span>
+      </div>
+      <div class="gal-foot-actions">
+        <button type="button" class="btn-ghost" onclick="selectAllImages()">Select all</button>
+        <button type="button" class="btn-ghost" onclick="deselectAllImages()">Deselect all</button>
+        <button type="button" class="btn btn-primary" onclick="closeGalleryModal()" style="padding:9px 22px;font-size:13px;border-radius:10px;">Done</button>
       </div>
     </div>
   </div>
@@ -929,26 +1884,44 @@
     document.getElementById('logoAutoBadge')?.classList.remove('show');
   }
 
-  // ── Image gallery ──────────────────────────────────────
-  // galleryImages: [{ dataUrl, originSlide, ext, size, selected }]
+  // ── Unified image gallery (PPT + Website sources) ─────
+  // galleryImages: [{
+  //   id, source: 'ppt'|'web',
+  //   dataUrl, ext, size, selected,
+  //   // ppt-only:
+  //   originSlide,
+  //   // web-only:
+  //   originUrl, alt, srcUrl,
+  // }]
   let galleryImages = [];
-  const MIN_GALLERY_BYTES = 4000; // skip tiny icons/bullets
-  const MAX_GALLERY_BYTES_PER_IMG = 6_000_000; // skip absurdly huge originals
+  let _galleryCounter = 0;
+  let _activeGalleryTab = 'all';
+  const MIN_GALLERY_BYTES = 4000;
+  const MAX_GALLERY_BYTES_PER_IMG = 6_000_000;
 
-  function buildImageGallery(slides) {
-    const seen = new Set();
+  function _addGalleryImages(items) {
+    // Dedupe across the whole gallery using a stable key (data URL prefix + size)
+    const existing = new Set(galleryImages.map(g => g.dataUrl.slice(0, 96) + ':' + g.size));
+    for (const it of items) {
+      const key = (it.dataUrl || '').slice(0, 96) + ':' + (it.size || 0);
+      if (!it.dataUrl || existing.has(key)) continue;
+      existing.add(key);
+      galleryImages.push({ id: 'g' + (++_galleryCounter), ...it });
+    }
+    refreshGalleryUI();
+  }
+
+  // Build gallery items for the PPT slides (called on PPT upload).
+  function buildPptGalleryItems(slides) {
     const items = [];
     for (const s of slides) {
       for (const img of (s.images || [])) {
         if (!img.dataUrl) continue;
         if (img.size < MIN_GALLERY_BYTES) continue;
         if (img.size > MAX_GALLERY_BYTES_PER_IMG) continue;
-        if (/^svg$/i.test(img.ext)) continue; // SVGs often used as icons; skip from gallery
-        // Dedupe — if the same image appears on many slides, keep the first
-        const key = img.dataUrl.slice(0, 96) + ':' + img.size;
-        if (seen.has(key)) continue;
-        seen.add(key);
+        if (/^svg$/i.test(img.ext)) continue;
         items.push({
+          source: 'ppt',
           dataUrl: img.dataUrl,
           originSlide: s.n,
           ext: img.ext,
@@ -958,56 +1931,383 @@
         });
       }
     }
-    galleryImages = items;
-    renderGallery();
+    return items;
   }
 
-  function renderGallery() {
+  function buildImageGallery(slides) {
+    // Replace previous PPT entries (keep web entries intact)
+    galleryImages = galleryImages.filter(g => g.source !== 'ppt');
+    _addGalleryImages(buildPptGalleryItems(slides));
+  }
+
+  // Keeps the summary, badge, and modal in sync with galleryImages.
+  function refreshGalleryUI() {
     const card = document.getElementById('galleryCard');
-    const grid = document.getElementById('galleryGrid');
-    if (!galleryImages.length) {
+    const total = galleryImages.length;
+    if (!total) {
       card.classList.remove('show');
-      grid.innerHTML = '';
-      return;
+    } else {
+      card.classList.add('show');
     }
-    card.classList.add('show');
-    grid.innerHTML = galleryImages.map((img, i) => (
-      '<div class="gallery-item' + (img.selected ? ' selected' : '') + '" data-i="' + i + '">' +
-        '<img src="' + img.dataUrl + '" alt="slide ' + img.originSlide + ' image"/>' +
-        '<div class="gallery-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>' +
-        '<div class="gallery-origin">Slide ' + img.originSlide + '</div>' +
-      '</div>'
-    )).join('');
-    grid.querySelectorAll('.gallery-item').forEach(el => {
-      el.addEventListener('click', () => {
-        const i = parseInt(el.dataset.i, 10);
-        galleryImages[i].selected = !galleryImages[i].selected;
-        el.classList.toggle('selected', galleryImages[i].selected);
-        updateGalleryCount();
-      });
-    });
-    updateGalleryCount();
-  }
 
-  function updateGalleryCount() {
+    const ppt = galleryImages.filter(g => g.source === 'ppt');
+    const web = galleryImages.filter(g => g.source === 'web');
     const sel = galleryImages.filter(g => g.selected);
-    document.getElementById('galleryCount').textContent =
-      sel.length + ' of ' + galleryImages.length;
-    const totalBytes = sel.reduce((a, g) => a + g.size, 0);
-    const mb = (totalBytes / 1024 / 1024).toFixed(1);
-    const sizeEl = document.getElementById('gallerySize');
-    sizeEl.textContent = sel.length ? '(~' + mb + ' MB original — will be compressed)' : '';
-    sizeEl.classList.toggle('gallery-size-warn', totalBytes > 30 * 1024 * 1024);
+
+    document.getElementById('gsumTotal').textContent    = total;
+    document.getElementById('gsumPpt').textContent      = ppt.length;
+    document.getElementById('gsumWeb').textContent      = web.length;
+    document.getElementById('gsumSelected').textContent = sel.length;
+
+    document.getElementById('galTabCountAll').textContent = total;
+    document.getElementById('galTabCountPpt').textContent = ppt.length;
+    document.getElementById('galTabCountWeb').textContent = web.length;
+
+    // Header gallery button + badge
+    const badge = document.getElementById('galleryBadge');
+    if (sel.length) {
+      badge.style.display = 'inline-block';
+      badge.textContent = String(sel.length);
+    } else {
+      badge.style.display = 'none';
+    }
+    const openBtn = document.getElementById('openGalleryBtn');
+    if (openBtn) openBtn.style.display = total ? 'inline-flex' : 'none';
+
+    // If modal is open, redraw its body too
+    if (document.getElementById('galleryModal').classList.contains('open')) {
+      renderGalleryModalBody();
+    }
   }
 
   function selectAllImages() {
     galleryImages.forEach(g => g.selected = true);
-    renderGallery();
+    refreshGalleryUI();
   }
   function deselectAllImages() {
     galleryImages.forEach(g => g.selected = false);
-    renderGallery();
+    refreshGalleryUI();
   }
+  function _toggleGalleryItem(id) {
+    const it = galleryImages.find(g => g.id === id);
+    if (!it) return;
+    it.selected = !it.selected;
+    refreshGalleryUI();
+  }
+  function _toggleSourceSelection(source, makeSelected) {
+    galleryImages.forEach(g => {
+      if (g.source === source) g.selected = makeSelected;
+    });
+    refreshGalleryUI();
+  }
+
+  // ── Gallery modal ──────────────────────────────────────
+  function openGalleryModal() {
+    if (!galleryImages.length) {
+      showError('No images yet — upload a PPT or fetch a website first.');
+      return;
+    }
+    document.getElementById('galleryModal').classList.add('open');
+    renderGalleryModalBody();
+  }
+  function closeGalleryModal() {
+    document.getElementById('galleryModal').classList.remove('open');
+  }
+  function setGalleryTab(tab) {
+    _activeGalleryTab = tab;
+    document.querySelectorAll('#galTabs .gal-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === tab);
+    });
+    renderGalleryModalBody();
+  }
+
+  function _galleryItemHtml(img) {
+    const tag = img.source === 'ppt'
+      ? ('Slide ' + (img.originSlide ?? '?'))
+      : (img.alt ? img.alt.slice(0, 24) : 'Web');
+    const safeTag = tag.replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+    return (
+      '<div class="gallery-item' + (img.selected ? ' selected' : '') + '" data-id="' + img.id + '">' +
+        '<img src="' + img.dataUrl + '" alt="' + safeTag + '" loading="lazy"/>' +
+        '<div class="gallery-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>' +
+        '<div class="gallery-origin">' + safeTag + '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderGalleryModalBody() {
+    const body = document.getElementById('galBody');
+    const tab = _activeGalleryTab;
+    const showPpt = tab === 'all' || tab === 'ppt';
+    const showWeb = tab === 'all' || tab === 'web';
+
+    const pptImgs = galleryImages.filter(g => g.source === 'ppt');
+    const webImgs = galleryImages.filter(g => g.source === 'web');
+
+    let html = '';
+
+    if (showPpt && pptImgs.length) {
+      // Group by originSlide
+      const bySlide = new Map();
+      for (const img of pptImgs) {
+        const k = img.originSlide ?? 0;
+        if (!bySlide.has(k)) bySlide.set(k, []);
+        bySlide.get(k).push(img);
+      }
+      const slideKeys = [...bySlide.keys()].sort((a, b) => a - b);
+      html += '<div class="gal-section">';
+      html += '<div class="gal-section-title"><strong><span class="gst-tag">PPT</span> From your PowerPoint</strong>'
+            + '<div class="gal-section-actions">'
+            + '<button type="button" class="btn-ghost" onclick="_toggleSourceSelection(\'ppt\',true)">Select all</button>'
+            + '<button type="button" class="btn-ghost" onclick="_toggleSourceSelection(\'ppt\',false)">Clear</button>'
+            + '</div></div>';
+      for (const k of slideKeys) {
+        html += '<div style="margin-bottom:14px;">'
+              + '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Slide ' + k + '</div>'
+              + '<div class="gal-grid">' + bySlide.get(k).map(_galleryItemHtml).join('') + '</div>'
+              + '</div>';
+      }
+      html += '</div>';
+    }
+
+    if (showWeb && webImgs.length) {
+      // Group by originUrl
+      const byUrl = new Map();
+      for (const img of webImgs) {
+        const k = img.originUrl || 'website';
+        if (!byUrl.has(k)) byUrl.set(k, []);
+        byUrl.get(k).push(img);
+      }
+      html += '<div class="gal-section">';
+      html += '<div class="gal-section-title"><strong><span class="gst-tag web">WEB</span> From the website</strong>'
+            + '<div class="gal-section-actions">'
+            + '<button type="button" class="btn-ghost" onclick="_toggleSourceSelection(\'web\',true)">Select all</button>'
+            + '<button type="button" class="btn-ghost" onclick="_toggleSourceSelection(\'web\',false)">Clear</button>'
+            + '</div></div>';
+      for (const [url, imgs] of byUrl.entries()) {
+        let host = url;
+        try { host = new URL(url).host; } catch {}
+        html += '<div style="margin-bottom:14px;">'
+              + '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;" title="' + url.replace(/"/g,'&quot;') + '">' + host + '</div>'
+              + '<div class="gal-grid">' + imgs.map(_galleryItemHtml).join('') + '</div>'
+              + '</div>';
+      }
+      html += '</div>';
+    }
+
+    if (!html) {
+      html = '<div class="gal-empty">'
+           + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
+           + '<div>No images in this category yet.</div></div>';
+    }
+
+    body.innerHTML = html;
+    body.querySelectorAll('.gallery-item').forEach(el => {
+      el.addEventListener('click', () => _toggleGalleryItem(el.dataset.id));
+    });
+
+    // Update foot stats
+    const sel = galleryImages.filter(g => g.selected);
+    document.getElementById('galFootSel').textContent = sel.length;
+    const mb = sel.reduce((a, g) => a + (g.size || 0), 0) / 1024 / 1024;
+    document.getElementById('galFootSize').textContent = sel.length
+      ? '~' + mb.toFixed(1) + ' MB original (will be compressed)'
+      : '~0 MB';
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('galleryModal').classList.contains('open')) {
+      closeGalleryModal();
+    }
+  });
+
+  // ── Website fetcher (Jina markdown + image proxy) ─────
+  // webPages: [{ url, markdown }]
+  let webPages = [];
+
+  function _setUrlStatus(msg, done) {
+    const el = document.getElementById('urlStatus');
+    if (!msg) { el.classList.remove('show', 'done'); el.innerHTML = ''; return; }
+    el.classList.add('show');
+    el.classList.toggle('done', !!done);
+    el.innerHTML = '<span class="spinner"></span><span>' + msg.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) + '</span>';
+  }
+
+  // Pull image URLs from a markdown page. Filters out tiny tracker pixels and SVGs.
+  function _extractImageUrlsFromMarkdown(md, baseUrl) {
+    const urls = [];
+    const seen = new Set();
+    // Markdown image syntax: ![alt](url "optional title")
+    const reMd = /!\[([^\]]*)\]\((\S+?)(?:\s+"[^"]*")?\)/g;
+    let m;
+    while ((m = reMd.exec(md)) !== null) {
+      const alt = (m[1] || '').trim();
+      let url = (m[2] || '').trim();
+      if (!url) continue;
+      if (url.startsWith('data:')) continue;
+      if (/\.(svg|gif)(\?|$)/i.test(url)) continue;
+      // Resolve relative
+      try {
+        url = new URL(url, baseUrl).toString();
+      } catch { continue; }
+      // Skip tracker pixels / 1x1 hints in URLs
+      if (/[?&](w|width)=1\b/.test(url)) continue;
+      if (seen.has(url)) continue;
+      seen.add(url);
+      urls.push({ url, alt });
+    }
+    return urls;
+  }
+
+  // Fetch an image via images.weserv.nl (CORS-friendly proxy) → resized JPG → dataURL.
+  // Returns null on failure or if image is too small.
+  async function _downloadWebImage(url, opts = {}) {
+    const { maxBytes = 1_500_000, maxSide = 1400 } = opts;
+    // Strip protocol; weserv expects no scheme, just host+path+query
+    const noProto = url.replace(/^https?:\/\//i, '');
+    const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(noProto)}&w=${maxSide}&h=${maxSide}&fit=inside&we&output=jpg&q=82`;
+    let res;
+    try {
+      res = await fetch(proxied);
+    } catch { return null; }
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (blob.size < MIN_GALLERY_BYTES) return null;
+    if (blob.size > maxBytes) return null;
+    if (!/^image\//i.test(blob.type)) return null;
+    const dataUrl = await blobToDataUrl(blob);
+    return { dataUrl, ext: 'jpg', size: blob.size };
+  }
+
+  async function fetchWebsite() {
+    hideError();
+    const raw = (document.getElementById('urlInput').value || '').trim();
+    if (!raw) { _setUrlStatus('Enter a URL first.', false); return; }
+    let url = raw;
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+    // Validate
+    try { new URL(url); }
+    catch { _setUrlStatus('Invalid URL.', false); return; }
+
+    const btn = document.getElementById('urlFetchBtn');
+    btn.disabled = true;
+
+    try {
+      _setUrlStatus('Fetching ' + url + ' …', false);
+      const mainMd = await _jinaFetch(url);
+      if (!mainMd || mainMd.length < 80) throw new Error('Could not read the page (might be blocked or empty).');
+
+      const pages = [{ url, markdown: mainMd }];
+
+      // Try a 2nd relevant page for richer context
+      try {
+        const u = new URL(url);
+        const candidates = ['/about', '/about-us', '/services', '/products', '/product', '/company'];
+        for (const path of candidates) {
+          const u2 = u.origin + path;
+          if (u2 === url) continue;
+          const md2 = await _jinaFetch(u2);
+          if (md2 && md2.length > 300) {
+            pages.push({ url: u2, markdown: md2 });
+            break;
+          }
+        }
+      } catch (_) { /* best-effort */ }
+
+      webPages = pages;
+
+      // Extract image URLs from all fetched pages
+      _setUrlStatus('Found content — extracting images…', false);
+      const imageRefs = [];
+      const seen = new Set();
+      for (const p of pages) {
+        for (const ref of _extractImageUrlsFromMarkdown(p.markdown, p.url)) {
+          if (seen.has(ref.url)) continue;
+          seen.add(ref.url);
+          imageRefs.push({ ...ref, originUrl: p.url });
+        }
+      }
+
+      // Limit how many we try to download
+      const MAX_WEB_IMAGES = 12;
+      const candidates = imageRefs.slice(0, MAX_WEB_IMAGES * 2); // try a few extras in case some fail
+      const downloaded = [];
+      for (const ref of candidates) {
+        if (downloaded.length >= MAX_WEB_IMAGES) break;
+        _setUrlStatus(`Downloading images… (${downloaded.length}/${Math.min(MAX_WEB_IMAGES, imageRefs.length)})`, false);
+        const img = await _downloadWebImage(ref.url);
+        if (img) {
+          downloaded.push({
+            source: 'web',
+            originUrl: ref.originUrl,
+            srcUrl: ref.url,
+            alt: ref.alt || '',
+            dataUrl: img.dataUrl,
+            ext: img.ext,
+            size: img.size,
+            selected: true, // by default include
+          });
+        }
+      }
+
+      // Replace previous web entries, add fresh ones
+      galleryImages = galleryImages.filter(g => g.source !== 'web');
+      _addGalleryImages(downloaded);
+
+      // Update hint
+      const charCount = pages.reduce((a, p) => a + p.markdown.length, 0);
+      const summary = `Fetched ${pages.length} page${pages.length>1?'s':''} (${Math.round(charCount/1000)}k chars), ${downloaded.length} image${downloaded.length===1?'':'s'} ready.`;
+      _setUrlStatus(summary, true);
+
+      // If we have an API key and no auto-title yet, try to detect company meta from web text
+      const key = apiKeyIn.value.trim();
+      if (key && !autoTitle) {
+        try {
+          const meta = await detectCompanyMetaFromText(key, pages.map(p => p.markdown).join('\n\n').slice(0, 4000));
+          if (meta) {
+            autoTitle = meta.title || autoTitle;
+            autoSubtitle = meta.subtitle || autoSubtitle;
+            applyAutoMeta();
+          }
+        } catch (_) {}
+      }
+
+    } catch (err) {
+      console.error(err);
+      _setUrlStatus('Failed: ' + (err.message || 'unknown error'), false);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function _jinaFetch(url) {
+    const r = await fetch('https://r.jina.ai/' + url, {
+      mode: 'cors',
+      headers: { 'Accept': 'text/markdown', 'X-Return-Format': 'markdown' }
+    });
+    if (!r.ok) return null;
+    return await r.text();
+  }
+
+  // Quick metadata detection from web markdown (analog of detectCompanyMeta for PPT)
+  async function detectCompanyMetaFromText(key, text) {
+    if (!text || text.length < 80) return null;
+    const sys = 'You extract presentation metadata from a website. Respond with JSON only: { "title": "<company / brand name in same language as source, max 60 chars>", "subtitle": "<1-line description for a sidebar, max 100 chars, same language>" }.';
+    try {
+      return await openaiJson(key, {
+        model: OPENAI_MODEL_QUICK,
+        system: sys,
+        user: text,
+        reasoningEffort: 'minimal',
+      });
+    } catch { return null; }
+  }
+
+  // Allow pressing Enter in the URL input to trigger fetch
+  document.getElementById('urlInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); fetchWebsite(); }
+  });
 
   // Compress a dataUrl by drawing to canvas and re-encoding as JPEG.
   // Keeps aspect ratio, scales longest side to `maxSide` px.
@@ -1040,8 +2340,9 @@
   apiKeyIn.addEventListener('change', async () => {
     const k = apiKeyIn.value.trim();
     localStorage.setItem('aiApiKey', k);
+    if (!k || autoTitle) return;
     // If PPT is already parsed but we haven't auto-detected yet, do it now
-    if (k && parsedSlides && !autoTitle) {
+    if (parsedSlides) {
       try {
         setInlineStatus('Detecting company name with AI…');
         const meta = await detectCompanyMeta(k, parsedSlides);
@@ -1052,6 +2353,21 @@
         }
         setInlineStatus('Ready — auto-detected. Feel free to edit.', true);
       } catch { setInlineStatus('Ready', true); }
+      return;
+    }
+    // Otherwise, if a website was already fetched, detect from that
+    if (Array.isArray(webPages) && webPages.length) {
+      try {
+        _setUrlStatus('Detecting company name with AI…');
+        const text = webPages.map(p => p.markdown).join('\n\n').slice(0, 4000);
+        const meta = await detectCompanyMetaFromText(k, text);
+        if (meta) {
+          autoTitle = meta.title || '';
+          autoSubtitle = meta.subtitle || '';
+          applyAutoMeta();
+        }
+        _setUrlStatus('Ready — auto-detected from website. Feel free to edit.', true);
+      } catch { _setUrlStatus('Ready', true); }
     }
   });
 
@@ -1157,12 +2473,28 @@
   const OPENAI_MODEL_QUICK = 'gpt-5.4-nano';  // quick metadata / name detection
   const OPENAI_MODEL_FALLBACK = 'gpt-4.1-mini';
 
-  async function openaiJson(key, { model, system, user, reasoningEffort }) {
+  // `user` may be a string OR an array of content parts (for multimodal vision input):
+  //   [ { type: 'input_text', text: '...' }, { type: 'input_image', image_url: 'data:...' } ]
+  async function openaiJson(key, { model, system, user, reasoningEffort, images }) {
+    let userContent = user;
+    // If `images` provided as a separate dataUrl array, attach them as input_image parts
+    if (Array.isArray(images) && images.length) {
+      const parts = [{ type: 'input_text', text: typeof user === 'string' ? user : '' }];
+      for (const img of images) {
+        if (img && typeof img === 'string') {
+          parts.push({ type: 'input_image', image_url: img });
+        } else if (img && img.dataUrl) {
+          parts.push({ type: 'input_image', image_url: img.dataUrl });
+        }
+      }
+      userContent = parts;
+    }
+
     const body = {
       model,
       input: [
         { role: 'system', content: system },
-        { role: 'user', content: user },
+        { role: 'user', content: userContent },
       ],
       text: { format: { type: 'json_object' } },
       store: false,
@@ -1239,10 +2571,12 @@
   }
 
   // ── GPT call ───────────────────────────────────────────
-  // `availableImages` (optional) is the list of user-selected images the GPT may
-  // reference in `figure` blocks by zero-based `index`.
-  async function gptStructure(key, pptText, title, subtitle, availableImages) {
-    const sys = `You convert raw PowerPoint slide text into a structured single-screen "website presentation" in JSON.
+  // Accepts content from PPT slides AND/OR website pages, plus the list of
+  // user-selected images. The model may reference images by zero-based `index`
+  // matching the AVAILABLE_IMAGES order.
+  // sources = { pptSlides?: [{n,text}], webPages?: [{url,markdown}] }
+  async function gptStructure(key, sources, title, subtitle, availableImages) {
+    const sys = `You convert source content (PowerPoint slides and/or a website) into a structured single-screen "website presentation" in JSON.
 
 The output must match the Csaba Metál reference style: 4–6 topic sections, each fitting one screen without scrolling. Sections have a short eyebrow tag, a big heading, optional lead paragraph, and 2–4 content blocks.
 
@@ -1310,45 +2644,84 @@ Rules:
 - If AVAILABLE_IMAGES is provided and non-empty, spread the images across sections
   using "figure" or "image-text" blocks. Each image "index" should be used AT MOST
   ONCE across the whole deck. Pick images that match the section's topic based on
-  the slide they originated from (originSlide).
+  the image's source/hint and what you SEE in the attached image previews.
 - Do NOT invent image indices: only use values that exist in AVAILABLE_IMAGES.
 - If AVAILABLE_IMAGES is empty or missing, do not emit "figure" or "image-text" blocks.
+- When BOTH a PPT and a website are provided, weave together their information —
+  the website usually has the official messaging; the PPT often has detail/data.
 - Preserve key numbers, names, facts from the source as accurately as possible.
 - Detect the language of the source and write sections in that language.
 - Output JSON only. No markdown fences, no commentary.`;
 
-    // Build the user message, truncating very large PPTs so we stay under the
+    // Build the user message, truncating very large content so we stay under the
     // per-minute token limit. Rough heuristic: ~4 chars per token.
     // Keep input at most ~60k chars (~15k tokens), leaving room for the system
     // prompt (~1k) and the structured JSON output (~3-5k).
     const MAX_INPUT_CHARS = 60000;
-    const PER_SLIDE_CHARS = 1800; // cap per slide so one huge slide can't dominate
-    let totalChars = 0;
-    const truncatedSlides = [];
+    const PER_SLIDE_CHARS = 1800;
+    const PER_PAGE_CHARS  = 6000;
+
+    let remaining = MAX_INPUT_CHARS;
     let wasTruncated = false;
-    for (const s of pptText) {
-      let text = s.text;
-      if (text.length > PER_SLIDE_CHARS) {
-        text = text.slice(0, PER_SLIDE_CHARS) + '…';
-        wasTruncated = true;
+
+    // PPT slides ──
+    let pptBlock = '';
+    if (Array.isArray(sources?.pptSlides) && sources.pptSlides.length) {
+      const truncated = [];
+      for (const s of sources.pptSlides) {
+        let text = s.text || '';
+        if (text.length > PER_SLIDE_CHARS) { text = text.slice(0, PER_SLIDE_CHARS) + '…'; wasTruncated = true; }
+        if (text.length > remaining) {
+          if (remaining > 200) truncated.push({ n: s.n, text: text.slice(0, remaining) + '…' });
+          remaining = 0;
+          wasTruncated = true;
+          break;
+        }
+        truncated.push({ n: s.n, text });
+        remaining -= text.length;
       }
-      if (totalChars + text.length > MAX_INPUT_CHARS) {
-        wasTruncated = true;
-        const remaining = MAX_INPUT_CHARS - totalChars;
-        if (remaining > 200) truncatedSlides.push({ n: s.n, text: text.slice(0, remaining) + '…' });
-        break;
+      if (truncated.length) {
+        pptBlock = '\n=== POWERPOINT SOURCE ===\n'
+          + truncated.map(s => `--- Slide ${s.n} ---\n${s.text}`).join('\n\n');
       }
-      truncatedSlides.push({ n: s.n, text });
-      totalChars += text.length;
     }
 
-    // Compact, token-cheap description of which images the model can use.
+    // Website pages ──
+    let webBlock = '';
+    if (Array.isArray(sources?.webPages) && sources.webPages.length && remaining > 400) {
+      const parts = [];
+      for (const p of sources.webPages) {
+        let md = p.markdown || '';
+        if (md.length > PER_PAGE_CHARS) { md = md.slice(0, PER_PAGE_CHARS) + '…'; wasTruncated = true; }
+        if (md.length > remaining) {
+          if (remaining > 200) parts.push(`--- ${p.url} ---\n${md.slice(0, remaining)}…`);
+          remaining = 0;
+          wasTruncated = true;
+          break;
+        }
+        parts.push(`--- ${p.url} ---\n${md}`);
+        remaining -= md.length;
+      }
+      if (parts.length) {
+        webBlock = '\n\n=== WEBSITE SOURCE ===\n' + parts.join('\n\n');
+      }
+    }
+
+    if (!pptBlock && !webBlock) {
+      throw new Error('No source content (PPT or website) was provided.');
+    }
+
+    // Compact description of which images the model can use.
     let imagesBlock = '';
     if (Array.isArray(availableImages) && availableImages.length) {
-      const lines = availableImages.map((im, i) =>
-        `  [${i}] originSlide=${im.originSlide}${im.hint ? ` hint="${im.hint.slice(0, 60)}"` : ''}`
-      ).join('\n');
-      imagesBlock = `\n\nAVAILABLE_IMAGES (${availableImages.length} total; reference by index):\n${lines}`;
+      const lines = availableImages.map((im, i) => {
+        const src = im.source === 'web' ? 'WEB' : 'PPT';
+        const meta = im.source === 'web'
+          ? `origin="${(im.originUrl || '').slice(0, 60)}"${im.alt ? ` alt="${im.alt.slice(0,40)}"` : ''}`
+          : `originSlide=${im.originSlide}${im.hint ? ` hint="${im.hint.slice(0, 60)}"` : ''}`;
+        return `  [${i}] ${src} ${meta}`;
+      }).join('\n');
+      imagesBlock = `\n\nAVAILABLE_IMAGES (${availableImages.length} total; reference by zero-based index. Image previews are attached in this same order):\n${lines}`;
     } else {
       imagesBlock = '\n\nAVAILABLE_IMAGES: (none — do not emit figure or image-text blocks)';
     }
@@ -1356,9 +2729,15 @@ Rules:
     const user = `Title: ${title || '(unspecified)'}
 Subtitle: ${subtitle || '(unspecified)'}${imagesBlock}
 
-Slide content (separated by ===)${wasTruncated ? ' — NOTE: input was truncated to fit token limits; produce the best possible summary from what you have.' : ''}:
+Source content (use everything below to plan sections)${wasTruncated ? ' — NOTE: input was truncated to fit token limits; produce the best possible summary from what you have.' : ''}:
+${pptBlock}${webBlock}`;
 
-${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
+    // Vision: include up to N selected image previews so the model can match images to sections.
+    const VISION_MAX = 8;
+    const visionImages = (availableImages || [])
+      .slice(0, VISION_MAX)
+      .map(im => ({ dataUrl: im.previewDataUrl || im.dataUrl }))
+      .filter(im => !!im.dataUrl);
 
     let data;
     try {
@@ -1366,6 +2745,7 @@ ${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
         model: OPENAI_MODEL_MAIN,
         system: sys,
         user,
+        images: visionImages.length ? visionImages : undefined,
         reasoningEffort: 'minimal',
       });
     } catch (err) {
@@ -1387,64 +2767,110 @@ ${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
   async function generate() {
     hideError();
     const key = apiKeyIn.value.trim();
-    const title = document.getElementById('presTitle').value.trim();
-    const subtitle = document.getElementById('presSubtitle').value.trim();
 
-    if (!pptFileData) { showError('Please select a .pptx file first.'); return; }
+    const hasPpt = !!pptFileData;
+    const hasWeb = Array.isArray(webPages) && webPages.length > 0;
+
+    if (!hasPpt && !hasWeb) {
+      showError('Please add at least one source — upload a PPT or fetch a website URL.');
+      return;
+    }
     if (!key) { showError('Please enter your OpenAI API key.'); return; }
 
     const btn = document.getElementById('generateBtn');
     btn.disabled = true;
 
     try {
-      setProgress(10, 'Reading slide content…');
-      const slides = parsedSlides || await extractPptData(pptFileData);
-      if (!parsedSlides) parsedSlides = slides;
-      if (!slides.length) throw new Error('No text found in the PowerPoint file.');
+      let slides = [];
+      if (hasPpt) {
+        setProgress(10, 'Reading slide content…');
+        slides = parsedSlides || await extractPptData(pptFileData);
+        if (!parsedSlides) parsedSlides = slides;
+      }
 
-      // If the API key wasn't available at upload time, detect company meta now
+      // If we have a key but haven't auto-detected metadata yet, do it now
       if (!autoTitle && !document.getElementById('presTitle').dataset.auto) {
         try {
-          const meta = await detectCompanyMeta(key, slides);
-          if (meta) {
-            autoTitle = meta.title || '';
-            autoSubtitle = meta.subtitle || '';
-            applyAutoMeta();
+          if (hasPpt && slides.length) {
+            const meta = await detectCompanyMeta(key, slides);
+            if (meta) { autoTitle = meta.title || ''; autoSubtitle = meta.subtitle || ''; applyAutoMeta(); }
+          } else if (hasWeb) {
+            const text = webPages.map(p => p.markdown).join('\n\n').slice(0, 4000);
+            const meta = await detectCompanyMetaFromText(key, text);
+            if (meta) { autoTitle = meta.title || ''; autoSubtitle = meta.subtitle || ''; applyAutoMeta(); }
           }
         } catch {}
       }
 
-      // Prepare the set of images the user chose (if any). Each image carries
-      // a short "hint" derived from its origin slide's text so GPT can place
-      // it in a topically-appropriate section.
+      // Prepare the set of selected images (PPT + Web). Compute a hint for each
+      // so GPT can match them topically. Also prepare a small preview dataURL
+      // for vision input (saves tokens vs. full-size).
       const selected = galleryImages.filter(g => g.selected);
-      const imageHints = selected.map((g, idx) => {
-        const originText = (parsedSlides.find(s => s.n === g.originSlide)?.text || '')
-          .replace(/\s+/g, ' ').trim().slice(0, 80);
-        return { index: idx, originSlide: g.originSlide, hint: originText };
-      });
 
-      setProgress(35, `Analyzing ${slides.length} slide(s) with AI…`);
+      setProgress(28, selected.length ? `Preparing ${selected.length} image preview(s)…` : 'Preparing AI request…');
+      const imageInfos = [];
+      for (let i = 0; i < selected.length; i++) {
+        const g = selected[i];
+        let preview = g.dataUrl;
+        try {
+          // Smaller preview for the vision request only (keeps tokens reasonable)
+          preview = await compressImage(g.dataUrl, { maxSide: 512, quality: 0.72 });
+        } catch (_) {}
+        let hint = '';
+        if (g.source === 'ppt') {
+          hint = (parsedSlides?.find(s => s.n === g.originSlide)?.text || '')
+                  .replace(/\s+/g, ' ').trim().slice(0, 80);
+        } else {
+          hint = (g.alt || '').slice(0, 80);
+        }
+        imageInfos.push({
+          index: i,
+          source: g.source,
+          originSlide: g.originSlide,
+          originUrl: g.originUrl,
+          alt: g.alt,
+          hint,
+          previewDataUrl: preview,
+        });
+      }
+
+      setProgress(40, hasPpt && hasWeb
+          ? `Analyzing PPT + website with AI…`
+          : hasPpt
+            ? `Analyzing ${slides.length} slide(s) with AI…`
+            : 'Analyzing website with AI…');
+
       const structured = await gptStructure(
-        key, slides,
+        key,
+        { pptSlides: hasPpt ? slides : null, webPages: hasWeb ? webPages : null },
         document.getElementById('presTitle').value.trim(),
         document.getElementById('presSubtitle').value.trim(),
-        imageHints
+        imageInfos
       );
 
       // Compress the selected images for the final payload (keeps us under
       // the save-web size limit and speeds up viewer load)
       let compressedImages = [];
       if (selected.length) {
-        setProgress(70, `Compressing ${selected.length} image(s)…`);
+        setProgress(72, `Compressing ${selected.length} image(s)…`);
         for (let i = 0; i < selected.length; i++) {
           const g = selected[i];
           try {
             const dataUrl = await compressImage(g.dataUrl, { maxSide: 1400, quality: 0.82 });
-            compressedImages.push({ dataUrl, originSlide: g.originSlide });
+            compressedImages.push({
+              dataUrl,
+              source: g.source,
+              originSlide: g.originSlide ?? null,
+              originUrl: g.originUrl ?? null,
+            });
           } catch (err) {
             console.warn('Image compression failed, using original:', err);
-            compressedImages.push({ dataUrl: g.dataUrl, originSlide: g.originSlide });
+            compressedImages.push({
+              dataUrl: g.dataUrl,
+              source: g.source,
+              originSlide: g.originSlide ?? null,
+              originUrl: g.originUrl ?? null,
+            });
           }
         }
         // Sanitize figure/image-text blocks to only reference valid indices
@@ -1465,9 +2891,12 @@ ${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
       setProgress(88, 'Building preview…');
       const finalTitle = document.getElementById('presTitle').value.trim();
       const finalSubtitle = document.getElementById('presSubtitle').value.trim();
+      const fallbackTitle = hasPpt
+        ? pptFileName.replace(/\.pptx$/i, '')
+        : (() => { try { return new URL(webPages[0].url).host; } catch { return 'Presentation'; } })();
       generated = {
         type: 'web',
-        title: finalTitle || structured.title || pptFileName.replace(/\.pptx$/i, ''),
+        title: finalTitle || structured.title || fallbackTitle,
         subtitle: finalSubtitle || structured.subtitle || '',
         logoDataUrl: logoDataUrl || null,
         sections: structured.sections,
@@ -1513,16 +2942,13 @@ ${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
   }
 
   function openPreviewFullscreen() {
-    const html = buildPreviewHtml(generated, true);
-    const w = window.open('', '_blank');
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+    if (!generated) return;
+    openEditorOverlay();
   }
 
   // Shared HTML builder used only for local preview.
   // The "real" viewer (at /w/<slug>) renders from saved JSON using the same template.
-  function buildPreviewHtml(data, showSidebar) {
+  function buildPreviewHtml(data, showSidebar, editMode) {
     const payload = JSON.stringify(data).replace(/<\/scr/gi, '<\\/scr');
     // NOTE: the strings below are split to avoid creating a literal closing
     // tag string inside this outer script block (which would close it early).
@@ -1533,15 +2959,572 @@ ${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
       '<meta name="viewport" content="width=device-width, initial-scale=1.0"/>\n' +
       '<title>' + escapeHtml(data.title || 'Preview') + '</title>\n' +
       '<style>' + WEB_VIEWER_CSS + '</style>\n' +
-      '</head><body>\n' +
+      '</head><body' + (editMode ? ' class="edit-mode"' : '') + '>\n' +
       '<div id="app"></div>\n' +
       openScript + '\n' +
-      '  const DATA = ' + payload + ';\n' +
+      '  window.DATA = ' + payload + ';\n' +
+      '  const DATA = window.DATA;\n' +
       '  const SHOW_SIDEBAR = ' + (showSidebar ? 'true' : 'false') + ';\n' +
+      '  const EDIT_MODE = ' + (editMode ? 'true' : 'false') + ';\n' +
       '  ' + WEB_VIEWER_JS + '\n' +
       closeScript + '\n' +
       '</body></html>';
   }
+
+  // ── Editor overlay ─────────────────────────────────────
+  // Opens a fullscreen overlay containing the presentation in edit mode.
+  // Changes are made directly inside the iframe's DATA. On Save, we copy
+  // those edits back to `generated` and refresh the small preview iframe.
+  let _editorDirty = false;
+  let _editorActive = false;
+
+  function openEditorOverlay() {
+    if (!generated) return;
+    _editorActive = true;
+    _editorDirty = false;
+
+    // Build editor HTML and put it into the overlay iframe
+    const html = buildPreviewHtml(generated, true, true);
+    const overlay = document.getElementById('editorOverlay');
+    const frame   = document.getElementById('editorFrame');
+
+    frame.onload = () => {
+      // After the editor renders, mark dirty on any change inside the iframe
+      try {
+        const doc = frame.contentDocument;
+        if (!doc) return;
+        const handler = () => { _editorDirty = true; _setEditorDirtyIndicator(true); };
+        doc.addEventListener('input', handler, true);
+        doc.addEventListener('click', (e) => {
+          if (e.target && e.target.closest && (e.target.closest('[data-edit-image]') || e.target.closest('[data-edit-logo]'))) {
+            handler();
+          }
+        }, true);
+      } catch (_) {}
+    };
+    frame.srcdoc = html;
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeEditorOverlay(force) {
+    if (!_editorActive) return;
+    if (_editorDirty && !force) {
+      const ok = confirm('Discard your unsaved edits?');
+      if (!ok) return;
+    }
+    _editorActive = false;
+    _editorDirty = false;
+    document.getElementById('editorOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+    _setEditorDirtyIndicator(false);
+    // Reset panel + button states
+    closeFontPanel();
+    closeAddCardMenu();
+    closeActionsPanel();
+    _lastEditFocusPath = null;
+    _lastSelBlockPath = null;
+    const fbtn = document.getElementById('editorFontBtn');
+    if (fbtn) {
+      fbtn.disabled = true;
+      fbtn.title = 'Click into a text first, then customize its font';
+    }
+    const abtn = document.getElementById('editorActionsBtn');
+    if (abtn) {
+      abtn.disabled = true;
+      abtn.classList.remove('has-action');
+      abtn.title = 'Click a card first, then assign an action';
+    }
+    // Clear iframe to free memory
+    document.getElementById('editorFrame').srcdoc = 'about:blank';
+  }
+
+  function saveEditorOverlay() {
+    if (!_editorActive) return;
+    const frame = document.getElementById('editorFrame');
+    let edited;
+    try {
+      edited = frame.contentWindow && frame.contentWindow.__editorData;
+    } catch (_) {}
+    if (!edited) {
+      showError('Could not read edits from the editor.');
+      return;
+    }
+
+    // Apply edits to `generated` (deep copy via JSON to detach refs)
+    try {
+      const cloned = JSON.parse(JSON.stringify(edited));
+      generated.title       = cloned.title;
+      generated.subtitle    = cloned.subtitle;
+      generated.logoDataUrl = cloned.logoDataUrl;
+      generated.sections    = cloned.sections;
+      generated.images      = cloned.images;
+      generated._styles     = cloned._styles || {};
+    } catch (e) {
+      showError('Failed to apply edits: ' + (e.message || e));
+      return;
+    }
+
+    // Reflect changes in the form fields too
+    try {
+      const titleIn = document.getElementById('presTitle');
+      const subIn   = document.getElementById('presSubtitle');
+      if (titleIn && generated.title) titleIn.value = generated.title;
+      if (subIn) subIn.value = generated.subtitle || '';
+    } catch (_) {}
+
+    // Refresh the small preview iframe
+    renderPreview();
+
+    _editorDirty = false;
+    _setEditorDirtyIndicator(false);
+    closeEditorOverlay(true);
+
+    // Subtle confirmation
+    setTimeout(() => {
+      const card = document.getElementById('previewCard');
+      if (card) card.classList.add('flash-saved');
+      setTimeout(() => card && card.classList.remove('flash-saved'), 900);
+    }, 50);
+  }
+
+  function _setEditorDirtyIndicator(on) {
+    const dot = document.getElementById('editorDirtyDot');
+    if (dot) dot.style.display = on ? 'inline-block' : 'none';
+    const saveBtn = document.getElementById('editorSaveBtn');
+    if (saveBtn) saveBtn.classList.toggle('has-changes', !!on);
+  }
+
+  function openEditorGalleryFromToolbar() {
+    const frame = document.getElementById('editorFrame');
+    try {
+      if (frame && frame.contentWindow && typeof frame.contentWindow._openGallery === 'function') {
+        frame.contentWindow._openGallery();
+      }
+    } catch (_) {}
+  }
+
+  function toggleAddCardMenu(ev) {
+    if (ev) ev.stopPropagation();
+    const menu = document.getElementById('editorAddMenu');
+    if (!menu) return;
+    closeFontPanel();
+    menu.classList.toggle('open');
+  }
+  function closeAddCardMenu() {
+    const menu = document.getElementById('editorAddMenu');
+    if (menu) menu.classList.remove('open');
+  }
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('editorAddWrap');
+    if (wrap && !wrap.contains(e.target)) closeAddCardMenu();
+    const fwrap = document.getElementById('editorFontWrap');
+    if (fwrap && !fwrap.contains(e.target)) closeFontPanel();
+    const awrap = document.getElementById('editorActionsWrap');
+    if (awrap && !awrap.contains(e.target)) closeActionsPanel();
+  });
+
+  // ── Font panel (parent side) ─────────────────────────
+  // The iframe notifies us whenever an editable text is focused via
+  // window.__editFocus(path). We remember the last-focused path and use it as
+  // the target for font-styling actions.
+  let _lastEditFocusPath = null;
+  window.__editFocus = function(path) {
+    if (!path) return;
+    _lastEditFocusPath = path;
+    const btn = document.getElementById('editorFontBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.title = 'Customize the font of the selected text';
+    }
+  };
+
+  function _frameWin() {
+    const f = document.getElementById('editorFrame');
+    return f && f.contentWindow ? f.contentWindow : null;
+  }
+
+  function toggleFontPanel(ev) {
+    if (ev) ev.stopPropagation();
+    const panel = document.getElementById('editorFontPanel');
+    if (!panel) return;
+    if (panel.classList.contains('open')) {
+      closeFontPanel();
+    } else {
+      openFontPanel();
+    }
+  }
+  function openFontPanel() {
+    const panel = document.getElementById('editorFontPanel');
+    if (!panel) return;
+    closeAddCardMenu();
+    if (!_lastEditFocusPath) return; // safety; the button is disabled in this state
+    _populateFontPanelFromCurrent();
+    panel.classList.add('open');
+  }
+  function closeFontPanel() {
+    const panel = document.getElementById('editorFontPanel');
+    if (panel) panel.classList.remove('open');
+  }
+  function _populateFontPanelFromCurrent() {
+    const win = _frameWin();
+    if (!win || typeof win.getCurrentFontStyle !== 'function' || !_lastEditFocusPath) return;
+    const cur = win.getCurrentFontStyle(_lastEditFocusPath) || {};
+    // Label
+    const label = document.getElementById('fpTargetLabel');
+    if (label) label.textContent = _humanizeEditPath(_lastEditFocusPath);
+    // Family
+    const fam = document.getElementById('fpFamily');
+    if (fam) fam.value = cur.fontFamily || '';
+    // Weight
+    const wt = document.getElementById('fpWeight');
+    if (wt) wt.value = cur.fontWeight || '';
+    // Size — use stored fontSize px, fall back to computed
+    const sz = document.getElementById('fpSize');
+    const szVal = document.getElementById('fpSizeVal');
+    let sizePx = cur.computedFontSizePx || 16;
+    if (cur.fontSize && /^\d+(\.\d+)?px$/.test(cur.fontSize)) sizePx = parseFloat(cur.fontSize);
+    if (sz) sz.value = Math.max(8, Math.min(120, Math.round(sizePx)));
+    if (szVal) szVal.textContent = Math.round(sizePx) + ' px';
+    // Opacity
+    const op = document.getElementById('fpOpacity');
+    const opVal = document.getElementById('fpOpacityVal');
+    let opacityPct = cur.opacity != null ? Math.round(cur.opacity * 100) : 100;
+    if (op) op.value = opacityPct;
+    if (opVal) opVal.textContent = opacityPct + '%';
+    // Shadow buttons
+    const group = document.getElementById('fpShadowGroup');
+    if (group) {
+      const cs = cur.textShadow || '';
+      Array.from(group.querySelectorAll('button')).forEach(b => {
+        b.classList.toggle('active', b.dataset.shadow === cs);
+      });
+    }
+    // Color
+    const colorIn = document.getElementById('fpColor');
+    if (colorIn) colorIn.value = cur.color || '#1f2a37';
+  }
+  function _humanizeEditPath(path) {
+    // Show a friendly label like "Heading", "Card title", "Card body"
+    if (!path) return 'Selected text';
+    if (path === 'title')    return 'Presentation title';
+    if (path === 'subtitle') return 'Presentation subtitle';
+    if (/\.heading$/.test(path))  return 'Section heading';
+    if (/\.eyebrow$/.test(path))  return 'Section eyebrow';
+    if (/\.lead$/.test(path))     return 'Section lead';
+    if (/\.h3$/.test(path))       return 'Card title';
+    if (/\.p$/.test(path))        return 'Card body';
+    if (/\.quote$/.test(path))    return 'Quote';
+    if (/\.subquote$/.test(path)) return 'Subquote';
+    if (/\.strong$/.test(path))   return 'Stat number';
+    if (/\.span$/.test(path))     return 'Stat label';
+    if (/\.caption$/.test(path))  return 'Caption';
+    if (/\.ul\.\d+$/.test(path))  return 'List item';
+    return 'Selected text';
+  }
+
+  function onFontControlChange(prop, value) {
+    if (!_lastEditFocusPath) return;
+    const win = _frameWin();
+    if (!win || typeof win.setFontStyle !== 'function') return;
+    win.setFontStyle(_lastEditFocusPath, prop, value);
+    // Visual: highlight active shadow button
+    if (prop === 'textShadow') {
+      const group = document.getElementById('fpShadowGroup');
+      if (group) {
+        Array.from(group.querySelectorAll('button')).forEach(b => {
+          b.classList.toggle('active', b.dataset.shadow === value);
+        });
+      }
+    }
+  }
+  function onFontSizeInput(value) {
+    const v = parseInt(value, 10);
+    const lbl = document.getElementById('fpSizeVal');
+    if (lbl) lbl.textContent = v + ' px';
+    onFontControlChange('fontSize', v + 'px');
+  }
+  function onFontOpacityInput(value) {
+    const pct = parseInt(value, 10);
+    const lbl = document.getElementById('fpOpacityVal');
+    if (lbl) lbl.textContent = pct + '%';
+    onFontControlChange('opacity', (pct / 100).toFixed(2));
+  }
+  function resetFontPanel() {
+    if (!_lastEditFocusPath) return;
+    const win = _frameWin();
+    if (win && typeof win.resetFontStyle === 'function') win.resetFontStyle(_lastEditFocusPath);
+    _populateFontPanelFromCurrent();
+  }
+
+  // ── Actions panel (parent side) ──────────────────────
+  // The iframe notifies us whenever a card (block) is selected via
+  // window.__blockSelect(blockPath). The Actions button targets that block.
+  let _lastSelBlockPath = null;
+  let _apActiveTab = 'none';
+  let _apGallerySelected = []; // image indices, in order
+  let _apPageImageIdx = null;
+
+  window.__blockSelect = function(path) {
+    if (!path) return;
+    _lastSelBlockPath = path;
+    const btn = document.getElementById('editorActionsBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.title = 'Assign an action to this card';
+      _refreshActionsBtnVisual();
+    }
+  };
+
+  // Update __editFocus to also pass through block path (for legacy single-arg calls,
+  // we accept blockPath as second arg from iframe).
+  const _origEditFocus = window.__editFocus;
+  window.__editFocus = function(path, blockPath) {
+    if (typeof _origEditFocus === 'function') {
+      try { _origEditFocus(path); } catch(_) {}
+    }
+    if (blockPath) window.__blockSelect(blockPath);
+  };
+
+  function _refreshActionsBtnVisual() {
+    const btn = document.getElementById('editorActionsBtn');
+    if (!btn || !_lastSelBlockPath) return;
+    const win = _frameWin();
+    const action = win && typeof win.getActionForBlock === 'function'
+      ? win.getActionForBlock(_lastSelBlockPath) : null;
+    btn.classList.toggle('has-action', !!(action && action.type));
+  }
+
+  function toggleActionsPanel(ev) {
+    if (ev) ev.stopPropagation();
+    const panel = document.getElementById('editorActionsPanel');
+    if (!panel) return;
+    if (panel.classList.contains('open')) {
+      closeActionsPanel();
+    } else {
+      openActionsPanel();
+    }
+  }
+  function openActionsPanel() {
+    if (!_lastSelBlockPath) return;
+    closeAddCardMenu();
+    closeFontPanel();
+    _populateActionsPanel();
+    document.getElementById('editorActionsPanel').classList.add('open');
+  }
+  function closeActionsPanel() {
+    const p = document.getElementById('editorActionsPanel');
+    if (p) p.classList.remove('open');
+  }
+
+  function _populateActionsPanel() {
+    const win = _frameWin();
+    if (!win || !_lastSelBlockPath) return;
+    const action = (typeof win.getActionForBlock === 'function')
+      ? win.getActionForBlock(_lastSelBlockPath) : null;
+
+    document.getElementById('apTargetLabel').textContent = _humanizeBlockPath(_lastSelBlockPath);
+    document.getElementById('apClearBtn').disabled = !(action && action.type);
+
+    const tab = action && action.type ? action.type : 'none';
+    selectActionTab(tab);
+
+    // Pre-fill gallery selection
+    _apGallerySelected = (action && action.type === 'gallery' && Array.isArray(action.images))
+      ? action.images.slice() : [];
+    const intervalSec = (action && action.type === 'gallery' && action.intervalMs)
+      ? Math.max(2, Math.min(15, Math.round(action.intervalMs/1000))) : 4;
+    document.getElementById('apInterval').value = intervalSec;
+    document.getElementById('apIntervalVal').textContent = intervalSec + ' s';
+    _renderActionGalleryGrid();
+
+    // Pre-fill page form
+    const pg = (action && action.type === 'page' && action.page) ? action.page : {};
+    document.getElementById('apPageEyebrow').value = pg.eyebrow || '';
+    document.getElementById('apPageHeading').value = pg.heading || '';
+    document.getElementById('apPageLead').value    = pg.lead    || '';
+    document.getElementById('apPageBody').value    = pg.body    || '';
+    _apPageImageIdx = (Number.isInteger(pg.imageIndex) && pg.imageIndex >= 0) ? pg.imageIndex : null;
+    _renderApPageImagePreview();
+  }
+
+  function _humanizeBlockPath(path) {
+    const m = path && path.match(/^sections\.(\d+)\.blocks\.(\d+)$/);
+    if (!m) return 'Selected card';
+    return 'Card on slide ' + (parseInt(m[1],10)+1);
+  }
+
+  function selectActionTab(tab) {
+    _apActiveTab = tab;
+    Array.from(document.querySelectorAll('.actions-panel .ap-tab')).forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === tab);
+    });
+    Array.from(document.querySelectorAll('.actions-panel .ap-tab-pane')).forEach(p => {
+      p.classList.toggle('active', p.dataset.pane === tab);
+    });
+  }
+
+  function _renderActionGalleryGrid() {
+    const grid = document.getElementById('apGalleryGrid');
+    if (!grid) return;
+    const win = _frameWin();
+    const imgs = (win && win.__editorData && Array.isArray(win.__editorData.images))
+      ? win.__editorData.images : [];
+    if (!imgs.length) {
+      grid.innerHTML = '<p class="ap-empty">No images yet. Open the gallery and add some first.</p>';
+      _updateGalleryCounter();
+      return;
+    }
+    grid.innerHTML = imgs.map((im, i) => {
+      const sel = _apGallerySelected.indexOf(i);
+      const num = sel >= 0 ? '<span class="ap-img-tile-num">'+(sel+1)+'</span>' : '';
+      return '<button type="button" class="ap-img-tile'+(sel>=0?' selected':'')+'" data-idx="'+i+'" onclick="toggleGalleryImage('+i+')">'
+           +   '<img src="'+im.dataUrl.replace(/"/g,'&quot;')+'" alt=""/>'
+           +   num
+           + '</button>';
+    }).join('');
+    _updateGalleryCounter();
+  }
+  function toggleGalleryImage(idx) {
+    const at = _apGallerySelected.indexOf(idx);
+    if (at >= 0) _apGallerySelected.splice(at, 1);
+    else         _apGallerySelected.push(idx);
+    _renderActionGalleryGrid();
+  }
+  function _updateGalleryCounter() {
+    const el = document.getElementById('apGalleryCounter');
+    const btn = document.getElementById('apGalleryApply');
+    if (el) el.textContent = _apGallerySelected.length + ' selected';
+    if (btn) btn.disabled = _apGallerySelected.length === 0;
+  }
+  function onActionIntervalInput(value) {
+    const sec = parseInt(value, 10);
+    document.getElementById('apIntervalVal').textContent = sec + ' s';
+  }
+  function applyGalleryAction() {
+    if (!_lastSelBlockPath || !_apGallerySelected.length) return;
+    const win = _frameWin();
+    if (!win || typeof win.setActionForBlock !== 'function') return;
+    const interval = parseInt(document.getElementById('apInterval').value, 10) || 4;
+    win.setActionForBlock(_lastSelBlockPath, {
+      type: 'gallery',
+      images: _apGallerySelected.slice(),
+      intervalMs: interval * 1000,
+    });
+    _editorDirty = true;
+    _setEditorDirtyIndicator(true);
+    _refreshActionsBtnVisual();
+    closeActionsPanel();
+  }
+
+  function openPageImagePicker() {
+    // Open a tiny inline picker (reuse the gallery grid)
+    const grid = document.getElementById('apGalleryGrid'); // borrow grid markup
+    const win = _frameWin();
+    const imgs = (win && win.__editorData && Array.isArray(win.__editorData.images))
+      ? win.__editorData.images : [];
+    if (!imgs.length) { alert('No images in the gallery yet. Open the gallery and add some first.'); return; }
+    // Lightweight modal: a horizontal scrolling row inside a prompt is overkill;
+    // instead we open the existing gallery host inside the iframe in "manage" mode
+    // and the user picks one — too much glue. Simplest: open a small select dialog.
+    const choices = imgs.map((_im, i) => i + 1);
+    const idxStr = prompt('Enter the image number to use as background (1 — ' + imgs.length + ').\nOpen the Gallery from the toolbar to see them numbered.', _apPageImageIdx != null ? String(_apPageImageIdx + 1) : '1');
+    if (idxStr == null) return;
+    const idx = parseInt(idxStr, 10) - 1;
+    if (!choices.includes(idx + 1)) { alert('Invalid number.'); return; }
+    _apPageImageIdx = idx;
+    _renderApPageImagePreview();
+  }
+  function clearPageImage() {
+    _apPageImageIdx = null;
+    _renderApPageImagePreview();
+  }
+  function _renderApPageImagePreview() {
+    const prev = document.getElementById('apPageImagePreview');
+    const clr  = document.getElementById('apPageImageClear');
+    if (!prev) return;
+    if (_apPageImageIdx == null) {
+      prev.style.backgroundImage = '';
+      if (clr) clr.style.display = 'none';
+      return;
+    }
+    const win = _frameWin();
+    const imgs = (win && win.__editorData && Array.isArray(win.__editorData.images))
+      ? win.__editorData.images : [];
+    const im = imgs[_apPageImageIdx];
+    if (im) prev.style.backgroundImage = 'url("' + im.dataUrl.replace(/"/g,'\\"') + '")';
+    if (clr) clr.style.display = 'inline-flex';
+  }
+  function applyPageAction() {
+    if (!_lastSelBlockPath) return;
+    const win = _frameWin();
+    if (!win || typeof win.setActionForBlock !== 'function') return;
+    const heading = document.getElementById('apPageHeading').value.trim();
+    if (!heading) { alert('Heading is required for a page action.'); return; }
+    win.setActionForBlock(_lastSelBlockPath, {
+      type: 'page',
+      page: {
+        eyebrow:    document.getElementById('apPageEyebrow').value.trim(),
+        heading:    heading,
+        lead:       document.getElementById('apPageLead').value.trim(),
+        body:       document.getElementById('apPageBody').value.trim(),
+        imageIndex: _apPageImageIdx,
+      },
+    });
+    _editorDirty = true;
+    _setEditorDirtyIndicator(true);
+    _refreshActionsBtnVisual();
+    closeActionsPanel();
+  }
+
+  function clearActionPanel() {
+    if (!_lastSelBlockPath) return;
+    const win = _frameWin();
+    if (win && typeof win.clearActionForBlock === 'function') win.clearActionForBlock(_lastSelBlockPath);
+    _editorDirty = true;
+    _setEditorDirtyIndicator(true);
+    _refreshActionsBtnVisual();
+    _populateActionsPanel();
+  }
+
+  function addCardFromToolbar(kind) {
+    closeAddCardMenu();
+    const frame = document.getElementById('editorFrame');
+    try {
+      if (frame && frame.contentWindow && typeof frame.contentWindow.addNewCard === 'function') {
+        frame.contentWindow.addNewCard(kind);
+        // Mark dirty (the iframe's add flow already calls markEditorDirty, but
+        // synthesize here too in case the listener was reattached late).
+        _editorDirty = true;
+        _setEditorDirtyIndicator(true);
+        // If user picked an image card and there are gallery images, open
+        // picker so they can choose right away.
+        if (kind === 'image' && typeof frame.contentWindow._openImagePicker === 'function') {
+          // The newly added block lives at the end of the current section.
+          try {
+            const data = frame.contentWindow.__editorData;
+            const id   = frame.contentWindow.__currentSectionId;
+            const sec  = data && (data.sections||[]).find(s => s.id === id);
+            if (sec) {
+              const idx = (data.sections||[]).indexOf(sec);
+              const bi  = (sec.blocks||[]).length - 1;
+              if (bi >= 0) frame.contentWindow._openImagePicker('sections.'+idx+'.blocks.'+bi);
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (!_editorActive) return;
+    if (e.key === 'Escape') {
+      closeEditorOverlay(false);
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      saveEditorOverlay();
+    }
+  });
 
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1689,7 +3672,7 @@ ${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
     h1{font-size:clamp(40px,4.2vw,70px);line-height:.94;letter-spacing:-.06em;color:var(--text-strong);max-width:860px}
     h2{font-size:clamp(30px,2.8vw,48px);line-height:.98;letter-spacing:-.05em;color:var(--text-strong)}
     h3{font-size:clamp(22px,1.5vw,28px);line-height:1.02;letter-spacing:-.04em;color:var(--text-strong);margin-bottom:10px}
-    .lead{font-size:clamp(18px,1.3vw,24px);line-height:1.38;color:var(--muted);max-width:980px}
+    .lead{font-size:clamp(18px,1.3vw,24px);line-height:1.38;color:var(--muted);max-width:980px;margin-top:10px}
     .logo-inline{max-height:56px;max-width:200px;margin-bottom:14px;display:block}
     .hero-grid{min-height:0;display:grid;grid-template-columns:1.05fr .95fr;gap:16px;flex:1 1 auto}
     .card,.visual-card,.mini{min-height:0;border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:0 12px 30px rgba(68,84,106,.07)}
@@ -1735,79 +3718,372 @@ ${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
     .image-text .it-body{min-height:0;padding:22px;border:1px solid var(--line);border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:10px;overflow:auto}
     @media (max-width:1180px){:root{--navw:240px}.layout{gap:14px;padding:14px}.panel{padding:20px}.card,.visual-card,.stat{padding:18px}}
     @media (max-width:980px){html,body{overflow:auto}.page{height:auto;min-height:100dvh}.shell{height:auto;min-height:100dvh;border-radius:0}.layout{grid-template-columns:1fr}.sidebar{padding:16px}.content{min-height:780px}.hero-grid,.grid-cards,.timeline,.two-col,.feature-list,.stats,.image-text{grid-template-columns:1fr !important}.panel{height:auto;min-height:780px}}
+
+    /* ── Edit mode affordances ───────────────────────────── */
+    .figure-img-wrap{display:flex;flex:1 1 auto;min-height:0;align-items:center;justify-content:center;width:100%;border-radius:14px;overflow:hidden}
+    .figure-img-wrap img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+    .img-placeholder{display:flex;align-items:center;justify-content:center;min-height:120px;width:100%;height:100%;color:#94a3b8;font-size:13px;font-weight:600;border:2px dashed #cbd5e1;border-radius:14px;background:#f8fafc;padding:16px;text-align:center}
+    .ed-text{outline:none;border-radius:6px;transition:background .12s,box-shadow .12s;cursor:text}
+    .ed-text:hover{background:rgba(54,150,240,0.06);box-shadow:inset 0 0 0 1px rgba(54,150,240,0.18)}
+    .ed-text.ed-focus{background:rgba(54,150,240,0.10);box-shadow:inset 0 0 0 2px rgba(54,150,240,0.55)}
+    .ed-text.ed-empty:not(.ed-focus)::before{content:'click to edit';color:#9ca3af;font-style:italic;opacity:.85}
+    .ed-image{position:relative;cursor:pointer}
+    .ed-image::after{
+      content:'✎ Click to replace';
+      position:absolute;inset:auto 8px 8px auto;
+      background:rgba(15,23,42,0.85);color:#fff;border-radius:6px;
+      padding:5px 10px;font-size:11px;font-weight:700;letter-spacing:.04em;
+      pointer-events:none;opacity:0;transition:opacity .15s;
+    }
+    .ed-image:hover::after{opacity:1}
+    .ed-image:hover{outline:2px solid rgba(54,150,240,.7);outline-offset:-1px}
+
+    /* Free-form canvas — when a section's body is in canvas mode, blocks become
+       absolutely positioned and can be dragged/resized freely. */
+    .body.canvas-mode{
+      position:relative;
+      gap:0;
+      overflow:hidden;
+    }
+    .body.canvas-mode > [data-block-path]{
+      box-sizing:border-box;
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path]{
+      outline:1px dashed rgba(54,150,240,.0);
+      transition:outline-color .15s;
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path]:hover{
+      outline-color:rgba(54,150,240,.55);
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path].card-dragging{
+      outline:1.5px solid rgba(54,150,240,.95);
+      box-shadow:0 8px 22px rgba(54,150,240,.25);
+      z-index:10;
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path].card-selected{
+      outline:1.5px solid rgba(54,150,240,.85);
+    }
+
+    /* Action badge — visible on cards that have an action assigned. Sits at
+       bottom-left, with a subtle gradient background so it stands out without
+       interfering with the move handle. */
+    .card-action-badge{display:none}
+    body.edit-mode .body.canvas-mode > [data-block-path] > .card-action-badge{
+      display:inline-flex;align-items:center;gap:5px;
+      position:absolute;left:8px;bottom:8px;z-index:18;
+      padding:3px 8px;border-radius:999px;
+      background:linear-gradient(135deg,#3696f0,#8654ab);
+      color:#fff;font-size:10px;font-weight:700;letter-spacing:.04em;
+      text-transform:uppercase;
+      box-shadow:0 4px 10px rgba(54,150,240,.35);
+      pointer-events:none;
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path] > .card-action-badge svg{flex:0 0 11px}
+
+    /* Card drag handles (move = top-left, resize = bottom-right). Hidden in
+       view mode, visible only inside the editor iframe. */
+    .card-handle{display:none}
+    body.edit-mode .body.canvas-mode > [data-block-path] > .card-handle{
+      display:flex;align-items:center;justify-content:center;
+      position:absolute;z-index:20;
+      background:#fff;color:#3696f0;
+      border:1.5px solid #3696f0;
+      box-shadow:0 4px 10px rgba(15,23,42,.18);
+      opacity:0;transition:opacity .15s,transform .15s;
+      pointer-events:auto;user-select:none;touch-action:none;
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path]:hover > .card-handle,
+    body.edit-mode .body.canvas-mode > [data-block-path].card-dragging > .card-handle{
+      opacity:1;
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path] > .card-handle.card-move{
+      top:-11px;left:-11px;
+      width:22px;height:22px;border-radius:50%;
+      cursor:move;
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path] > .card-handle.card-move:hover{
+      transform:scale(1.12);
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path] > .card-handle.card-delete{
+      top:-11px;right:-11px;
+      width:22px;height:22px;border-radius:50%;
+      cursor:pointer;
+      color:#dc2626;border-color:#dc2626;
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path] > .card-handle.card-delete:hover{
+      background:#dc2626;color:#fff;transform:scale(1.12);
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path] > .card-handle.card-resize{
+      right:-9px;bottom:-9px;
+      width:18px;height:18px;border-radius:5px;
+      cursor:nwse-resize;
+      background:linear-gradient(135deg,#3696f0,#8654ab);
+      border:none;
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path] > .card-handle.card-resize::before{
+      content:'';position:absolute;
+      right:3px;bottom:3px;width:8px;height:8px;
+      border-right:2px solid #fff;border-bottom:2px solid #fff;
+      border-radius:0 0 2px 0;
+    }
+    body.edit-mode .body.canvas-mode > [data-block-path] > .card-handle.card-resize:hover{
+      transform:scale(1.15);
+    }
+    .logo-wrap{display:inline-block}
+    .logo-wrap.brand-logo{display:block;margin-bottom:10px;max-width:200px}
+    .logo-wrap img.logo,.logo-wrap img.logo-inline{display:block;border-radius:6px}
+    .logo-wrap .img-placeholder{min-height:48px;font-size:11px}
+
+    /* In-iframe gallery modal */
+    #ed-gal-backdrop{display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif}
+    #ed-gal-backdrop.open{display:flex}
+    #ed-gal-modal{background:#fff;border-radius:18px;width:100%;max-width:1000px;max-height:calc(100vh - 48px);display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(15,23,42,.45);overflow:hidden;color:#1e1e2e}
+    .ed-gal-head{padding:16px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
+    .ed-gal-head h3{margin:0;font-size:17px;font-weight:800;letter-spacing:-.3px;color:#1e1e2e}
+    .ed-gal-close{background:none;border:none;width:30px;height:30px;border-radius:7px;cursor:pointer;color:#6b7280;font-size:18px;font-weight:600}
+    .ed-gal-close:hover{background:#f3f4f6;color:#1e1e2e}
+    .ed-gal-tabs{display:flex;gap:6px;padding:11px 22px;border-bottom:1px solid #e5e7eb;background:#f9fafb;overflow-x:auto}
+    .ed-gal-tab{flex:0 0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:999px;padding:6px 13px;font-size:12px;font-weight:700;color:#1e1e2e;cursor:pointer;transition:all .15s}
+    .ed-gal-tab em{font-style:normal;background:#f3f4f6;color:#6b7280;padding:1px 7px;border-radius:999px;margin-left:5px;font-size:11px}
+    .ed-gal-tab.active{background:linear-gradient(135deg,#3696f0,#8654ab);border-color:transparent;color:#fff}
+    .ed-gal-tab.active em{background:rgba(255,255,255,.22);color:#fff}
+    .ed-gal-tab:hover:not(.active){border-color:#3696f0;color:#3696f0}
+    .ed-gal-body{flex:1 1 auto;overflow-y:auto;padding:18px 22px}
+    .ed-gal-section{margin-bottom:22px}
+    .ed-gal-section-title{margin-bottom:10px;font-size:13px;color:#1e1e2e}
+    .ed-gal-pill{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:999px;border:1px solid;margin-right:6px}
+    .ed-gal-pill.ppt{background:rgba(54,150,240,.12);color:#3696f0;border-color:rgba(54,150,240,.3)}
+    .ed-gal-pill.web{background:rgba(16,185,129,.12);color:#047857;border-color:rgba(16,185,129,.3)}
+    .ed-gal-pill.user{background:rgba(168,85,247,.12);color:#7c3aed;border-color:rgba(168,85,247,.3)}
+    .ed-gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+    .ed-gal-item{position:relative;aspect-ratio:4/3;border:2px solid #e5e7eb;border-radius:10px;overflow:hidden;cursor:pointer;background:#fff;transition:all .15s;display:flex;align-items:center;justify-content:center}
+    .ed-gal-item:hover{border-color:#3696f0;transform:translateY(-1px);box-shadow:0 6px 18px rgba(54,150,240,.15)}
+    .ed-gal-item img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+    .ed-gal-item-tag{position:absolute;left:6px;bottom:6px;background:rgba(15,23,42,.8);color:#fff;font-size:10px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:5px;backdrop-filter:blur(2px);max-width:calc(100% - 12px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ed-gal-item-del{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.9);border:1px solid #e5e7eb;color:#6b7280;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:700;opacity:0;transition:opacity .15s}
+    .ed-gal-item:hover .ed-gal-item-del{opacity:1}
+    .ed-gal-item-del:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+    .ed-gal-empty{text-align:center;padding:40px 20px;color:#6b7280;font-size:13px}
+    .ed-gal-foot{padding:13px 22px;border-top:1px solid #e5e7eb;background:#f9fafb;display:flex;align-items:center;gap:10px}
+    .ed-gal-upload-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:linear-gradient(135deg,#3696f0,#8654ab);color:#fff;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:.02em}
+    .ed-gal-upload-btn:hover{filter:brightness(1.08)}
+    .ed-gal-foot-spacer{flex:1 1 auto}
+    .ed-gal-btn-secondary{padding:8px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#fff;color:#1e1e2e;font-size:12px;font-weight:700;cursor:pointer}
+    .ed-gal-btn-secondary:hover{border-color:#3696f0;color:#3696f0}
   `;
 
   const WEB_VIEWER_JS = `
     function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-    function renderBlock(b){
+    // Build a CSS style string from a stored font-style object (DATA._styles[path]).
+    // Returns '' when nothing is set.
+    function _textStyleString(path){
+      const map = DATA && DATA._styles;
+      if (!map) return '';
+      const st = map[path];
+      if (!st || typeof st !== 'object') return '';
+      const parts = [];
+      if (st.fontSize)            parts.push('font-size:'+st.fontSize);
+      if (st.fontFamily)          parts.push('font-family:'+st.fontFamily);
+      if (st.fontWeight!=null)    parts.push('font-weight:'+st.fontWeight);
+      if (st.opacity!=null)       parts.push('opacity:'+st.opacity);
+      if (st.textShadow)          parts.push('text-shadow:'+st.textShadow);
+      if (st.color)               parts.push('color:'+st.color);
+      if (st.letterSpacing)       parts.push('letter-spacing:'+st.letterSpacing);
+      if (st.fontStyle)           parts.push('font-style:'+st.fontStyle);
+      return parts.join(';');
+    }
+    function ed(path,{multi}={}){
+      // Build the data-edit attribute string + optional inline style based on
+      // any custom font/text styling stored at DATA._styles[path].
+      let s = ' data-edit="'+esc(path)+'"' + (multi?' data-edit-multi="1"':'');
+      const ts = _textStyleString(path);
+      if (ts) s += ' style="'+esc(ts)+'"';
+      return s;
+    }
+    function emptyOrEdit(val, path, opts){
+      // In edit mode we always render the slot so the user can fill it; in viewer mode we skip empty fields.
+      if (val) return false;
+      return EDIT_MODE ? false : true; // return true ⇒ skip
+    }
+    // Free-form block positioning. Each block can opt into absolute layout via a
+    // _layout field with x/y/w/h percentages of the section body. When set, the
+    // block is positioned absolutely on the section canvas.
+    function _layoutStyle(b){
+      if (!b || !b._layout) return '';
+      const L = b._layout;
+      if (typeof L.x !== 'number' || typeof L.y !== 'number' ||
+          typeof L.w !== 'number' || typeof L.h !== 'number') return '';
+      return 'position:absolute;left:'+L.x+'%;top:'+L.y+'%;width:'+L.w+'%;height:'+L.h+'%;';
+    }
+    function _hasLayouts(blocks){
+      return Array.isArray(blocks) && blocks.some(b => b && b._layout);
+    }
+    // Render the inner content of a card object (used for both single-card blocks
+    // and legacy multi-card blocks). A card may carry h3, p, optional features
+    // (strong+span list) and optional ul (bullet list).
+    function _renderCardInner(c, basePath){
+      const features = (c.features||[]).map((f,k)=>
+        '<div class="feature"><strong'+ed(basePath+'.features.'+k+'.strong')+'>'+esc(f.strong||'')+'</strong><span'+ed(basePath+'.features.'+k+'.span')+'>'+esc(f.span||'')+'</span></div>'
+      ).join('');
+      const ul = (c.ul||[]).map((x,k)=>
+        '<li'+ed(basePath+'.ul.'+k)+'>'+esc(x||'')+'</li>'
+      ).join('');
+      let inner = '';
+      if (c.h3 || EDIT_MODE) inner += '<h3'+ed(basePath+'.h3')+'>'+esc(c.h3||'')+'</h3>';
+      if (c.p  || EDIT_MODE) inner += '<p'+ed(basePath+'.p',{multi:1})+'>'+esc(c.p||'')+'</p>';
+      if (features) inner += '<div class="feature-list">'+features+'</div>';
+      if (ul) inner += '<ul class="clean">'+ul+'</ul>';
+      return inner;
+    }
+
+    function renderBlock(b, bp){
       if(!b||!b.type) return '';
+      const ls = _layoutStyle(b);
+      const styleAttr = ls ? ' style="'+ls+'"' : '';
+
       if (b.type==='hero'){
-        const stats = (b.stats||[]).map(s=>'<div class="stat"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('');
-        const cols = Math.min(4, Math.max(1, (b.stats||[]).length || 2));
-        return '<div class="hero-grid"><div class="visual-card"><div class="quote">'+esc(b.quote||'')+'</div><div class="subquote">'+esc(b.subquote||'')+'</div></div>'
-               +(stats?'<div class="stats cols-'+(cols<=2?2:(cols<=4?'4':'4'))+'">'+stats+'</div>':'')+'</div>';
+        const stats = (b.stats||[]);
+        const hasStats = !!stats.length;
+        // Hero without stats — render the visual-card directly so it's a single
+        // movable/resizable block on the canvas.
+        if (!hasStats) {
+          return '<div class="visual-card" data-block-path="'+esc(bp)+'"'+styleAttr+'>'
+            +'<div class="quote"'+ed(bp+'.quote',{multi:1})+'>'+esc(b.quote||'')+'</div>'
+            +'<div class="subquote"'+ed(bp+'.subquote',{multi:1})+'>'+esc(b.subquote||'')+'</div>'
+            +'</div>';
+        }
+        // Legacy hero with inline stats (used before flatten runs)
+        const statItems = stats.map((s,k)=>'<div class="stat"><strong'+ed(bp+'.stats.'+k+'.strong')+'>'+esc(s.strong||'')+'</strong><span'+ed(bp+'.stats.'+k+'.span')+'>'+esc(s.span||'')+'</span></div>').join('');
+        return '<div class="hero-grid" data-block-path="'+esc(bp)+'"'+styleAttr+'>'
+              +'<div class="visual-card">'
+              +'<div class="quote"'+ed(bp+'.quote',{multi:1})+'>'+esc(b.quote||'')+'</div>'
+              +'<div class="subquote"'+ed(bp+'.subquote',{multi:1})+'>'+esc(b.subquote||'')+'</div>'
+              +'</div>'
+              +'<div class="stats cols-'+(stats.length<=2?2:'4')+'">'+statItems+'</div>'
+              +'</div>';
       }
+
       if (b.type==='stats'){
-        const items = (b.items||[]).map(s=>'<div class="stat"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('');
-        const n = (b.items||[]).length;
+        const items = (b.items||[]);
+        const n = items.length;
+        if (!n) return '';
+        // Single stat — render directly
+        if (n === 1) {
+          const s = items[0];
+          return '<div class="stat" data-block-path="'+esc(bp)+'"'+styleAttr+'>'
+            +'<strong'+ed(bp+'.items.0.strong')+'>'+esc(s.strong||'')+'</strong>'
+            +'<span'+ed(bp+'.items.0.span')+'>'+esc(s.span||'')+'</span>'
+            +'</div>';
+        }
+        // Legacy multi-stat
         const cls = n===4?'cols-4':n===3?'cols-3':'';
-        return '<div class="stats '+cls+'">'+items+'</div>';
+        const html = items.map((s,k)=>'<div class="stat"><strong'+ed(bp+'.items.'+k+'.strong')+'>'+esc(s.strong||'')+'</strong><span'+ed(bp+'.items.'+k+'.span')+'>'+esc(s.span||'')+'</span></div>').join('');
+        return '<div class="stats '+cls+'" data-block-path="'+esc(bp)+'"'+styleAttr+'>'+html+'</div>';
       }
+
       if (b.type==='cards'){
-        const cols = (b.cols===3||(b.cards||[]).length%3===0&&(b.cards||[]).length>2)?3:2;
-        const cards = (b.cards||[]).map(c=>'<div class="card compact"><h3>'+esc(c.h3||'')+'</h3><p>'+esc(c.p||'')+'</p></div>').join('');
-        return '<div class="grid-cards cols-'+cols+'">'+cards+'</div>';
+        const cards = (b.cards||[]);
+        const n = cards.length;
+        if (!n) return '';
+        // Single card — render the card itself as the block element
+        if (n === 1) {
+          return '<div class="card compact" data-block-path="'+esc(bp)+'"'+styleAttr+'>'
+                + _renderCardInner(cards[0], bp+'.cards.0')
+                +'</div>';
+        }
+        // Legacy multi-card
+        const colsClass = (b.cols===3||(n%3===0&&n>2))?3:2;
+        const html = cards.map((c,k)=>'<div class="card compact">'+_renderCardInner(c, bp+'.cards.'+k)+'</div>').join('');
+        return '<div class="grid-cards cols-'+colsClass+'" data-block-path="'+esc(bp)+'"'+styleAttr+'>'+html+'</div>';
       }
+
       if (b.type==='two-col'){
+        // Legacy — kept for pre-flatten data only. After flatten this never appears.
         const L=b.left||{}; const R=b.right||{};
-        const features=(L.features||[]).map(f=>'<div class="feature"><strong>'+esc(f.strong)+'</strong><span>'+esc(f.span)+'</span></div>').join('');
-        const ul=(R.ul||[]).map(x=>'<li>• '+esc(x)+'</li>').join('');
-        return '<div class="two-col"><div class="card"><h3>'+esc(L.h3||'')+'</h3>'+(L.p?'<p>'+esc(L.p)+'</p>':'')+(features?'<div class="feature-list">'+features+'</div>':'')+'</div><div class="card"><h3>'+esc(R.h3||'')+'</h3>'+(R.p?'<p>'+esc(R.p)+'</p>':'')+(ul?'<ul class="clean">'+ul+'</ul>':'')+'</div></div>';
+        const features=(L.features||[]).map((f,k)=>'<div class="feature"><strong'+ed(bp+'.left.features.'+k+'.strong')+'>'+esc(f.strong||'')+'</strong><span'+ed(bp+'.left.features.'+k+'.span')+'>'+esc(f.span||'')+'</span></div>').join('');
+        const ul=(R.ul||[]).map((x,k)=>'<li'+ed(bp+'.right.ul.'+k)+'>'+esc(x||'')+'</li>').join('');
+        const left  = '<div class="card"><h3'+ed(bp+'.left.h3')+'>'+esc(L.h3||'')+'</h3>'
+              +(L.p||EDIT_MODE?'<p'+ed(bp+'.left.p',{multi:1})+'>'+esc(L.p||'')+'</p>':'')
+              +(features?'<div class="feature-list">'+features+'</div>':'')+'</div>';
+        const right = '<div class="card"><h3'+ed(bp+'.right.h3')+'>'+esc(R.h3||'')+'</h3>'
+              +(R.p||EDIT_MODE?'<p'+ed(bp+'.right.p',{multi:1})+'>'+esc(R.p||'')+'</p>':'')
+              +(ul?'<ul class="clean">'+ul+'</ul>':'')+'</div>';
+        return '<div class="two-col" data-block-path="'+esc(bp)+'"'+styleAttr+'>'+left+right+'</div>';
       }
+
       if (b.type==='timeline'){
-        const cols = b.cols || Math.min(6, Math.max(3,(b.steps||[]).length));
-        const steps = (b.steps||[]).map(s=>'<div class="step"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('');
-        return '<div class="timeline cols-'+cols+'">'+steps+'</div>';
+        const steps = (b.steps||[]);
+        const n = steps.length;
+        if (!n) return '';
+        if (n === 1) {
+          const s = steps[0];
+          return '<div class="step" data-block-path="'+esc(bp)+'"'+styleAttr+'>'
+            +'<strong'+ed(bp+'.steps.0.strong')+'>'+esc(s.strong||'')+'</strong>'
+            +'<span'+ed(bp+'.steps.0.span')+'>'+esc(s.span||'')+'</span>'
+            +'</div>';
+        }
+        const cls = (b.cols && (b.cols>=3 && b.cols<=6)) ? ('cols-'+b.cols) : ('cols-'+Math.min(6, Math.max(3, n)));
+        const html = steps.map((s,k)=>'<div class="step"><strong'+ed(bp+'.steps.'+k+'.strong')+'>'+esc(s.strong||'')+'</strong><span'+ed(bp+'.steps.'+k+'.span')+'>'+esc(s.span||'')+'</span></div>').join('');
+        return '<div class="timeline '+cls+'" data-block-path="'+esc(bp)+'"'+styleAttr+'>'+html+'</div>';
       }
+
       if (b.type==='pills'){
-        const pills = (b.items||[]).map(p=>'<div class="pill">'+esc(p)+'</div>').join('');
-        return '<div class="pillrow">'+pills+'</div>';
+        const pills = (b.items||[]).map((p,k)=>'<div class="pill"'+ed(bp+'.items.'+k)+'>'+esc(p||'')+'</div>').join('');
+        return '<div class="pillrow" data-block-path="'+esc(bp)+'"'+styleAttr+'>'+pills+'</div>';
       }
+
       if (b.type==='contact'){
-        const pills = (b.items||[]).map(p=>'<div class="pill">'+esc(p)+'</div>').join('');
-        return '<div class="footer-line"><div class="pillrow">'+pills+'</div></div>';
+        const pills = (b.items||[]).map((p,k)=>'<div class="pill"'+ed(bp+'.items.'+k)+'>'+esc(p||'')+'</div>').join('');
+        return '<div class="footer-line" data-block-path="'+esc(bp)+'"'+styleAttr+'><div class="pillrow">'+pills+'</div></div>';
       }
+
       if (b.type==='figure'){
         const imgs = DATA.images || [];
         const src = (Number.isInteger(b.index) && imgs[b.index]) ? imgs[b.index].dataUrl : null;
-        if (!src) return '';
-        return '<div class="figure"><img src="'+esc(src)+'" alt="figure"/>'
-          +(b.caption?'<div class="caption">'+esc(b.caption)+'</div>':'')+'</div>';
+        if (!src && !EDIT_MODE) return '';
+        return '<div class="figure" data-block-path="'+esc(bp)+'"'+styleAttr+'><div class="figure-img-wrap" data-edit-image="'+esc(bp)+'">'
+          + (src ? '<img src="'+esc(src)+'" alt="figure"/>' : '<div class="img-placeholder">No image — click to choose</div>')
+          + '</div>'
+          + (b.caption||EDIT_MODE?'<div class="caption"'+ed(bp+'.caption',{multi:1})+'>'+esc(b.caption||'')+'</div>':'')
+          + '</div>';
       }
+
       if (b.type==='image-text'){
+        // Legacy — kept for pre-flatten data only.
         const imgs = DATA.images || [];
         const src = (Number.isInteger(b.index) && imgs[b.index]) ? imgs[b.index].dataUrl : null;
-        if (!src) return '';
-        const ul = (b.ul||[]).map(x=>'<li>• '+esc(x)+'</li>').join('');
-        const bodyHtml = '<div class="it-body">'+(b.h3?'<h3>'+esc(b.h3)+'</h3>':'')
-          +(b.p?'<p class="muted">'+esc(b.p)+'</p>':'')
-          +(ul?'<ul class="clean">'+ul+'</ul>':'')+'</div>';
-        const imgHtml = '<div class="it-image"><img src="'+esc(src)+'" alt=""/></div>';
-        return b.side==='right'
-          ? '<div class="image-text side-right">'+bodyHtml+imgHtml+'</div>'
-          : '<div class="image-text">'+imgHtml+bodyHtml+'</div>';
+        if (!src && !EDIT_MODE) return '';
+        const ul = (b.ul||[]).map((x,k)=>'<li'+ed(bp+'.ul.'+k)+'>'+esc(x||'')+'</li>').join('');
+        const bodyHtml = '<div class="it-body">'
+          +(b.h3||EDIT_MODE?'<h3'+ed(bp+'.h3')+'>'+esc(b.h3||'')+'</h3>':'')
+          +(b.p||EDIT_MODE?'<p class="muted"'+ed(bp+'.p',{multi:1})+'>'+esc(b.p||'')+'</p>':'')
+          +(ul?'<ul class="clean">'+ul+'</ul>':'')
+          +'</div>';
+        const imgHtml = '<div class="it-image" data-edit-image="'+esc(bp)+'">'
+          + (src ? '<img src="'+esc(src)+'" alt=""/>' : '<div class="img-placeholder">No image — click to choose</div>')
+          + '</div>';
+        const inner = b.side==='right' ? bodyHtml+imgHtml : imgHtml+bodyHtml;
+        return '<div class="image-text'+(b.side==='right'?' side-right':'')+'" data-block-path="'+esc(bp)+'"'+styleAttr+'>'+inner+'</div>';
       }
+
       return '';
     }
-    function renderSection(sec, first){
+    function renderSection(sec, first, idx){
+      const sp = 'sections.'+idx;
       let html = '<section class="section'+(first?' active':'')+'" id="'+esc(sec.id)+'"><div class="panel">';
       html += '<div class="head">';
-      if (first && DATA.logoDataUrl) html += '<img class="logo-inline" src="'+esc(DATA.logoDataUrl)+'" alt="logo"/>';
-      if (sec.eyebrow) html += '<div class="eyebrow">'+esc(sec.eyebrow)+'</div>';
-      html += '<h'+(first?'1':'2')+'>'+esc(sec.heading||'')+'</h'+(first?'1':'2')+'>';
-      if (sec.lead) html += '<p class="lead" style="margin-top:10px;">'+esc(sec.lead)+'</p>';
-      html += '</div><div class="body">';
-      for (const b of (sec.blocks||[])) html += renderBlock(b);
+      if (first && (DATA.logoDataUrl||EDIT_MODE)) {
+        html += '<div class="logo-wrap" data-edit-logo="1">'
+              + (DATA.logoDataUrl ? '<img class="logo-inline" src="'+esc(DATA.logoDataUrl)+'" alt="logo"/>' : '<div class="img-placeholder">+ Logo</div>')
+              + '</div>';
+      }
+      if (sec.eyebrow||EDIT_MODE) html += '<div class="eyebrow"'+ed(sp+'.eyebrow')+'>'+esc(sec.eyebrow||'')+'</div>';
+      html += '<h'+(first?'1':'2')+ed(sp+'.heading')+'>'+esc(sec.heading||'')+'</h'+(first?'1':'2')+'>';
+      if (sec.lead||EDIT_MODE) html += '<p class="lead"'+ed(sp+'.lead',{multi:1})+'>'+esc(sec.lead||'')+'</p>';
+      const blocks = sec.blocks||[];
+      const bodyCls = _hasLayouts(blocks) ? 'body canvas-mode' : 'body';
+      html += '</div><div class="'+bodyCls+'">';
+      for (let j=0;j<blocks.length;j++) html += renderBlock(blocks[j], sp+'.blocks.'+j);
       html += '</div></div></section>';
       return html;
     }
@@ -1817,15 +4093,19 @@ ${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
       let html = '<div class="page"><div class="shell"><div class="windowbar"><div class="dots"><span></span><span></span><span></span></div></div><div class="'+layoutCls+'">';
       if (SHOW_SIDEBAR){
         html += '<aside class="sidebar"><div class="brand">';
-        if (DATA.logoDataUrl) html += '<img class="logo" src="'+esc(DATA.logoDataUrl)+'" alt="logo"/>';
-        html += '<div class="eyebrow">'+esc(DATA.subtitle||'Interactive presentation')+'</div>';
-        html += '<div class="title">'+esc(DATA.title||'Presentation')+'</div>';
+        if (DATA.logoDataUrl||EDIT_MODE) {
+          html += '<div class="logo-wrap brand-logo" data-edit-logo="1">'
+                + (DATA.logoDataUrl ? '<img class="logo" src="'+esc(DATA.logoDataUrl)+'" alt="logo"/>' : '<div class="img-placeholder">+ Logo</div>')
+                + '</div>';
+        }
+        html += '<div class="eyebrow"'+ed('subtitle')+'>'+esc(DATA.subtitle||'Interactive presentation')+'</div>';
+        html += '<div class="title"'+ed('title')+'>'+esc(DATA.title||'Presentation')+'</div>';
         html += '</div><div class="nav">';
         sections.forEach((s,i)=>{ html += '<button class="navbtn'+(i===0?' active':'')+'" data-section="'+esc(s.id)+'">'+esc(s.label||s.eyebrow||('Section '+(i+1)))+'</button>'; });
         html += '</div><div class="sidebar-foot">Use the arrow buttons on the connected presenter remote, or click a topic above.</div></aside>';
       }
       html += '<main class="content">';
-      sections.forEach((s,i)=>{ html += renderSection(s, i===0); });
+      sections.forEach((s,i)=>{ html += renderSection(s, i===0, i); });
       html += '</main></div></div></div>';
       document.getElementById('app').innerHTML = html;
 
@@ -1842,8 +4122,950 @@ ${truncatedSlides.map(s => `=== Slide ${s.n} ===\n${s.text}`).join('\n\n')}`;
       window.__sectionIds = sections.map(s=>s.id);
       const h = location.hash.replace('#','');
       if (h && document.getElementById(h)) show(h);
+
+      // Note: render() never auto-installs edit mode anymore. The script entry
+      // at the bottom orchestrates: render → flatten (once) → render → install.
     }
-    render();
+
+    // ── Edit mode ────────────────────────────────────────
+    window.__editorData = null;
+    function _setPath(obj, path, value){
+      const parts = path.split('.');
+      let cur = obj;
+      for (let i=0;i<parts.length-1;i++){
+        const k = parts[i];
+        const nextKey = parts[i+1];
+        if (cur[k]==null) cur[k] = /^\\d+$/.test(nextKey) ? [] : {};
+        cur = cur[k];
+      }
+      cur[parts[parts.length-1]] = value;
+    }
+    function markEditorDirty(){
+      try {
+        // The parent listens for 'input' events to flag the editor as dirty.
+        // Synthesize one when layout changes (move/resize) so saves work.
+        document.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch(_) {}
+    }
+    window.markEditorDirty = markEditorDirty;
+
+    // Track the path of the most recently focused contenteditable. Stays set
+    // even after blur (so toolbar buttons can act on the "last clicked" text).
+    let _lastFocusedEditPath = null;
+    // Track which block (card) was most recently selected. Updated when the
+    // user clicks anywhere inside a block element OR focuses text inside it.
+    let _lastSelectedBlockPath = null;
+    window.__getLastFocusedEditPath = () => _lastFocusedEditPath;
+    window.__getLastSelectedBlockPath = () => _lastSelectedBlockPath;
+
+    function _blockPathFromEditPath(p){
+      if (!p) return null;
+      const m = p.match(/^(sections\\.\\d+\\.blocks\\.\\d+)/);
+      return m ? m[1] : null;
+    }
+    function _notifyParentEditFocus(path){
+      try {
+        if (window.parent && typeof window.parent.__editFocus === 'function') {
+          window.parent.__editFocus(path, _lastSelectedBlockPath);
+        }
+      } catch(_) {}
+    }
+    function _selectBlock(path){
+      if (!path) return;
+      _lastSelectedBlockPath = path;
+      try {
+        if (window.parent && typeof window.parent.__blockSelect === 'function') {
+          window.parent.__blockSelect(path);
+        }
+      } catch(_) {}
+      // Visual: mark this block selected (others lose the class)
+      document.querySelectorAll('.body.canvas-mode > [data-block-path].card-selected').forEach(el => el.classList.remove('card-selected'));
+      const el = document.querySelector('[data-block-path="'+path+'"]');
+      if (el) el.classList.add('card-selected');
+    }
+
+    // Install edit-mode handlers on the *currently rendered* DOM. Called every
+    // time we re-render in edit mode (initial + after add/delete/etc).
+    function setupEditHandlers(){
+      window.__editorData = DATA;
+      document.body.classList.add('edit-mode');
+
+      document.querySelectorAll('[data-edit]').forEach(el=>{
+        el.setAttribute('contenteditable','true');
+        el.classList.add('ed-text');
+        if (!el.textContent.trim()) el.classList.add('ed-empty');
+        el.addEventListener('focus',()=>{
+          el.classList.add('ed-focus');
+          _lastFocusedEditPath = el.dataset.edit;
+          const bp = _blockPathFromEditPath(el.dataset.edit);
+          if (bp) _selectBlock(bp);
+          _notifyParentEditFocus(el.dataset.edit);
+        });
+        el.addEventListener('blur',()=>{
+          el.classList.remove('ed-focus');
+          const path = el.dataset.edit;
+          const txt = el.textContent.replace(/\\u00a0/g,' ').trim();
+          el.classList.toggle('ed-empty', !txt);
+          _setPath(DATA, path, txt);
+          // Note: we keep _lastFocusedEditPath so the toolbar still knows what
+          // text the user last clicked into.
+        });
+        el.addEventListener('keydown',(e)=>{
+          if (e.key==='Enter' && !el.dataset.editMulti) { e.preventDefault(); el.blur(); }
+          if (e.key==='Escape') { el.blur(); }
+        });
+      });
+      document.querySelectorAll('[data-edit-image]').forEach(el=>{
+        el.classList.add('ed-image');
+        el.addEventListener('click',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          _openImagePicker(el.dataset.editImage);
+        });
+      });
+      document.querySelectorAll('[data-edit-logo]').forEach(el=>{
+        el.classList.add('ed-image');
+        el.addEventListener('click',(e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          _openLogoPicker();
+        });
+      });
+
+      _initSectionCanvases();
+      _attachCardHandlesAll();
+      _refreshAllActionBadges();
+      _buildGalleryUI();
+    }
+
+    // Re-render and re-attach handlers (used after add/delete card).
+    function refreshEditView(){
+      render();
+      setupEditHandlers();
+    }
+    window.refreshEditView = refreshEditView;
+
+    // ── Per-element font / text styling ───────────────────
+    // Style overrides live at DATA._styles[path] = { fontSize, fontFamily,
+    // fontWeight, opacity, textShadow, color, letterSpacing, fontStyle }.
+    // setFontStyle applies a single property and persists it; the inline style
+    // attribute on the element is updated in-place (no re-render needed).
+    function _findEditEl(path){
+      if (!path) return null;
+      const safe = path.replace(/"/g, '\\\\"');
+      return document.querySelector('[data-edit="'+safe+'"]');
+    }
+    function _writeInlineStyleFor(el, path){
+      const css = _textStyleString(path);
+      if (css) el.setAttribute('style', css);
+      else el.removeAttribute('style');
+    }
+    function setFontStyle(path, prop, value){
+      if (!path || !prop) return;
+      DATA._styles = DATA._styles || {};
+      const cur = DATA._styles[path] = DATA._styles[path] || {};
+      if (value === '' || value == null) {
+        delete cur[prop];
+      } else {
+        cur[prop] = value;
+      }
+      // Clean up empty entries so the saved JSON stays minimal.
+      if (Object.keys(cur).length === 0) delete DATA._styles[path];
+      const el = _findEditEl(path);
+      if (el) _writeInlineStyleFor(el, path);
+      markEditorDirty();
+    }
+    window.setFontStyle = setFontStyle;
+
+    function resetFontStyle(path){
+      if (!path) return;
+      if (DATA._styles) delete DATA._styles[path];
+      const el = _findEditEl(path);
+      if (el) el.removeAttribute('style');
+      markEditorDirty();
+    }
+    window.resetFontStyle = resetFontStyle;
+
+    // Read back the effective font styling for a given editable: stored
+    // overrides + computed defaults the user can see in the panel. Returned
+    // values are normalized: fontSize as integer pixels, opacity 0–1, etc.
+    function getCurrentFontStyle(path){
+      const el = _findEditEl(path);
+      const stored = (DATA._styles && DATA._styles[path]) || {};
+      const out = {
+        fontFamily: stored.fontFamily || '',
+        fontWeight: stored.fontWeight != null ? String(stored.fontWeight) : '',
+        fontSize:   stored.fontSize   || '',
+        opacity:    stored.opacity   != null ? Number(stored.opacity) : 1,
+        textShadow: stored.textShadow || '',
+        color:      stored.color || '',
+      };
+      if (el) {
+        const cs = window.getComputedStyle(el);
+        out.computedFontSizePx   = Math.round(parseFloat(cs.fontSize) || 16);
+        out.computedFontFamily   = cs.fontFamily || '';
+        out.computedFontWeight   = cs.fontWeight || '';
+        out.computedOpacity      = Number(cs.opacity || 1);
+        out.computedColor        = cs.color || '';
+      } else {
+        out.computedFontSizePx = 16;
+      }
+      return out;
+    }
+    window.getCurrentFontStyle = getCurrentFontStyle;
+
+    // ── Per-block actions (presenter taps a card → audience sees) ─────
+    // Stored at block._action with one of these shapes:
+    //   { type: 'gallery', images: [imgIdx...], intervalMs: 4000 }
+    //   { type: 'page', page: { eyebrow, heading, lead, body, imageIndex } }
+    function _getBlockByPathDeep(path){
+      // _getBlockByPath only matches sections.X.blocks.Y. Re-implement for
+      // safety in case it's not in scope at every call site.
+      const m = path && path.match(/^sections\\.(\\d+)\\.blocks\\.(\\d+)$/);
+      if (!m) return null;
+      const sec = (DATA.sections||[])[+m[1]];
+      if (!sec) return null;
+      return (sec.blocks||[])[+m[2]] || null;
+    }
+    function getActionForBlock(path){
+      const block = _getBlockByPathDeep(path);
+      if (!block) return null;
+      return block._action || null;
+    }
+    window.getActionForBlock = getActionForBlock;
+
+    function setActionForBlock(path, action){
+      const block = _getBlockByPathDeep(path);
+      if (!block) return;
+      if (!action || !action.type) {
+        delete block._action;
+      } else {
+        block._action = action;
+      }
+      _refreshActionBadge(path);
+      markEditorDirty();
+    }
+    window.setActionForBlock = setActionForBlock;
+
+    function clearActionForBlock(path){
+      setActionForBlock(path, null);
+    }
+    window.clearActionForBlock = clearActionForBlock;
+
+    function _refreshActionBadge(path){
+      const el = document.querySelector('[data-block-path="'+path+'"]');
+      if (!el) return;
+      let badge = el.querySelector(':scope > .card-action-badge');
+      const block = _getBlockByPathDeep(path);
+      const hasAction = !!(block && block._action && block._action.type);
+      if (hasAction && !badge) {
+        badge = document.createElement('div');
+        badge.className = 'card-action-badge';
+        el.appendChild(badge);
+      }
+      if (badge) {
+        if (hasAction) {
+          const t = block._action.type;
+          const label = t === 'gallery' ? 'Gallery' : (t === 'page' ? 'Page' : 'Action');
+          badge.innerHTML = ''
+            + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
+            +   '<polygon points="5 3 19 12 5 21 5 3"/>'
+            + '</svg>'
+            + '<span>'+esc(label)+'</span>';
+          badge.dataset.actionType = t;
+        } else {
+          badge.remove();
+        }
+      }
+    }
+
+    function _refreshAllActionBadges(){
+      document.querySelectorAll('.body.canvas-mode > [data-block-path]').forEach(el => {
+        _refreshActionBadge(el.dataset.blockPath);
+      });
+    }
+
+    // ── Flatten multi-item blocks into per-card blocks ───
+    // We render once with the original (grid) layout, measure each inner card's
+    // rendered position, then split multi-item blocks into N single-item blocks
+    // each carrying its own _layout. After this, every card on the canvas can
+    // be moved/resized individually.
+    function _layoutFromEl(el, bodyRect){
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      const W = Math.max(1, bodyRect.width);
+      const H = Math.max(1, bodyRect.height);
+      return {
+        x: ((r.left - bodyRect.left) / W) * 100,
+        y: ((r.top  - bodyRect.top ) / H) * 100,
+        w: (r.width  / W) * 100,
+        h: (r.height / H) * 100,
+      };
+    }
+
+    function _flattenAllSections(){
+      const sections = DATA.sections || [];
+      sections.forEach((sec, secIdx) => {
+        const sectionEl = document.getElementById(sec.id);
+        if (!sectionEl) return;
+
+        // Force section visible (off-screen) for accurate measurement.
+        const wasActive = sectionEl.classList.contains('active');
+        const prevDisplay = sectionEl.style.display;
+        const prevVisibility = sectionEl.style.visibility;
+        if (!wasActive){
+          sectionEl.style.display = 'block';
+          sectionEl.style.visibility = 'hidden';
+          sectionEl.classList.add('active');
+        }
+
+        const body = sectionEl.querySelector('.body');
+        if (!body) {
+          if (!wasActive){
+            sectionEl.classList.remove('active');
+            sectionEl.style.display = prevDisplay;
+            sectionEl.style.visibility = prevVisibility;
+          }
+          return;
+        }
+
+        void body.offsetHeight;
+        const bodyRect = body.getBoundingClientRect();
+
+        const flat = [];
+        const oldBlocks = sec.blocks || [];
+        oldBlocks.forEach((block, bi) => {
+          if (!block || !block.type) { flat.push(block); return; }
+
+          const blockPath = 'sections.'+secIdx+'.blocks.'+bi;
+          const blockEl = body.querySelector('[data-block-path="'+blockPath+'"]');
+
+          // Multi-card 'cards' → split into N single-card blocks
+          if (block.type === 'cards' && (block.cards || []).length > 1) {
+            const innerEls = blockEl ? Array.from(blockEl.children).filter(c => c.classList && c.classList.contains('card')) : [];
+            block.cards.forEach((c, i) => {
+              const nb = { type: 'cards', cards: [c] };
+              const layout = _layoutFromEl(innerEls[i], bodyRect);
+              if (layout) nb._layout = layout;
+              flat.push(nb);
+            });
+            return;
+          }
+
+          // Multi-stat 'stats' → split into N single-stat blocks
+          if (block.type === 'stats' && (block.items || []).length > 1) {
+            const innerEls = blockEl ? Array.from(blockEl.children).filter(c => c.classList && c.classList.contains('stat')) : [];
+            block.items.forEach((s, i) => {
+              const nb = { type: 'stats', items: [s] };
+              const layout = _layoutFromEl(innerEls[i], bodyRect);
+              if (layout) nb._layout = layout;
+              flat.push(nb);
+            });
+            return;
+          }
+
+          // Multi-step 'timeline' → split into N single-step blocks
+          if (block.type === 'timeline' && (block.steps || []).length > 1) {
+            const innerEls = blockEl ? Array.from(blockEl.children).filter(c => c.classList && c.classList.contains('step')) : [];
+            block.steps.forEach((s, i) => {
+              const nb = { type: 'timeline', steps: [s] };
+              const layout = _layoutFromEl(innerEls[i], bodyRect);
+              if (layout) nb._layout = layout;
+              flat.push(nb);
+            });
+            return;
+          }
+
+          // 'two-col' → 2 cards blocks (preserving features/ul)
+          if (block.type === 'two-col') {
+            const innerEls = blockEl ? Array.from(blockEl.children).filter(c => c.classList && c.classList.contains('card')) : [];
+            const L = block.left || {}, R = block.right || {};
+            const lb = { type: 'cards', cards: [{ h3: L.h3||'', p: L.p||'', features: L.features||[] }] };
+            const rb = { type: 'cards', cards: [{ h3: R.h3||'', p: R.p||'', ul: R.ul||[] }] };
+            const ll = _layoutFromEl(innerEls[0], bodyRect);
+            const rl = _layoutFromEl(innerEls[1], bodyRect);
+            if (ll) lb._layout = ll;
+            if (rl) rb._layout = rl;
+            flat.push(lb);
+            flat.push(rb);
+            return;
+          }
+
+          // 'hero' with stats → 1 hero (no stats) + N single-stat blocks
+          if (block.type === 'hero' && (block.stats || []).length > 0) {
+            const visualEl = blockEl ? blockEl.querySelector('.visual-card') : null;
+            const statEls  = blockEl ? Array.from(blockEl.querySelectorAll('.stat')) : [];
+            const hb = { type: 'hero', quote: block.quote||'', subquote: block.subquote||'' };
+            const hl = _layoutFromEl(visualEl, bodyRect);
+            if (hl) hb._layout = hl;
+            flat.push(hb);
+            block.stats.forEach((s, i) => {
+              const nb = { type: 'stats', items: [s] };
+              const layout = _layoutFromEl(statEls[i], bodyRect);
+              if (layout) nb._layout = layout;
+              flat.push(nb);
+            });
+            return;
+          }
+
+          // 'image-text' → 1 figure + 1 single-card 'cards' block
+          if (block.type === 'image-text') {
+            const imgEl = blockEl ? blockEl.querySelector('.it-image') : null;
+            const txtEl = blockEl ? blockEl.querySelector('.it-body')  : null;
+            const fb = { type: 'figure', index: block.index, caption: '' };
+            const cb = { type: 'cards', cards: [{ h3: block.h3||'', p: block.p||'', ul: block.ul||[] }] };
+            const fl = _layoutFromEl(imgEl, bodyRect);
+            const cl = _layoutFromEl(txtEl, bodyRect);
+            if (fl) fb._layout = fl;
+            if (cl) cb._layout = cl;
+            flat.push(fb);
+            flat.push(cb);
+            return;
+          }
+
+          // No flatten — capture _layout if missing
+          if (blockEl && !block._layout){
+            const layout = _layoutFromEl(blockEl, bodyRect);
+            if (layout) block._layout = layout;
+          }
+          flat.push(block);
+        });
+
+        sec.blocks = flat;
+
+        if (!wasActive){
+          sectionEl.classList.remove('active');
+          sectionEl.style.display = prevDisplay;
+          sectionEl.style.visibility = prevVisibility;
+        }
+      });
+    }
+
+    // ── Add Card / Delete Card ───────────────────────────
+    function _currentSectionIndex(){
+      const id = window.__currentSectionId;
+      const sections = DATA.sections || [];
+      const i = sections.findIndex(s => s.id === id);
+      return i >= 0 ? i : 0;
+    }
+
+    function addNewCard(kind){
+      const si = _currentSectionIndex();
+      const sec = (DATA.sections||[])[si];
+      if (!sec) return;
+      sec.blocks = sec.blocks || [];
+
+      // Default layout: roughly centered, sensible size per type
+      const defaults = {
+        text:  { type:'cards',  cards:[{ h3:'New card', p:'Click to edit text.' }],   _layout:{ x:30, y:30, w:40, h:24 } },
+        stat:  { type:'stats',  items:[{ strong:'100%', span:'New stat' }],            _layout:{ x:35, y:35, w:25, h:18 } },
+        quote: { type:'hero',   quote:'New quote', subquote:'Subquote',                 _layout:{ x:25, y:25, w:50, h:35 } },
+        image: { type:'figure', index: ((DATA.images||[]).length ? 0 : null), caption:'', _layout:{ x:30, y:25, w:40, h:45 } },
+        pill:  { type:'pills',  items:['New tag'],                                       _layout:{ x:35, y:42, w:30, h:10 } },
+        step:  { type:'timeline', steps:[{ strong:'Step', span:'Description' }],         _layout:{ x:35, y:35, w:25, h:18 } },
+      };
+      const block = defaults[kind] || defaults.text;
+      // Deep clone so reusing the defaults map doesn't share refs across calls
+      const fresh = JSON.parse(JSON.stringify(block));
+      sec.blocks.push(fresh);
+
+      refreshEditView();
+      markEditorDirty();
+      // Re-show the section we were on, so the new card lands on the right slide
+      if (typeof window.__showSection === 'function' && window.__currentSectionId){
+        window.__showSection(window.__currentSectionId);
+      }
+    }
+    window.addNewCard = addNewCard;
+
+    function deleteBlock(blockEl){
+      if (!blockEl) return;
+      const path = blockEl.dataset.blockPath;
+      const m = path && path.match(/^sections\\.(\\d+)\\.blocks\\.(\\d+)$/);
+      if (!m) return;
+      const si = +m[1], bi = +m[2];
+      const sec = (DATA.sections||[])[si];
+      if (!sec || !Array.isArray(sec.blocks)) return;
+      sec.blocks.splice(bi, 1);
+      const keepId = sec.id;
+      refreshEditView();
+      markEditorDirty();
+      if (typeof window.__showSection === 'function' && keepId){
+        window.__showSection(keepId);
+      }
+    }
+
+    // ── Free-form block positioning ───────────────────────
+    function _getBlockByPath(path){
+      const m = path && path.match(/^sections\\.(\\d+)\\.blocks\\.(\\d+)$/);
+      if (!m) return null;
+      const sec = (DATA.sections||[])[+m[1]];
+      if (!sec) return null;
+      return (sec.blocks||[])[+m[2]] || null;
+    }
+
+    // For each section, measure each block's natural rendered position (in the
+    // default flex/grid flow) and convert to percent of the section body. Then
+    // switch the body to canvas-mode so blocks become absolutely positioned.
+    function _initSectionCanvases(){
+      const sections = document.querySelectorAll('.section');
+      sections.forEach(sec => {
+        const body = sec.querySelector('.body');
+        if (!body) return;
+        const blockEls = Array.from(body.children).filter(c => c.dataset && c.dataset.blockPath);
+        if (!blockEls.length) return;
+
+        const allHaveLayout = blockEls.every(el => {
+          const b = _getBlockByPath(el.dataset.blockPath);
+          return b && b._layout;
+        });
+
+        if (!allHaveLayout){
+          // Force the section visible (off-screen) so we can measure even
+          // sections that are not currently active.
+          const wasActive = sec.classList.contains('active');
+          const prevDisplay = sec.style.display;
+          const prevVisibility = sec.style.visibility;
+          if (!wasActive){
+            sec.style.display = 'block';
+            sec.style.visibility = 'hidden';
+            sec.classList.add('active');
+          }
+          // Force layout
+          void body.offsetHeight;
+          const bodyRect = body.getBoundingClientRect();
+          const W = Math.max(1, bodyRect.width);
+          const H = Math.max(1, bodyRect.height);
+          blockEls.forEach(el => {
+            const block = _getBlockByPath(el.dataset.blockPath);
+            if (!block) return;
+            if (!block._layout){
+              const r = el.getBoundingClientRect();
+              block._layout = {
+                x: ((r.left - bodyRect.left) / W) * 100,
+                y: ((r.top - bodyRect.top) / H) * 100,
+                w: (r.width / W) * 100,
+                h: (r.height / H) * 100,
+              };
+            }
+          });
+          if (!wasActive){
+            sec.classList.remove('active');
+            sec.style.display = prevDisplay;
+            sec.style.visibility = prevVisibility;
+          }
+        }
+
+        body.classList.add('canvas-mode');
+        blockEls.forEach(el => {
+          const block = _getBlockByPath(el.dataset.blockPath);
+          if (!block || !block._layout) return;
+          _applyLayoutStyle(el, block._layout);
+        });
+      });
+    }
+
+    function _applyLayoutStyle(el, L){
+      el.style.position = 'absolute';
+      el.style.left = L.x + '%';
+      el.style.top = L.y + '%';
+      el.style.width = L.w + '%';
+      el.style.height = L.h + '%';
+    }
+
+    function _attachCardHandlesAll(){
+      document.querySelectorAll('.body.canvas-mode > [data-block-path]').forEach(el => {
+        if (el.dataset.handlesAttached === '1') return;
+        el.dataset.handlesAttached = '1';
+
+        // Selecting the block on any mousedown inside it. Use mousedown so the
+        // selection is set BEFORE drag/resize handlers fire.
+        el.addEventListener('mousedown', () => {
+          _selectBlock(el.dataset.blockPath);
+        });
+
+        const move = document.createElement('div');
+        move.className = 'card-handle card-move';
+        move.title = 'Drag to move';
+        move.innerHTML = ''
+          + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+          +   '<polyline points="5 9 2 12 5 15"/>'
+          +   '<polyline points="9 5 12 2 15 5"/>'
+          +   '<polyline points="15 19 12 22 9 19"/>'
+          +   '<polyline points="19 9 22 12 19 15"/>'
+          +   '<line x1="2" y1="12" x2="22" y2="12"/>'
+          +   '<line x1="12" y1="2" x2="12" y2="22"/>'
+          + '</svg>';
+        move.addEventListener('mousedown', (e)=>_startCardMove(el, e));
+        move.addEventListener('touchstart', (e)=>_startCardMove(el, e), { passive: false });
+        el.appendChild(move);
+
+        const del = document.createElement('div');
+        del.className = 'card-handle card-delete';
+        del.title = 'Delete card';
+        del.innerHTML = ''
+          + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">'
+          +   '<line x1="6" y1="6" x2="18" y2="18"/>'
+          +   '<line x1="18" y1="6" x2="6" y2="18"/>'
+          + '</svg>';
+        del.addEventListener('click', (e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          deleteBlock(el);
+        });
+        el.appendChild(del);
+
+        const resize = document.createElement('div');
+        resize.className = 'card-handle card-resize';
+        resize.title = 'Drag corner to resize';
+        resize.addEventListener('mousedown', (e)=>_startCardResize(el, e));
+        resize.addEventListener('touchstart', (e)=>_startCardResize(el, e), { passive: false });
+        el.appendChild(resize);
+      });
+    }
+
+    function _ptOf(e){
+      if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      return { x: e.clientX, y: e.clientY };
+    }
+
+    function _startCardMove(blockEl, e){
+      e.preventDefault();
+      e.stopPropagation();
+      const block = _getBlockByPath(blockEl.dataset.blockPath);
+      const body = blockEl.parentElement;
+      if (!block || !block._layout || !body) return;
+      const bodyRect = body.getBoundingClientRect();
+      const start = _ptOf(e);
+      const startL = Object.assign({}, block._layout);
+
+      blockEl.classList.add('card-dragging');
+      document.body.style.userSelect = 'none';
+
+      function onMove(ev){
+        const p = _ptOf(ev);
+        const dx = ((p.x - start.x) / bodyRect.width) * 100;
+        const dy = ((p.y - start.y) / bodyRect.height) * 100;
+        let nx = startL.x + dx;
+        let ny = startL.y + dy;
+        nx = Math.max(0, Math.min(100 - block._layout.w, nx));
+        ny = Math.max(0, Math.min(100 - block._layout.h, ny));
+        block._layout.x = nx;
+        block._layout.y = ny;
+        blockEl.style.left = nx + '%';
+        blockEl.style.top  = ny + '%';
+        if (typeof markEditorDirty === 'function') markEditorDirty();
+      }
+      function onUp(){
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+        document.body.style.userSelect = '';
+        blockEl.classList.remove('card-dragging');
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onUp);
+    }
+
+    function _startCardResize(blockEl, e){
+      e.preventDefault();
+      e.stopPropagation();
+      const block = _getBlockByPath(blockEl.dataset.blockPath);
+      const body = blockEl.parentElement;
+      if (!block || !block._layout || !body) return;
+      const bodyRect = body.getBoundingClientRect();
+      const start = _ptOf(e);
+      const startL = Object.assign({}, block._layout);
+
+      blockEl.classList.add('card-dragging');
+      document.body.style.userSelect = 'none';
+
+      function onMove(ev){
+        const p = _ptOf(ev);
+        const dx = ((p.x - start.x) / bodyRect.width) * 100;
+        const dy = ((p.y - start.y) / bodyRect.height) * 100;
+        let nw = startL.w + dx;
+        let nh = startL.h + dy;
+        const minW = 6, minH = 4;
+        nw = Math.max(minW, Math.min(100 - block._layout.x, nw));
+        nh = Math.max(minH, Math.min(100 - block._layout.y, nh));
+        block._layout.w = nw;
+        block._layout.h = nh;
+        blockEl.style.width = nw + '%';
+        blockEl.style.height = nh + '%';
+        if (typeof markEditorDirty === 'function') markEditorDirty();
+      }
+      function onUp(){
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+        document.body.style.userSelect = '';
+        blockEl.classList.remove('card-dragging');
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onUp);
+    }
+
+    // ── Gallery / picker UI inside the iframe ────────────
+    function _ensureGalleryHost(){
+      let host = document.getElementById('ed-gallery-host');
+      if (host) return host;
+      host = document.createElement('div');
+      host.id = 'ed-gallery-host';
+      host.innerHTML = ''
+        + '<div id="ed-gal-backdrop" onclick="if(event.target===this)_closeGallery()">'
+        +   '<div id="ed-gal-modal">'
+        +     '<div class="ed-gal-head">'
+        +       '<h3 id="ed-gal-title">Image Gallery</h3>'
+        +       '<button class="ed-gal-close" onclick="_closeGallery()" type="button">✕</button>'
+        +     '</div>'
+        +     '<div class="ed-gal-tabs" id="ed-gal-tabs"></div>'
+        +     '<div class="ed-gal-body" id="ed-gal-body"></div>'
+        +     '<div class="ed-gal-foot">'
+        +       '<label for="ed-gal-upload" class="ed-gal-upload-btn">'
+        +         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+        +         '<span>Upload your own image</span>'
+        +       '</label>'
+        +       '<input type="file" id="ed-gal-upload" accept="image/*" style="display:none"/>'
+        +       '<div class="ed-gal-foot-spacer"></div>'
+        +       '<button class="ed-gal-btn-secondary" type="button" onclick="_closeGallery()">Close</button>'
+        +     '</div>'
+        +   '</div>'
+        + '</div>';
+      document.body.appendChild(host);
+      document.getElementById('ed-gal-upload').addEventListener('change', (e)=>{
+        const f = e.target.files && e.target.files[0];
+        if (f) _handleUpload(f);
+        e.target.value = '';
+      });
+      return host;
+    }
+    let _activeGalTab = 'all';
+    let _pickerTarget = null; // null = manage mode; otherwise: { mode: 'block'|'logo', path? }
+
+    function _buildGalleryUI(){ _ensureGalleryHost(); }
+    function _openGallery(){
+      _ensureGalleryHost();
+      _pickerTarget = null;
+      document.getElementById('ed-gal-title').textContent = 'Image Gallery';
+      _renderGalleryUI();
+      document.getElementById('ed-gal-backdrop').classList.add('open');
+    }
+    function _openImagePicker(blockPath){
+      _ensureGalleryHost();
+      _pickerTarget = { mode: 'block', path: blockPath };
+      document.getElementById('ed-gal-title').textContent = 'Pick an image for this card';
+      _renderGalleryUI();
+      document.getElementById('ed-gal-backdrop').classList.add('open');
+    }
+    function _openLogoPicker(){
+      _ensureGalleryHost();
+      _pickerTarget = { mode: 'logo' };
+      document.getElementById('ed-gal-title').textContent = 'Pick a logo';
+      _renderGalleryUI();
+      document.getElementById('ed-gal-backdrop').classList.add('open');
+    }
+    function _closeGallery(){
+      const bd = document.getElementById('ed-gal-backdrop');
+      if (bd) bd.classList.remove('open');
+    }
+    window._openGallery = _openGallery;
+    window._closeGallery = _closeGallery;
+
+    function _imgSourceLabel(im){
+      if (!im) return 'Image';
+      if (im.source === 'web') {
+        if (im.originUrl) {
+          try { return new URL(im.originUrl).host; } catch {}
+        }
+        return 'Website';
+      }
+      if (im.source === 'user') return 'Uploaded';
+      if (im.source === 'ppt') return im.originSlide ? ('Slide '+im.originSlide) : 'PPT';
+      return 'Image';
+    }
+    function _renderGalleryUI(){
+      const tabs = document.getElementById('ed-gal-tabs');
+      const body = document.getElementById('ed-gal-body');
+      const imgs = DATA.images || [];
+      const ppt  = imgs.map((im,i)=>({im,i})).filter(x=>x.im && x.im.source==='ppt');
+      const web  = imgs.map((im,i)=>({im,i})).filter(x=>x.im && x.im.source==='web');
+      const user = imgs.map((im,i)=>({im,i})).filter(x=>x.im && (x.im.source==='user' || !x.im.source));
+
+      tabs.innerHTML = ''
+        + '<button class="ed-gal-tab'+(_activeGalTab==='all' ?' active':'')+'" data-t="all" type="button">All <em>'+imgs.length+'</em></button>'
+        + '<button class="ed-gal-tab'+(_activeGalTab==='ppt' ?' active':'')+'" data-t="ppt" type="button">PowerPoint <em>'+ppt.length+'</em></button>'
+        + '<button class="ed-gal-tab'+(_activeGalTab==='web' ?' active':'')+'" data-t="web" type="button">Website <em>'+web.length+'</em></button>'
+        + '<button class="ed-gal-tab'+(_activeGalTab==='user'?' active':'')+'" data-t="user" type="button">Uploaded <em>'+user.length+'</em></button>';
+      tabs.querySelectorAll('.ed-gal-tab').forEach(b=>b.addEventListener('click',()=>{ _activeGalTab=b.dataset.t; _renderGalleryUI(); }));
+
+      const showPpt = _activeGalTab==='all' || _activeGalTab==='ppt';
+      const showWeb = _activeGalTab==='all' || _activeGalTab==='web';
+      const showUser= _activeGalTab==='all' || _activeGalTab==='user';
+
+      let html = '';
+      function renderGroup(title, list, badge){
+        if (!list.length) return '';
+        const items = list.map(({im,i})=>{
+          const tag = _imgSourceLabel(im);
+          return '<div class="ed-gal-item" data-idx="'+i+'">'
+               + '<img src="'+esc(im.dataUrl)+'" loading="lazy"/>'
+               + '<div class="ed-gal-item-tag">'+esc(tag)+'</div>'
+               + '<button class="ed-gal-item-del" type="button" title="Remove from bank" data-del="'+i+'">×</button>'
+               + '</div>';
+        }).join('');
+        return '<div class="ed-gal-section"><div class="ed-gal-section-title"><strong><span class="ed-gal-pill '+esc(badge)+'">'+esc(badge.toUpperCase())+'</span> '+esc(title)+'</strong></div>'
+             + '<div class="ed-gal-grid">'+items+'</div></div>';
+      }
+      if (showPpt)  html += renderGroup('From your PowerPoint', ppt, 'ppt');
+      if (showWeb)  html += renderGroup('From the website', web, 'web');
+      if (showUser) html += renderGroup('Uploaded by you', user, 'user');
+      if (!html) {
+        html = '<div class="ed-gal-empty">No images yet. Use Upload to add one.</div>';
+      }
+      body.innerHTML = html;
+
+      body.querySelectorAll('.ed-gal-item').forEach(el=>{
+        el.addEventListener('click',(e)=>{
+          if (e.target.classList.contains('ed-gal-item-del')) return;
+          const idx = parseInt(el.dataset.idx,10);
+          _useImage(idx);
+        });
+      });
+      body.querySelectorAll('[data-del]').forEach(el=>{
+        el.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          const idx = parseInt(el.dataset.del,10);
+          _deleteImage(idx);
+        });
+      });
+    }
+
+    async function _handleUpload(file){
+      try {
+        const dataUrl = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+        const compressed = await _editorCompress(dataUrl, 1400, 0.82);
+        if (!DATA.images) DATA.images = [];
+        const newImg = { dataUrl: compressed, source: 'user', originSlide: null, originUrl: null };
+        DATA.images.push(newImg);
+        // If the gallery is in "pick for X" mode, immediately use this new image.
+        if (_pickerTarget) {
+          _useImage(DATA.images.length - 1);
+        } else {
+          _activeGalTab = 'user';
+          _renderGalleryUI();
+        }
+      } catch (err) {
+        alert('Failed to read image: ' + (err && err.message || err));
+      }
+    }
+    function _editorCompress(dataUrl, maxSide, q){
+      return new Promise((resolve, reject)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          let { width:w, height:h } = img;
+          const scale = Math.min(1, maxSide/Math.max(w,h));
+          w = Math.round(w*scale); h = Math.round(h*scale);
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,w,h);
+          cx.drawImage(img,0,0,w,h);
+          try { resolve(c.toDataURL('image/jpeg', q)); } catch(e){ reject(e); }
+        };
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+    }
+    function _useImage(imgIdx){
+      const imgs = DATA.images || [];
+      if (!imgs[imgIdx]) return;
+      const tgt = _pickerTarget;
+      if (!tgt) { _closeGallery(); return; }
+      if (tgt.mode === 'logo') {
+        DATA.logoDataUrl = imgs[imgIdx].dataUrl;
+        _rerenderLogos();
+      } else if (tgt.mode === 'block') {
+        // tgt.path is like 'sections.0.blocks.1' — set its .index to imgIdx
+        _setPath(DATA, tgt.path + '.index', imgIdx);
+        _rerenderImageBlock(tgt.path);
+      }
+      _closeGallery();
+    }
+    function _deleteImage(imgIdx){
+      // Don't allow deleting an image that's currently in use
+      const used = _imageUsages(imgIdx);
+      if (used.length) {
+        alert('This image is used in ' + used.length + ' place(s). Replace it first, then delete.');
+        return;
+      }
+      const imgs = DATA.images || [];
+      if (!imgs[imgIdx]) return;
+      // Splice out at index — but we MUST shift all indices > imgIdx down by 1.
+      imgs.splice(imgIdx, 1);
+      (DATA.sections||[]).forEach(sec=>{
+        (sec.blocks||[]).forEach(b=>{
+          if ((b.type==='figure'||b.type==='image-text') && Number.isInteger(b.index)) {
+            if (b.index > imgIdx) b.index -= 1;
+          }
+        });
+      });
+      _renderGalleryUI();
+    }
+    function _imageUsages(imgIdx){
+      const out = [];
+      (DATA.sections||[]).forEach((sec,si)=>{
+        (sec.blocks||[]).forEach((b,bi)=>{
+          if ((b.type==='figure'||b.type==='image-text') && b.index===imgIdx) {
+            out.push({ section: si, block: bi });
+          }
+        });
+      });
+      return out;
+    }
+
+    // ── Re-render helpers (avoid full re-render to preserve selection) ──
+    function _rerenderImageBlock(blockPath){
+      // blockPath like 'sections.0.blocks.1'
+      const m = blockPath.match(/^sections\\.(\\d+)\\.blocks\\.(\\d+)$/);
+      if (!m) return;
+      const si = +m[1], bi = +m[2];
+      const block = DATA.sections[si] && DATA.sections[si].blocks[bi];
+      if (!block) return;
+      const wrap = document.querySelector('[data-edit-image="'+blockPath+'"]');
+      if (!wrap) return;
+      const imgs = DATA.images || [];
+      const src = (Number.isInteger(block.index) && imgs[block.index]) ? imgs[block.index].dataUrl : null;
+      wrap.innerHTML = src
+        ? '<img src="'+esc(src)+'" alt=""/>'
+        : '<div class="img-placeholder">No image — click to choose</div>';
+    }
+    function _rerenderLogos(){
+      const url = DATA.logoDataUrl || '';
+      document.querySelectorAll('[data-edit-logo]').forEach(wrap=>{
+        if (!url) {
+          wrap.innerHTML = '<div class="img-placeholder">+ Logo</div>';
+        } else {
+          const isBrand = wrap.classList.contains('brand-logo');
+          wrap.innerHTML = isBrand
+            ? '<img class="logo" src="'+esc(url)+'" alt="logo"/>'
+            : '<img class="logo-inline" src="'+esc(url)+'" alt="logo"/>';
+        }
+      });
+    }
+
+    if (EDIT_MODE) {
+      render();
+      _flattenAllSections();
+      render();
+      setupEditHandlers();
+    } else {
+      render();
+    }
   `;
 </script>
 </body>

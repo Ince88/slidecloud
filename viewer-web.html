@@ -110,6 +110,8 @@
   }
   .panel > .head { flex: 0 0 auto; }
   .panel > .body { flex: 1 1 auto; min-height: 0; display:flex; flex-direction:column; gap:16px; }
+  .panel > .body.canvas-mode { position:relative; gap:0; overflow:hidden; }
+  .panel > .body.canvas-mode > * { box-sizing:border-box; }
 
   h1,h2,h3,h4,p{margin:0}
   h1{font-size:clamp(40px,4.2vw,70px);line-height:.94;letter-spacing:-.06em;color:var(--text-strong);max-width:860px}
@@ -243,6 +245,228 @@
   body.phone .sidebar .nav{ gap: 12px; }
   body.phone .navbtn{ padding: 20px; font-size: 17px; }
   body.phone .sidebar-foot{ display:none; }
+
+  /* "Actions on this slide" panel — only visible on phone presenter mode */
+  .phone-actions { display: none; }
+  body.phone .phone-actions {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 18px; padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  .phone-actions-title {
+    font-size: 11px; font-weight: 800; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    padding: 0 4px;
+  }
+  .phone-actions-empty {
+    padding: 14px; border-radius: 10px;
+    background: var(--bg-soft);
+    color: var(--muted); font-size: 13px; text-align: center;
+    border: 1px dashed var(--border);
+  }
+  .phone-action-btn {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 18px; border-radius: 14px;
+    background: linear-gradient(135deg, rgba(54,150,240,0.08), rgba(134,84,171,0.08));
+    border: 1px solid rgba(54,150,240,0.25);
+    color: var(--text-strong);
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    text-align: left; cursor: pointer;
+    transition: all .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .phone-action-btn:hover { background: linear-gradient(135deg, rgba(54,150,240,0.15), rgba(134,84,171,0.15)); }
+  .phone-action-btn:active { transform: scale(0.98); }
+  .phone-action-btn.firing {
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    color: #fff; border-color: transparent;
+    box-shadow: 0 8px 22px rgba(54,150,240,0.4);
+  }
+  .phone-action-icon {
+    flex: 0 0 38px; width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    color: #fff;
+  }
+  .phone-action-btn.firing .phone-action-icon {
+    background: rgba(255,255,255,0.22);
+  }
+  .phone-action-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .phone-action-kind {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent);
+    opacity: 0.9;
+  }
+  .phone-action-btn.firing .phone-action-kind { color: rgba(255,255,255,0.92); }
+  .phone-action-label {
+    font-size: 15px; font-weight: 700; line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .phone-action-detail {
+    font-size: 12px; color: var(--muted); font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .phone-action-btn.firing .phone-action-detail { color: rgba(255,255,255,0.85); }
+  .phone-actions-close {
+    margin-top: 4px;
+    padding: 12px; border-radius: 10px;
+    background: var(--bg-soft); border: 1px solid var(--border);
+    color: var(--text); font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+    display: none; align-items: center; justify-content: center; gap: 8px;
+  }
+  .phone-actions-close.visible { display: flex; }
+  .phone-actions-close:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+  /* Cards with an action assigned — show a subtle hint cursor in present mode */
+  .actionable {
+    cursor: pointer;
+    transition: outline-color .15s, transform .12s, box-shadow .15s;
+  }
+  body.phone .actionable:active { transform: scale(0.97); }
+  .actionable::after {
+    content: '';
+    position: absolute; top: 8px; right: 8px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    box-shadow: 0 2px 8px rgba(54,150,240,.4);
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polygon points='5 3 19 12 5 21 5 3'/></svg>"),
+      linear-gradient(135deg, #3696f0, #8654ab);
+    background-size: 12px 12px, 100% 100%;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+    pointer-events: none;
+    opacity: 0.92;
+  }
+
+  /* ───────────── Action overlay ───────────── */
+  .action-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(8, 12, 24, 0.92);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+  }
+  .action-overlay.open { display: flex; }
+  .action-stage {
+    position: relative;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    transform-origin: center center;
+    transform: scale(0.7);
+    opacity: 0;
+    transition: transform .42s cubic-bezier(.2,.9,.25,1.05),
+                opacity .32s ease-out;
+  }
+  .action-overlay.open .action-stage {
+    transform: scale(1);
+    opacity: 1;
+  }
+  .action-overlay.zooming-out .action-stage {
+    transform: scale(0.65);
+    opacity: 0;
+  }
+
+  .action-close-btn {
+    position: absolute; top: 22px; right: 22px;
+    z-index: 10001;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    transition: all .15s;
+  }
+  .action-close-btn:hover { background: rgba(255,255,255,0.22); transform: scale(1.06); }
+
+  /* Gallery action: full-screen rotating image */
+  .action-gallery {
+    position: relative;
+    width: 96vw; height: 92vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .action-gallery-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity .55s ease-in-out;
+    border-radius: 14px;
+  }
+  .action-gallery-img.active { opacity: 1; }
+  .action-gallery-dots {
+    position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; z-index: 5;
+    padding: 8px 14px; border-radius: 999px;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(6px);
+  }
+  .action-gallery-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    transition: background .25s, transform .25s;
+  }
+  .action-gallery-dot.active {
+    background: #fff; transform: scale(1.35);
+  }
+  .action-gallery-progress {
+    position: absolute; top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, #3696f0, #8654ab);
+    z-index: 6;
+    width: 0%;
+    transition: width linear;
+  }
+
+  /* Page action: a styled centered slide */
+  .action-page {
+    width: min(1100px, 92vw);
+    max-height: 90vh;
+    background: linear-gradient(180deg, #ffffff 0%, #f5f8fd 100%);
+    border-radius: 24px;
+    padding: 48px 60px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; gap: 16px;
+    overflow: auto;
+  }
+  .action-page.has-bg {
+    color: #fff;
+    background-size: cover; background-position: center;
+    position: relative;
+  }
+  .action-page.has-bg::before {
+    content: '';
+    position: absolute; inset: 0; border-radius: 24px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 100%);
+    pointer-events: none;
+  }
+  .action-page.has-bg > * { position: relative; z-index: 1; }
+  .action-page-eyebrow {
+    font-size: 13px; font-weight: 800; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent-2); opacity: 0.95;
+  }
+  .action-page.has-bg .action-page-eyebrow { color: #ffd28a; }
+  .action-page-heading {
+    font-size: clamp(32px, 4.5vw, 60px); line-height: 1.05;
+    letter-spacing: -0.04em; font-weight: 800;
+    color: var(--text-strong);
+  }
+  .action-page.has-bg .action-page-heading { color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,0.4); }
+  .action-page-lead {
+    font-size: clamp(17px, 1.6vw, 22px); line-height: 1.45;
+    color: var(--muted); max-width: 800px;
+  }
+  .action-page.has-bg .action-page-lead { color: rgba(255,255,255,0.92); }
+  .action-page-body {
+    font-size: clamp(15px, 1.2vw, 18px); line-height: 1.6;
+    color: var(--text); white-space: pre-wrap;
+  }
+  .action-page.has-bg .action-page-body { color: rgba(255,255,255,0.9); }
+
+  @media (max-width: 760px) {
+    .action-page { padding: 28px 22px; border-radius: 16px; }
+    .action-close-btn { top: 14px; right: 14px; width: 38px; height: 38px; }
+  }
 </style>
 </head>
 <body>
@@ -252,6 +476,14 @@
   </div>
 
   <div id="app"></div>
+
+  <!-- Action overlay shown when the presenter taps a card with an _action -->
+  <div class="action-overlay" id="actionOverlay" onclick="if(event.target===this)fireCloseAction()">
+    <button type="button" class="action-close-btn" onclick="fireCloseAction()" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+    <div class="action-stage" id="actionStage"></div>
+  </div>
 
   <div class="phone-ctrls" id="phoneCtrls">
     <button type="button" onclick="goPrev()" aria-label="Previous">
@@ -324,74 +556,138 @@
   }
 
   // ── Render ─────────────────────────────────────────────
-  function renderBlock(b){
+  // Free-form layout: each block can carry an optional `_layout` { x,y,w,h } in
+  // percentages of the section body, and is then absolutely positioned on the
+  // section canvas. Blocks without `_layout` flow normally.
+  function _layoutStyle(b){
+    if (!b || !b._layout) return '';
+    const L = b._layout;
+    if (typeof L.x !== 'number' || typeof L.y !== 'number' ||
+        typeof L.w !== 'number' || typeof L.h !== 'number') return '';
+    return ' style="position:absolute;left:'+L.x+'%;top:'+L.y+'%;width:'+L.w+'%;height:'+L.h+'%;"';
+  }
+  function _hasLayouts(blocks){
+    return Array.isArray(blocks) && blocks.some(b => b && b._layout);
+  }
+  // Build inline style="..." attribute (with leading space) for a per-text-path
+  // override stored at DATA._styles[path]. Empty string when nothing is set.
+  function _txt(path){
+    const map = DATA && DATA._styles;
+    if (!map) return '';
+    const s = map[path];
+    if (!s || typeof s !== 'object') return '';
+    const parts = [];
+    if (s.fontFamily)         parts.push('font-family:'+s.fontFamily);
+    if (s.fontWeight!=null)   parts.push('font-weight:'+s.fontWeight);
+    if (s.fontSize)           parts.push('font-size:'+s.fontSize);
+    if (s.opacity!=null)      parts.push('opacity:'+s.opacity);
+    if (s.textShadow)         parts.push('text-shadow:'+s.textShadow);
+    if (s.color)              parts.push('color:'+s.color);
+    if (s.letterSpacing)      parts.push('letter-spacing:'+s.letterSpacing);
+    if (s.fontStyle)          parts.push('font-style:'+s.fontStyle);
+    return parts.length ? ' style="'+parts.join(';')+'"' : '';
+  }
+  function _cardInner(c, basePath){
+    const features = (c.features||[]).map((f,k)=>'<div class="feature"><strong'+_txt(basePath+'.features.'+k+'.strong')+'>'+esc(f.strong||'')+'</strong><span'+_txt(basePath+'.features.'+k+'.span')+'>'+esc(f.span||'')+'</span></div>').join('');
+    const ul = (c.ul||[]).map((x,k)=>'<li'+_txt(basePath+'.ul.'+k)+'>'+esc(x||'')+'</li>').join('');
+    let inner = '';
+    if (c.h3) inner += '<h3'+_txt(basePath+'.h3')+'>'+esc(c.h3)+'</h3>';
+    if (c.p)  inner += '<p'+_txt(basePath+'.p')+'>'+esc(c.p)+'</p>';
+    if (features) inner += '<div class="feature-list">'+features+'</div>';
+    if (ul) inner += '<ul class="clean">'+ul+'</ul>';
+    return inner;
+  }
+  function renderBlock(b, bp){
     if(!b||!b.type) return '';
+    const ls = _layoutStyle(b);
+    bp = bp || '';
     if (b.type==='hero'){
       const items = (b.stats||[]);
-      const stats = items.map(s=>'<div class="stat"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('');
-      return '<div class="hero-grid"><div class="visual-card"><div class="quote">'+esc(b.quote||'')+'</div><div class="subquote">'+esc(b.subquote||'')+'</div></div>'
-             +(stats?'<div class="stats '+(items.length>=4?'':items.length===3?'cols-3':'')+'">'+stats+'</div>':'')+'</div>';
+      const hasStats = !!items.length;
+      if (!hasStats) {
+        return '<div class="visual-card"'+ls+'><div class="quote"'+_txt(bp+'.quote')+'>'+esc(b.quote||'')+'</div><div class="subquote"'+_txt(bp+'.subquote')+'>'+esc(b.subquote||'')+'</div></div>';
+      }
+      const stats = items.map((s,k)=>'<div class="stat"><strong'+_txt(bp+'.stats.'+k+'.strong')+'>'+esc(s.strong)+'</strong><span'+_txt(bp+'.stats.'+k+'.span')+'>'+esc(s.span)+'</span></div>').join('');
+      return '<div class="hero-grid"'+ls+'><div class="visual-card"><div class="quote"'+_txt(bp+'.quote')+'>'+esc(b.quote||'')+'</div><div class="subquote"'+_txt(bp+'.subquote')+'>'+esc(b.subquote||'')+'</div></div>'
+             +'<div class="stats '+(items.length>=4?'':items.length===3?'cols-3':'')+'">'+stats+'</div></div>';
     }
     if (b.type==='stats'){
       const items = (b.items||[]);
       const n = items.length;
+      if (n === 1) {
+        const s = items[0];
+        return '<div class="stat"'+ls+'><strong'+_txt(bp+'.items.0.strong')+'>'+esc(s.strong||'')+'</strong><span'+_txt(bp+'.items.0.span')+'>'+esc(s.span||'')+'</span></div>';
+      }
       const cls = n===4?'cols-4':n===3?'cols-3':'';
-      return '<div class="stats '+cls+'">'+items.map(s=>'<div class="stat"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('')+'</div>';
+      return '<div class="stats '+cls+'"'+ls+'>'+items.map((s,k)=>'<div class="stat"><strong'+_txt(bp+'.items.'+k+'.strong')+'>'+esc(s.strong)+'</strong><span'+_txt(bp+'.items.'+k+'.span')+'>'+esc(s.span)+'</span></div>').join('')+'</div>';
     }
     if (b.type==='cards'){
-      const len = (b.cards||[]).length;
+      const cards = (b.cards||[]);
+      const len = cards.length;
+      if (len === 1) {
+        return '<div class="card compact"'+ls+'>'+_cardInner(cards[0], bp+'.cards.0')+'</div>';
+      }
       const cols = b.cols===3 || (b.cols!==2 && len >= 3 && len%3 === 0) ? 3 : 2;
-      return '<div class="grid-cards cols-'+cols+'">'+(b.cards||[]).map(c=>'<div class="card compact"><h3>'+esc(c.h3||'')+'</h3><p>'+esc(c.p||'')+'</p></div>').join('')+'</div>';
+      return '<div class="grid-cards cols-'+cols+'"'+ls+'>'+cards.map((c,k)=>'<div class="card compact">'+_cardInner(c, bp+'.cards.'+k)+'</div>').join('')+'</div>';
     }
     if (b.type==='two-col'){
       const L=b.left||{}; const R=b.right||{};
-      const features=(L.features||[]).map(f=>'<div class="feature"><strong>'+esc(f.strong)+'</strong><span>'+esc(f.span)+'</span></div>').join('');
-      const ul=(R.ul||[]).map(x=>'<li>• '+esc(x)+'</li>').join('');
-      return '<div class="two-col"><div class="card"><h3>'+esc(L.h3||'')+'</h3>'+(L.p?'<p>'+esc(L.p)+'</p>':'')+(features?'<div class="feature-list">'+features+'</div>':'')+'</div><div class="card"><h3>'+esc(R.h3||'')+'</h3>'+(R.p?'<p>'+esc(R.p)+'</p>':'')+(ul?'<ul class="clean">'+ul+'</ul>':'')+'</div></div>';
+      const features=(L.features||[]).map((f,k)=>'<div class="feature"><strong'+_txt(bp+'.left.features.'+k+'.strong')+'>'+esc(f.strong)+'</strong><span'+_txt(bp+'.left.features.'+k+'.span')+'>'+esc(f.span)+'</span></div>').join('');
+      const ul=(R.ul||[]).map((x,k)=>'<li'+_txt(bp+'.right.ul.'+k)+'>• '+esc(x)+'</li>').join('');
+      return '<div class="two-col"'+ls+'><div class="card"><h3'+_txt(bp+'.left.h3')+'>'+esc(L.h3||'')+'</h3>'+(L.p?'<p'+_txt(bp+'.left.p')+'>'+esc(L.p)+'</p>':'')+(features?'<div class="feature-list">'+features+'</div>':'')+'</div><div class="card"><h3'+_txt(bp+'.right.h3')+'>'+esc(R.h3||'')+'</h3>'+(R.p?'<p'+_txt(bp+'.right.p')+'>'+esc(R.p)+'</p>':'')+(ul?'<ul class="clean">'+ul+'</ul>':'')+'</div></div>';
     }
     if (b.type==='timeline'){
-      const cols = b.cols || Math.min(6, Math.max(3,(b.steps||[]).length));
-      return '<div class="timeline cols-'+cols+'">'+(b.steps||[]).map(s=>'<div class="step"><strong>'+esc(s.strong)+'</strong><span>'+esc(s.span)+'</span></div>').join('')+'</div>';
+      const steps = (b.steps||[]);
+      const n = steps.length;
+      if (n === 1) {
+        const s = steps[0];
+        return '<div class="step"'+ls+'><strong'+_txt(bp+'.steps.0.strong')+'>'+esc(s.strong||'')+'</strong><span'+_txt(bp+'.steps.0.span')+'>'+esc(s.span||'')+'</span></div>';
+      }
+      const cols = b.cols || Math.min(6, Math.max(3, n));
+      return '<div class="timeline cols-'+cols+'"'+ls+'>'+steps.map((s,k)=>'<div class="step"><strong'+_txt(bp+'.steps.'+k+'.strong')+'>'+esc(s.strong)+'</strong><span'+_txt(bp+'.steps.'+k+'.span')+'>'+esc(s.span)+'</span></div>').join('')+'</div>';
     }
     if (b.type==='pills'){
-      return '<div class="pillrow">'+(b.items||[]).map(p=>'<div class="pill">'+esc(p)+'</div>').join('')+'</div>';
+      return '<div class="pillrow"'+ls+'>'+(b.items||[]).map((p,k)=>'<div class="pill"'+_txt(bp+'.items.'+k)+'>'+esc(p)+'</div>').join('')+'</div>';
     }
     if (b.type==='contact'){
-      return '<div class="footer-line"><div class="pillrow">'+(b.items||[]).map(p=>'<div class="pill">'+esc(p)+'</div>').join('')+'</div></div>';
+      return '<div class="footer-line"'+ls+'><div class="pillrow">'+(b.items||[]).map((p,k)=>'<div class="pill"'+_txt(bp+'.items.'+k)+'>'+esc(p)+'</div>').join('')+'</div></div>';
     }
     if (b.type==='figure'){
       const imgs = DATA.images || [];
       const src = (Number.isInteger(b.index) && imgs[b.index]) ? imgs[b.index].dataUrl : null;
       if (!src) return '';
-      return '<div class="figure"><img src="'+esc(src)+'" alt="figure"/>'
-        +(b.caption?'<div class="caption">'+esc(b.caption)+'</div>':'')+'</div>';
+      return '<div class="figure"'+ls+'><img src="'+esc(src)+'" alt="figure"/>'
+        +(b.caption?'<div class="caption"'+_txt(bp+'.caption')+'>'+esc(b.caption)+'</div>':'')+'</div>';
     }
     if (b.type==='image-text'){
       const imgs = DATA.images || [];
       const src = (Number.isInteger(b.index) && imgs[b.index]) ? imgs[b.index].dataUrl : null;
       if (!src) return '';
-      const ul = (b.ul||[]).map(x=>'<li>• '+esc(x)+'</li>').join('');
-      const bodyHtml = '<div class="it-body">'+(b.h3?'<h3>'+esc(b.h3)+'</h3>':'')
-        +(b.p?'<p class="muted">'+esc(b.p)+'</p>':'')
+      const ul = (b.ul||[]).map((x,k)=>'<li'+_txt(bp+'.ul.'+k)+'>• '+esc(x)+'</li>').join('');
+      const bodyHtml = '<div class="it-body">'+(b.h3?'<h3'+_txt(bp+'.h3')+'>'+esc(b.h3)+'</h3>':'')
+        +(b.p?'<p class="muted"'+_txt(bp+'.p')+'>'+esc(b.p)+'</p>':'')
         +(ul?'<ul class="clean">'+ul+'</ul>':'')+'</div>';
       const imgHtml = '<div class="it-image"><img src="'+esc(src)+'" alt=""/></div>';
       return b.side==='right'
-        ? '<div class="image-text side-right">'+bodyHtml+imgHtml+'</div>'
-        : '<div class="image-text">'+imgHtml+bodyHtml+'</div>';
+        ? '<div class="image-text side-right"'+ls+'>'+bodyHtml+imgHtml+'</div>'
+        : '<div class="image-text"'+ls+'>'+imgHtml+bodyHtml+'</div>';
     }
     return '';
   }
 
-  function renderSection(sec, first){
+  function renderSection(sec, first, idx){
     const hlvl = first ? 'h1' : 'h2';
+    const sp = 'sections.'+idx;
+    const blocks = sec.blocks||[];
+    const bodyCls = _hasLayouts(blocks) ? 'body canvas-mode' : 'body';
     let html = '<section class="section'+(first?' active':'')+'" id="'+esc(sec.id)+'"><div class="panel">';
     html += '<div class="head">';
     if (first && DATA.logoDataUrl) html += '<img class="logo-inline" src="'+esc(DATA.logoDataUrl)+'" alt="logo"/>';
-    if (sec.eyebrow) html += '<div class="eyebrow">'+esc(sec.eyebrow)+'</div>';
-    html += '<'+hlvl+'>'+esc(sec.heading||'')+'</'+hlvl+'>';
-    if (sec.lead) html += '<p class="lead" style="margin-top:10px;">'+esc(sec.lead)+'</p>';
-    html += '</div><div class="body">';
-    for (const b of (sec.blocks||[])) html += renderBlock(b);
+    if (sec.eyebrow) html += '<div class="eyebrow"'+_txt(sp+'.eyebrow')+'>'+esc(sec.eyebrow)+'</div>';
+    html += '<'+hlvl+_txt(sp+'.heading')+'>'+esc(sec.heading||'')+'</'+hlvl+'>';
+    if (sec.lead) html += '<p class="lead"'+_txt(sp+'.lead')+'>'+esc(sec.lead)+'</p>';
+    html += '</div><div class="'+bodyCls+'">';
+    for (let j=0;j<blocks.length;j++) html += renderBlock(blocks[j], sp+'.blocks.'+j);
     html += '</div></div></section>';
     return html;
   }
@@ -409,18 +705,20 @@
     if (showSidebar){
       html += '<aside class="sidebar"><div class="brand">';
       if (DATA.logoDataUrl) html += '<img class="logo" src="'+esc(DATA.logoDataUrl)+'" alt="logo"/>';
-      html += '<div class="eyebrow">'+esc(DATA.subtitle||'Interactive presentation')+'</div>';
-      html += '<div class="title">'+esc(DATA.title||'Presentation')+'</div>';
+      html += '<div class="eyebrow"'+_txt('subtitle')+'>'+esc(DATA.subtitle||'Interactive presentation')+'</div>';
+      html += '<div class="title"'+_txt('title')+'>'+esc(DATA.title||'Presentation')+'</div>';
       html += '</div><div class="nav">';
       sections.forEach((s,i)=>{ html += '<button class="navbtn'+(i===0?' active':'')+'" data-section="'+esc(s.id)+'" data-idx="'+i+'">'+esc(s.label||s.eyebrow||('Section '+(i+1)))+'</button>'; });
       html += '</div>';
       html += '<div class="sidebar-ctrls"><button onclick="goPrev()">◀ Prev</button><button onclick="goNext()">Next ▶</button></div>';
+      // Phone-only "Actions on this slide" panel — populated by updatePhoneActions().
+      html += '<div class="phone-actions" id="phoneActions"></div>';
       html += '<div class="sidebar-foot">Tap a topic or use Next/Prev. Viewers see the content without this sidebar.</div>';
       html += '</aside>';
     }
 
     html += '<main class="content">';
-    sections.forEach((s,i)=>{ html += renderSection(s, i===0); });
+    sections.forEach((s,i)=>{ html += renderSection(s, i===0, i); });
     html += '</main></div></div></div>';
 
     document.getElementById('app').innerHTML = html;
@@ -436,10 +734,289 @@
     // Show phone controls only in phone presenter mode
     if (presentMode) document.getElementById('phoneCtrls').classList.add('show');
 
+    // In presenter mode, make cards with an _action tappable.
+    if (presentMode) {
+      attachActionableCards();
+      updatePhoneActions(currentIndex);
+    }
+
     // Restore from hash or websocket later
     const h = location.hash.replace('#','');
     const initIdx = sections.findIndex(s => s.id === h);
     if (initIdx >= 0) showIndex(initIdx);
+  }
+
+  // Walk every block in DATA, find ones with _action, find their DOM element
+  // by data-block-path, and add a click/tap listener that fires the action.
+  function attachActionableCards() {
+    const sections = DATA.sections || [];
+    sections.forEach((sec, secIdx) => {
+      (sec.blocks || []).forEach((block, bi) => {
+        if (!block || !block._action || !block._action.type) return;
+        const path = 'sections.'+secIdx+'.blocks.'+bi;
+        const el = document.querySelector('[data-block-path="'+path+'"]');
+        if (!el) return;
+        el.classList.add('actionable');
+        el.setAttribute('role', 'button');
+        el.setAttribute('aria-label', block._action.type === 'gallery' ? 'Show gallery' : 'Show detail page');
+        el.addEventListener('click', (e) => {
+          // Don't trigger when the user is interacting with a child input (none here typically)
+          e.preventDefault();
+          firePresenterAction(path);
+        });
+      });
+    });
+  }
+
+  // Pick a short, human-readable label from a block (the first piece of text
+  // we can find inside it). Truncated to ~50 chars.
+  function _blockLabel(block) {
+    if (!block) return 'Card';
+    const candidates = [];
+    if (block.heading) candidates.push(block.heading);
+    if (block.h3) candidates.push(block.h3);
+    if (block.eyebrow) candidates.push(block.eyebrow);
+    if (block.title) candidates.push(block.title);
+    if (block.quote) candidates.push(block.quote);
+    if (block.label) candidates.push(block.label);
+    if (block.value) candidates.push(String(block.value));
+    if (block.p) candidates.push(block.p);
+    if (block.text) candidates.push(block.text);
+    if (block.caption) candidates.push(block.caption);
+    if (Array.isArray(block.cards) && block.cards[0]) {
+      const c = block.cards[0];
+      if (c.h3) candidates.push(c.h3);
+      if (c.p)  candidates.push(c.p);
+    }
+    const txt = (candidates.find(s => s && String(s).trim()) || '').toString().trim();
+    if (!txt) return 'Card';
+    return txt.length > 50 ? txt.slice(0, 47) + '…' : txt;
+  }
+
+  function _actionDetail(action) {
+    if (!action) return '';
+    if (action.type === 'gallery') {
+      const n = (action.images || []).length;
+      const sec = Math.round((action.intervalMs || 4000) / 1000);
+      return n + ' image' + (n === 1 ? '' : 's') + ' · ' + sec + 's each';
+    }
+    if (action.type === 'page' && action.page) {
+      return action.page.heading || 'Detail page';
+    }
+    return '';
+  }
+
+  // Re-render the phone actions panel based on the currently active slide.
+  // Only matters in phone presenter mode; harmless otherwise.
+  function updatePhoneActions(idx) {
+    const host = document.getElementById('phoneActions');
+    if (!host) return;
+    const sections = DATA.sections || [];
+    const sec = sections[idx];
+    if (!sec) { host.innerHTML = ''; return; }
+
+    const actionable = (sec.blocks || []).map((b, bi) => ({ b, bi }))
+      .filter(x => x.b && x.b._action && x.b._action.type);
+
+    if (actionable.length === 0) {
+      host.innerHTML = ''
+        + '<div class="phone-actions-title">Actions on this slide</div>'
+        + '<div class="phone-actions-empty">No actions assigned to cards on this slide.</div>';
+      return;
+    }
+
+    const items = actionable.map(({ b, bi }) => {
+      const path = 'sections.' + idx + '.blocks.' + bi;
+      const action = b._action;
+      const isGallery = action.type === 'gallery';
+      const icon = isGallery
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>';
+      return ''
+        + '<button type="button" class="phone-action-btn" data-card-path="' + esc(path) + '" onclick="onPhoneActionTap(\'' + esc(path) + '\', this)">'
+        +   '<div class="phone-action-icon">' + icon + '</div>'
+        +   '<div class="phone-action-meta">'
+        +     '<div class="phone-action-kind">' + (isGallery ? 'Gallery' : 'Detail page') + '</div>'
+        +     '<div class="phone-action-label">' + esc(_blockLabel(b)) + '</div>'
+        +     '<div class="phone-action-detail">' + esc(_actionDetail(action)) + '</div>'
+        +   '</div>'
+        + '</button>';
+    }).join('');
+
+    host.innerHTML = ''
+      + '<div class="phone-actions-title">Actions on this slide</div>'
+      + items
+      + '<button type="button" class="phone-actions-close" id="phoneActionsClose" onclick="fireCloseAction()">'
+      +   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>'
+      +   'Close action'
+      + '</button>';
+  }
+
+  function onPhoneActionTap(path, btnEl) {
+    // Reflect the firing state on the button
+    document.querySelectorAll('.phone-action-btn.firing').forEach(b => b.classList.remove('firing'));
+    if (btnEl) btnEl.classList.add('firing');
+    const closeBtn = document.getElementById('phoneActionsClose');
+    if (closeBtn) closeBtn.classList.add('visible');
+    firePresenterAction(path);
+  }
+  window.onPhoneActionTap = onPhoneActionTap;
+
+  // Presenter triggered an action. Show overlay locally AND notify viewers.
+  // Send the full _action object inline so viewers can render it without
+  // depending on their own (possibly stale) DATA having the action saved.
+  function firePresenterAction(path) {
+    const action = _getActionByPath(path);
+    showActionOverlay(path, action);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'action', cardPath: path, action }));
+    } else if (presentMode) {
+      console.warn('[actions] WebSocket not connected — viewers will not receive this action.');
+    }
+  }
+  function fireCloseAction() {
+    closeActionOverlay();
+    if (presentMode && socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'action-close' }));
+    }
+  }
+  window.fireCloseAction = fireCloseAction;
+
+  // ── Action overlay ──────────────────────────────────────
+  let _actionState = { open: false, timer: null, idx: 0, total: 0 };
+
+  function _getActionByPath(path) {
+    const m = path && path.match(/^sections\.(\d+)\.blocks\.(\d+)$/);
+    if (!m) return null;
+    const sec = (DATA.sections || [])[+m[1]];
+    if (!sec) return null;
+    const block = (sec.blocks || [])[+m[2]];
+    return (block && block._action) ? block._action : null;
+  }
+
+  // Accepts an optional `inlineAction` (sent by the presenter via WS). If
+  // provided, we use it directly; otherwise we look it up in DATA. This lets
+  // viewers render actions even if their loaded DATA pre-dates the assignment.
+  function showActionOverlay(path, inlineAction) {
+    const action = (inlineAction && inlineAction.type)
+      ? inlineAction
+      : _getActionByPath(path);
+    if (!action || !action.type) {
+      console.warn('[actions] No action to show for path:', path);
+      return;
+    }
+    const overlay = document.getElementById('actionOverlay');
+    const stage   = document.getElementById('actionStage');
+    if (!overlay || !stage) return;
+
+    // Reset any in-flight timers / state from a previous action
+    _resetActionTimers();
+
+    if (action.type === 'gallery') {
+      _renderGalleryAction(stage, action);
+    } else if (action.type === 'page') {
+      _renderPageAction(stage, action);
+    }
+
+    overlay.classList.remove('zooming-out');
+    overlay.classList.add('open');
+    _actionState.open = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeActionOverlay() {
+    if (!_actionState.open) return;
+    const overlay = document.getElementById('actionOverlay');
+    if (!overlay) return;
+    _resetActionTimers();
+    overlay.classList.add('zooming-out');
+    setTimeout(() => {
+      overlay.classList.remove('open', 'zooming-out');
+      const stage = document.getElementById('actionStage');
+      if (stage) stage.innerHTML = '';
+      document.body.style.overflow = '';
+      _actionState.open = false;
+    }, 320);
+    // Clear phone-action firing state
+    document.querySelectorAll('.phone-action-btn.firing').forEach(b => b.classList.remove('firing'));
+    const closeBtn = document.getElementById('phoneActionsClose');
+    if (closeBtn) closeBtn.classList.remove('visible');
+  }
+
+  function _resetActionTimers() {
+    if (_actionState.timer) {
+      clearInterval(_actionState.timer);
+      _actionState.timer = null;
+    }
+  }
+
+  function _renderGalleryAction(stage, action) {
+    const imgs = (action.images || [])
+      .map(idx => (DATA.images && DATA.images[idx]) ? DATA.images[idx].dataUrl : null)
+      .filter(Boolean);
+    if (!imgs.length) {
+      stage.innerHTML = '<div style="color:#fff;font-size:18px;opacity:.7;">No images in this gallery action.</div>';
+      return;
+    }
+    const intervalMs = Math.max(1500, Math.min(60000, action.intervalMs || 4000));
+    _actionState.idx = 0;
+    _actionState.total = imgs.length;
+
+    const html = ''
+      + '<div class="action-gallery">'
+      +   '<div class="action-gallery-progress" id="agProgress"></div>'
+      +   imgs.map((src, i) => '<img class="action-gallery-img'+(i===0?' active':'')+'" src="'+esc(src)+'" data-idx="'+i+'" alt=""/>').join('')
+      +   (imgs.length > 1 ? '<div class="action-gallery-dots">' + imgs.map((_, i) => '<div class="action-gallery-dot'+(i===0?' active':'')+'" data-i="'+i+'"></div>').join('') + '</div>' : '')
+      + '</div>';
+    stage.innerHTML = html;
+
+    if (imgs.length > 1) {
+      _startProgressBar(intervalMs);
+      _actionState.timer = setInterval(() => {
+        _advanceGallery(intervalMs);
+      }, intervalMs);
+    }
+  }
+
+  function _advanceGallery(intervalMs) {
+    const total = _actionState.total;
+    if (total <= 1) return;
+    _actionState.idx = (_actionState.idx + 1) % total;
+    document.querySelectorAll('.action-gallery-img').forEach((img, i) => {
+      img.classList.toggle('active', i === _actionState.idx);
+    });
+    document.querySelectorAll('.action-gallery-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === _actionState.idx);
+    });
+    _startProgressBar(intervalMs);
+  }
+
+  function _startProgressBar(intervalMs) {
+    const bar = document.getElementById('agProgress');
+    if (!bar) return;
+    bar.style.transition = 'none';
+    bar.style.width = '0%';
+    // Force reflow so the next transition takes effect
+    void bar.offsetWidth;
+    bar.style.transition = 'width ' + intervalMs + 'ms linear';
+    bar.style.width = '100%';
+  }
+
+  function _renderPageAction(stage, action) {
+    const p = action.page || {};
+    const imgIdx = Number.isInteger(p.imageIndex) ? p.imageIndex : null;
+    const bgUrl = (imgIdx != null && DATA.images && DATA.images[imgIdx])
+      ? DATA.images[imgIdx].dataUrl : null;
+    const cls = bgUrl ? 'action-page has-bg' : 'action-page';
+    const styleAttr = bgUrl ? ' style="background-image:url(\''+esc(bgUrl)+'\');"' : '';
+    const html = ''
+      + '<div class="'+cls+'"'+styleAttr+'>'
+      + (p.eyebrow ? '<div class="action-page-eyebrow">'+esc(p.eyebrow)+'</div>' : '')
+      + '<h1 class="action-page-heading">'+esc(p.heading || '')+'</h1>'
+      + (p.lead    ? '<p class="action-page-lead">'+esc(p.lead)+'</p>' : '')
+      + (p.body    ? '<p class="action-page-body">'+esc(p.body)+'</p>' : '')
+      + '</div>';
+    stage.innerHTML = html;
   }
 
   function showIndex(idx){
@@ -450,6 +1027,8 @@
     document.querySelectorAll('.navbtn').forEach((b,i)=>b.classList.toggle('active', i===idx));
     document.querySelectorAll('.section').forEach(sec => sec.classList.toggle('active', sec.id === id));
     if (location.hash !== '#'+id) history.replaceState(null,'','#'+id);
+    // Refresh phone "Actions on this slide" panel (no-op outside present mode).
+    if (presentMode) updatePhoneActions(idx);
   }
 
   function goToIndex(idx, fromPresenter){
@@ -470,6 +1049,10 @@
 
   // Keyboard
   document.addEventListener('keydown', (e) => {
+    // Escape closes the action overlay first if it's open
+    if (e.key === 'Escape' && _actionState.open) { e.preventDefault(); fireCloseAction(); return; }
+    // Don't navigate slides while the overlay is open
+    if (_actionState.open) return;
     if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); goNext(); }
     if (e.key === 'ArrowLeft'  || e.key === 'PageUp') { e.preventDefault(); goPrev(); }
   });
@@ -502,6 +1085,12 @@
         if (msg.type === 'prev' && !presentMode) {
           const prev = Math.max(0, currentIndex - 1);
           showIndex(prev);
+        }
+        if (msg.type === 'action' && typeof msg.cardPath === 'string' && !presentMode) {
+          showActionOverlay(msg.cardPath, msg.action);
+        }
+        if (msg.type === 'action-close' && !presentMode) {
+          closeActionOverlay();
         }
         if (msg.type === 'error') { console.warn('WS error:', msg.message); }
       });
