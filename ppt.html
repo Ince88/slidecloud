@@ -3,12 +3,21 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Flipcloud — Generate from PowerPoint &amp;/or Website</title>
+<title>Flipcloud — Generate from PowerPoint, PDF &amp;/or Website</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  // Configure PDF.js worker (matches the script version above so we don't get
+  // "version mismatch" errors when the worker is fetched).
+  if (window['pdfjsLib']) {
+    window['pdfjsLib'].GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -803,6 +812,64 @@
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 12px;
   }
+
+  /* Action image picker grid — bigger tiles, with selection number badges */
+  .aip-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 14px;
+  }
+  .aip-tile {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #f5f7fb;
+    border: 2px solid transparent;
+    transition: border-color .12s, transform .12s, box-shadow .12s;
+    padding: 0;
+    font-family: inherit;
+  }
+  .aip-tile:hover {
+    border-color: rgba(54, 150, 240, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  }
+  .aip-tile.selected {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px rgba(54, 150, 240, 0.18);
+  }
+  .aip-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .aip-tile-num {
+    position: absolute; top: 8px; right: 8px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #3696f0, #8654ab);
+    color: #fff; font-size: 13px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.25);
+  }
+  .aip-tile-caption {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 8px 10px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0));
+    color: #fff; font-size: 11px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    pointer-events: none;
+  }
+  .aip-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .aip-empty strong { color: var(--text); display: block; margin-bottom: 6px; }
   .gal-modal-foot {
     border-top: 1px solid var(--line);
     padding: 14px 24px;
@@ -947,11 +1014,109 @@
     background: #f7f8fc;
   }
 
-  .editor-add-wrap, .editor-font-wrap, .editor-actions-wrap { position: relative; }
+  .editor-add-wrap, .editor-font-wrap, .editor-actions-wrap, .editor-page-wrap { position: relative; }
   .editor-add-btn .editor-add-caret,
   .editor-font-btn .editor-add-caret,
   .editor-actions-btn .editor-add-caret { opacity: .8; }
 
+  .page-options-panel {
+    position: absolute; top: calc(100% + 8px); left: 0;
+    background: #1c2236; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 16px;
+    width: 320px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.5);
+    display: none; flex-direction: column; gap: 14px;
+    z-index: 10001;
+    color: #e2e8f8; font-size: 13px;
+  }
+  .page-options-panel.open { display: flex; }
+  .po-header {
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;
+  }
+  .po-header strong { font-size: 14px; font-weight: 700; color: #fff; }
+  .po-reset {
+    background: transparent; border: 1px solid rgba(255,255,255,0.12);
+    color: #cbd5e8; font-size: 11px; font-weight: 600;
+    padding: 4px 10px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; transition: all .12s;
+  }
+  .po-reset:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+  .po-section { display: flex; flex-direction: column; gap: 8px; }
+  .po-section-title {
+    font-size: 11px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #9aabc7;
+  }
+  .po-help { margin: 0; font-size: 11px; color: #9aabc7; line-height: 1.5; }
+
+  .po-color-row {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .po-color-row label {
+    flex: 0 0 80px; font-size: 12px; font-weight: 600; color: #cbd5e8;
+  }
+  .po-color-control {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    padding: 6px; border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .po-color-control input[type="color"] {
+    width: 32px; height: 32px;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 6px; cursor: pointer; background: transparent;
+    padding: 0;
+    -webkit-appearance: none; appearance: none;
+  }
+  .po-color-control input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .po-color-control input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+  .po-color-control input[type="text"] {
+    flex: 1; background: transparent;
+    border: none; outline: none;
+    color: #fff; font-family: 'SF Mono', Menlo, monospace;
+    font-size: 12px; font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .po-actions-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; flex-wrap: wrap;
+  }
+  .po-btn-soft {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 11px; border-radius: 7px;
+    background: linear-gradient(135deg, rgba(54,150,240,0.18), rgba(134,84,171,0.18));
+    border: 1px solid rgba(54,150,240,0.4);
+    color: #fff; font-family: inherit; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .12s;
+  }
+  .po-btn-soft:hover {
+    background: linear-gradient(135deg, rgba(54,150,240,0.32), rgba(134,84,171,0.32));
+    border-color: rgba(54,150,240,0.7);
+  }
+  .po-source-tag {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #9aabc7;
+  }
+  .po-source-tag.logo { color: #5fc8a8; }
+  .po-source-tag.manual { color: #f0a05f; }
+
+  .editor-toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    z-index: 12000;
+    background: rgba(15, 22, 38, 0.95); color: #fff;
+    border: 1px solid rgba(54, 150, 240, 0.35);
+    padding: 12px 22px; border-radius: 12px;
+    font-size: 13px; font-weight: 600;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.4);
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s ease-out, transform .25s ease-out;
+  }
+  .editor-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
   .editor-actions-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
@@ -1043,30 +1208,52 @@
     background: linear-gradient(135deg, #3696f0, #8654ab);
     cursor: pointer; border: 2px solid #fff;
   }
-  .ap-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
-    max-height: 220px; overflow-y: auto; padding: 4px;
-    background: rgba(0,0,0,0.18); border-radius: 8px;
+  .ap-picker-summary {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 10px; border-radius: 10px;
+    background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.12);
   }
-  .ap-empty { grid-column: 1 / -1; margin: 0; padding: 16px;
-    text-align: center; font-size: 11px; color: #6b7280; }
-  .ap-img-tile {
-    position: relative; padding: 0; border: 2px solid transparent;
-    border-radius: 7px; overflow: hidden; cursor: pointer; background: #0a0e1a;
-    aspect-ratio: 1; transition: all .12s;
+  .ap-picker-thumbs {
+    display: flex; flex-wrap: wrap; gap: 4px; min-height: 0;
   }
-  .ap-img-tile:hover { border-color: rgba(54,150,240,0.5); }
-  .ap-img-tile.selected { border-color: #3696f0; box-shadow: 0 0 0 1px #3696f0; }
-  .ap-img-tile img {
-    width: 100%; height: 100%; object-fit: cover; display: block;
+  .ap-picker-thumbs:empty { display: none; }
+  .ap-picker-thumb {
+    position: relative;
+    width: 44px; height: 44px; border-radius: 6px;
+    overflow: hidden; background: #0a0e1a;
+    border: 1px solid rgba(255,255,255,0.1);
   }
-  .ap-img-tile-num {
-    position: absolute; top: 4px; right: 4px;
+  .ap-picker-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ap-picker-thumb-num {
+    position: absolute; top: 2px; right: 2px;
     background: linear-gradient(135deg, #3696f0, #8654ab);
-    color: #fff; font-size: 10px; font-weight: 700;
-    width: 18px; height: 18px; border-radius: 50%;
+    color: #fff; font-size: 9px; font-weight: 800;
+    width: 14px; height: 14px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+    line-height: 1;
+  }
+  .ap-picker-thumb-extra {
+    width: 44px; height: 44px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.06);
+    color: #cbd5e8; font-size: 11px; font-weight: 700;
+    border: 1px dashed rgba(255,255,255,0.12);
+  }
+  .ap-picker-text {
+    font-size: 11px; color: #9aabc7; line-height: 1.4;
+  }
+  .ap-picker-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border-radius: 8px;
+    background: linear-gradient(135deg, rgba(54,150,240,0.18), rgba(134,84,171,0.18));
+    border: 1px solid rgba(54,150,240,0.4);
+    color: #fff; font-family: inherit; font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all .12s;
+    align-self: flex-start;
+  }
+  .ap-picker-btn:hover {
+    background: linear-gradient(135deg, rgba(54,150,240,0.32), rgba(134,84,171,0.32));
+    border-color: rgba(54,150,240,0.7);
   }
   .ap-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 4px; }
   .ap-counter { font-size: 11px; color: #9aabc7; font-weight: 600; }
@@ -1269,9 +1456,9 @@
 </nav>
 
 <div class="wrap">
-  <h1 class="page-title">Turn a PowerPoint <em style="font-style:normal;font-weight:600">and/or</em> website into <span class="grad-text">a beautiful presentation</span>.</h1>
+  <h1 class="page-title">Turn a PowerPoint, PDF <em style="font-style:normal;font-weight:600">and/or</em> website into <span class="grad-text">a beautiful presentation</span>.</h1>
   <p class="page-sub">
-    Drop a .pptx file, paste a website URL, or both — we'll read the content (and grab images from each source), then GPT structures it into a clean, single-screen presentation you can share. Pick which images to include from the Gallery.
+    Drop a .pptx or .pdf file, paste a website URL, or both — we'll read the content (and grab images from each source), then GPT structures it into a clean, single-screen presentation you can share. Pick which images to include from the Gallery.
   </p>
 
   <!-- Header tools row -->
@@ -1291,12 +1478,12 @@
   <div class="card">
     <h2>1. Add your source content</h2>
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">
-      Provide a <strong>PowerPoint file</strong>, a <strong>website URL</strong>, or both. AI will read everything together and pull images from each source.
+      Provide a <strong>PowerPoint or PDF file</strong>, a <strong>website URL</strong>, or both. AI will read everything together and pull images from each source.
     </div>
 
     <div class="grid-2">
       <div>
-        <label class="src-label">PowerPoint (.pptx)</label>
+        <label class="src-label">PowerPoint or PDF (.pptx, .pdf)</label>
         <label for="pptFile" class="dropzone src-dz" id="pptDz">
           <div class="dz-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1305,11 +1492,11 @@
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
           </div>
-          <div class="dz-title">Click to choose a .pptx</div>
+          <div class="dz-title">Click to choose a .pptx or .pdf</div>
           <div class="dz-sub">or drag and drop</div>
           <div class="dz-file" id="pptFileName"></div>
         </label>
-        <input type="file" id="pptFile" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+        <input type="file" id="pptFile" accept=".pptx,.pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf" />
       </div>
 
       <div>
@@ -1378,7 +1565,7 @@
   <!-- Step 2.5: Image gallery summary (shown after sources are loaded) -->
   <div class="card gallery-card" id="galleryCard">
     <h2>3. Pick images to include</h2>
-    <p class="hint" style="margin:0 0 14px;">We collected images from your PPT and the website. Open the Gallery to choose which ones AI should place into the generated presentation — they're categorized by source.</p>
+    <p class="hint" style="margin:0 0 14px;">We collected images from your document and the website. Open the Gallery to choose which ones AI should place into the generated presentation — they're categorized by source.</p>
 
     <div class="gallery-summary">
       <div class="gallery-summary-stats">
@@ -1388,7 +1575,7 @@
         </div>
         <div class="gsum-stat">
           <strong id="gsumPpt">0</strong>
-          <span>from PPT</span>
+          <span>from document</span>
         </div>
         <div class="gsum-stat">
           <strong id="gsumWeb">0</strong>
@@ -1415,7 +1602,7 @@
     <h2>4. OpenAI API key</h2>
     <label for="apiKey">Your OpenAI API key (stored only in your browser)</label>
     <input type="password" id="apiKey" placeholder="sk-..." />
-    <div class="hint">We use your API key to structure the PowerPoint into topics. It never leaves your browser — we don't store it.</div>
+    <div class="hint">We use your API key to structure the document into topics. It never leaves your browser — we don't store it.</div>
 
     <div class="actions" style="margin-top: 18px;">
       <button class="btn btn-primary" id="generateBtn" onclick="generate()">
@@ -1496,6 +1683,48 @@
       <span class="editor-hint">Drag corners to resize · Drag the move handle to reposition · Click ✕ to delete</span>
     </div>
     <div class="editor-tools">
+      <div class="editor-page-wrap" id="editorPageWrap">
+        <button class="editor-tool-btn" type="button" id="editorPageBtn" onclick="togglePageOptionsPanel(event)" title="Page options — accent color, theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Page options</span>
+          <svg class="editor-add-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="page-options-panel" id="pageOptionsPanel" role="dialog" aria-label="Page options" onclick="event.stopPropagation()">
+          <div class="po-header">
+            <strong>Page options</strong>
+            <button type="button" class="po-reset" onclick="resetPageOptions()" title="Restore default theme">Reset</button>
+          </div>
+
+          <div class="po-section">
+            <div class="po-section-title">Theme colors</div>
+            <p class="po-help">Used for accents, stat numbers, pills, and the active sidebar tab. Auto-extracted from your logo if available.</p>
+
+            <div class="po-color-row">
+              <label for="poAccent">Accent</label>
+              <div class="po-color-control">
+                <input type="color" id="poAccent" oninput="onPageColorChange('accent', this.value)"/>
+                <input type="text" id="poAccentHex" placeholder="#4472C4" maxlength="7" oninput="onPageColorTyped('accent', this.value)"/>
+              </div>
+            </div>
+
+            <div class="po-color-row">
+              <label for="poAccent2">Secondary</label>
+              <div class="po-color-control">
+                <input type="color" id="poAccent2" oninput="onPageColorChange('accent2', this.value)"/>
+                <input type="text" id="poAccent2Hex" placeholder="#ED7D31" maxlength="7" oninput="onPageColorTyped('accent2', this.value)"/>
+              </div>
+            </div>
+
+            <div class="po-actions-row">
+              <button type="button" class="po-btn-soft" onclick="extractColorFromLogoBtn()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125 0-.943.746-1.688 1.688-1.688H16.5c3.04 0 5.5-2.46 5.5-5.5C22 6.04 17.52 2 12 2z"/></svg>
+                <span>Auto-pick from logo</span>
+              </button>
+              <span class="po-source-tag" id="poSourceTag"></span>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="editor-add-wrap" id="editorAddWrap">
         <button class="editor-tool-btn editor-add-btn" type="button" id="editorAddBtn" onclick="toggleAddCardMenu(event)" title="Add a new card to the current slide">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1611,8 +1840,13 @@
           </div>
           <div class="ap-tab-pane ap-pane-gallery" data-pane="gallery">
             <p class="ap-help">Pick one or more images from the gallery. When the presenter taps this card, the chosen images appear full-screen — the presenter swipes through them with on-screen arrows.</p>
-            <div class="ap-grid" id="apGalleryGrid">
-              <p class="ap-empty">No images yet. Open the gallery and add some first.</p>
+            <div class="ap-picker-summary" id="apGallerySummary">
+              <div class="ap-picker-thumbs" id="apGalleryThumbs"></div>
+              <div class="ap-picker-text" id="apGallerySumText">No images selected yet.</div>
+              <button type="button" class="ap-picker-btn" onclick="openGalleryActionPicker()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span id="apGalleryPickBtnLabel">Choose images…</span>
+              </button>
             </div>
             <div class="ap-foot">
               <span class="ap-counter" id="apGalleryCounter">0 selected</span>
@@ -1655,6 +1889,10 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         <span>Gallery</span>
       </button>
+      <button class="editor-tool-btn" type="button" onclick="fixSlideLayout()" title="Auto-grow cards to fit their text and push apart any overlapping cards on the current slide">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M14 14h7v7h-7z"/><path d="M3 14h7v7H3z"/></svg>
+        <span>Fix layout</span>
+      </button>
       <button class="editor-tool-btn editor-save" id="editorSaveBtn" type="button" onclick="saveEditorOverlay()" title="Save changes (Cmd/Ctrl+S)">
         <span class="editor-dirty-dot" id="editorDirtyDot"></span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -1666,6 +1904,35 @@
 </div>
 
 <!-- Gallery modal ─────────────────────────────────────── -->
+<!-- Action image picker — large-grid picker used by the Actions panel
+     (Gallery action: multi-select; Page action: single-select) -->
+<div class="gal-modal-backdrop" id="actionImagePickerModal" onclick="if(event.target===this)cancelActionImagePicker()">
+  <div class="gal-modal" role="dialog" aria-modal="true" aria-labelledby="aipTitle">
+    <div class="gal-modal-head">
+      <div>
+        <h3 id="aipTitle">Select images</h3>
+        <p id="aipSubtitle">Click to add or remove images. The number on each image shows the play order.</p>
+      </div>
+      <button class="gal-modal-close" type="button" onclick="cancelActionImagePicker()" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="gal-modal-body" id="aipBody"></div>
+    <div class="gal-modal-foot">
+      <div class="gal-foot-info">
+        <strong id="aipFootCount">0</strong> selected
+      </div>
+      <div class="gal-foot-actions">
+        <button type="button" class="btn-ghost" id="aipClearBtn" onclick="clearActionImagePickerSelection()">Clear all</button>
+        <button type="button" class="btn-ghost" onclick="cancelActionImagePicker()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="aipDoneBtn" onclick="doneActionImagePicker()" style="padding:9px 22px;font-size:13px;border-radius:10px;">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="gal-modal-backdrop" id="galleryModal" onclick="if(event.target===this)closeGalleryModal()">
   <div class="gal-modal" role="dialog" aria-modal="true" aria-labelledby="galModalTitle">
     <div class="gal-modal-head">
@@ -1681,7 +1948,7 @@
     </div>
     <div class="gal-tabs" id="galTabs">
       <button type="button" class="gal-tab active" data-tab="all" onclick="setGalleryTab('all')">All <span class="tab-count" id="galTabCountAll">0</span></button>
-      <button type="button" class="gal-tab" data-tab="ppt"  onclick="setGalleryTab('ppt')">PowerPoint <span class="tab-count" id="galTabCountPpt">0</span></button>
+      <button type="button" class="gal-tab" data-tab="ppt"  onclick="setGalleryTab('ppt')">Document <span class="tab-count" id="galTabCountPpt">0</span></button>
       <button type="button" class="gal-tab" data-tab="web"  onclick="setGalleryTab('web')">Website <span class="tab-count" id="galTabCountWeb">0</span></button>
     </div>
     <div class="gal-modal-body" id="galBody"></div>
@@ -1702,8 +1969,170 @@
   // ── State ──────────────────────────────────────────────
   let pptFileData = null;
   let pptFileName = '';
+  // Tracks whether the uploaded source document is a PowerPoint or a PDF.
+  // Drives which extractor we run and how the gallery / fallback title behave.
+  let sourceDocKind = ''; // 'pptx' | 'pdf' | ''
   let logoDataUrl = null;
   let generated = null; // { type:'web', title, subtitle, brand, sections: [...] }
+  // Per-presentation theme colors. Auto-extracted from the logo on upload,
+  // overridable via the editor's "Page options" panel.
+  let brandColors = null; // { accent, accent2, source: 'logo'|'manual'|null } | null
+
+  // ── Color helpers ─────────────────────────────────────
+  function _hexFromRgb(r, g, b) {
+    return '#' + [r, g, b].map(v => Math.min(255, Math.max(0, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  }
+  function _rgbFromHex(hex) {
+    if (!hex) return null;
+    const m = hex.replace('#', '');
+    const v = m.length === 3 ? m.split('').map(c => c + c).join('') : m;
+    if (v.length !== 6) return null;
+    const n = parseInt(v, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function _rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s; const l = (max + min) / 2;
+    if (max === min) { h = s = 0; }
+    else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return { h: h * 360, s, l };
+  }
+  function _hslToRgb(h, s, l) {
+    h = (h % 360 + 360) % 360 / 360;
+    let r, g, b;
+    if (s === 0) { r = g = b = l; }
+    else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1; if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+    return { r: r * 255, g: g * 255, b: b * 255 };
+  }
+  // Soft (very light tint) of an accent color — used for backgrounds like .pill
+  function _softFromAccent(hex) {
+    const rgb = _rgbFromHex(hex);
+    if (!rgb) return '#eaf1fb';
+    const hsl = _rgbToHsl(rgb.r, rgb.g, rgb.b);
+    const out = _hslToRgb(hsl.h, Math.min(0.55, Math.max(0.25, hsl.s)), 0.93);
+    return _hexFromRgb(out.r, out.g, out.b);
+  }
+  // Default secondary color when only one is extracted: shift hue ~150°
+  function _deriveAccent2(hex) {
+    const rgb = _rgbFromHex(hex);
+    if (!rgb) return '#ED7D31';
+    const hsl = _rgbToHsl(rgb.r, rgb.g, rgb.b);
+    const newH = (hsl.h + 150) % 360;
+    // Push saturation up a bit and bring lightness toward warm/orange-y range
+    const out = _hslToRgb(newH, Math.max(0.55, hsl.s), Math.max(0.4, Math.min(0.55, hsl.l)));
+    return _hexFromRgb(out.r, out.g, out.b);
+  }
+
+  // Extract the dominant brand color from a logo data URL using a small canvas.
+  // Returns a Promise<string|null> with a hex color.
+  function extractDominantColorFromImage(dataUrl) {
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const W = 80, H = 80;
+            const c = document.createElement('canvas');
+            c.width = W; c.height = H;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(img, 0, 0, W, H);
+            const data = ctx.getImageData(0, 0, W, H).data;
+            const buckets = new Map();
+            const Q = 24;
+            for (let i = 0; i < data.length; i += 4) {
+              const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+              if (a < 128) continue;
+              const br = (r + g + b) / 3;
+              if (br > 235) continue;
+              if (br < 25)  continue;
+              const max = Math.max(r, g, b), min = Math.min(r, g, b);
+              if (max === 0) continue;
+              const sat = (max - min) / max;
+              if (sat < 0.18) continue; // skip greys
+              const key = (Math.floor(r/Q)*Q) + ',' + (Math.floor(g/Q)*Q) + ',' + (Math.floor(b/Q)*Q);
+              const weight = 1 + sat * 2;
+              buckets.set(key, (buckets.get(key) || 0) + weight);
+            }
+            if (buckets.size === 0) { resolve(null); return; }
+            const sorted = [...buckets.entries()].sort((a, b) => b[1] - a[1]);
+            const [r, g, b] = sorted[0][0].split(',').map(Number);
+            // Make sure the picked color works as a foreground/accent on light bg:
+            // if too light, darken; if too saturated and bright, leave alone.
+            const hsl = _rgbToHsl(r, g, b);
+            const targetL = Math.min(0.55, Math.max(0.32, hsl.l));
+            const targetS = Math.max(0.45, hsl.s);
+            const out = _hslToRgb(hsl.h, targetS, targetL);
+            resolve(_hexFromRgb(out.r, out.g, out.b));
+          } catch (_) { resolve(null); }
+        };
+        img.onerror = () => resolve(null);
+        img.src = dataUrl;
+      } catch (_) { resolve(null); }
+    });
+  }
+
+  // Set the brand colors on state (and propagate to live previews).
+  function setBrandColors(accent, accent2, source) {
+    if (!accent) {
+      brandColors = null;
+    } else {
+      brandColors = {
+        accent:  accent,
+        accent2: accent2 || _deriveAccent2(accent),
+        source:  source || 'manual',
+      };
+    }
+    _applyBrandToLivePreviews();
+    if (generated) {
+      if (brandColors) generated.brand = { ...brandColors };
+      else delete generated.brand;
+      _editorDirty = true;
+      _setEditorDirtyIndicator(true);
+    }
+  }
+
+  function _applyBrandToLivePreviews() {
+    // Small preview iframe (preview.contentWindow) and editor iframe (editorFrame)
+    ['preview', 'editorFrame'].forEach(id => {
+      const f = document.getElementById(id);
+      const win = f && f.contentWindow;
+      if (!win || typeof win.__applyBrand !== 'function') return;
+      win.__applyBrand(brandColors);
+    });
+  }
+
+  async function _autoExtractBrandFromLogo() {
+    if (!logoDataUrl) return;
+    // Don't override if the user manually picked colors
+    if (brandColors && brandColors.source === 'manual') return;
+    const accent = await extractDominantColorFromImage(logoDataUrl);
+    if (!accent) return;
+    setBrandColors(accent, _deriveAccent2(accent), 'logo');
+  }
 
   // ── File handling ─────────────────────────────────────
   const pptInput = document.getElementById('pptFile');
@@ -1722,10 +2151,14 @@
 
   async function handlePpt(file) {
     if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.pptx')) {
-      showError('Please select a .pptx file.');
+    const lower = file.name.toLowerCase();
+    const isPpt = lower.endsWith('.pptx');
+    const isPdf = lower.endsWith('.pdf');
+    if (!isPpt && !isPdf) {
+      showError('Please select a .pptx or .pdf file.');
       return;
     }
+    sourceDocKind = isPpt ? 'pptx' : 'pdf';
     pptFileName = file.name;
     pptFileNameEl.textContent = 'Selected: ' + file.name;
 
@@ -1735,16 +2168,20 @@
     // Pre-fill title from file name (as a placeholder until AI fills it)
     const titleIn = document.getElementById('presTitle');
     if (!titleIn.value) {
-      titleIn.value = file.name.replace(/\.pptx$/i, '').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      titleIn.value = file.name.replace(/\.(pptx|pdf)$/i, '').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     }
 
-    // Parse PPTX (text + images) and auto-detect logo / company name
+    // Parse the source document (text + images) and auto-detect logo / name
     try {
-      setInlineStatus('Reading PowerPoint content…');
-      parsedSlides = await extractPptData(pptFileData);
+      setInlineStatus(isPdf ? 'Reading PDF content…' : 'Reading PowerPoint content…');
+      parsedSlides = isPdf
+        ? await extractPdfData(pptFileData)
+        : await extractPptData(pptFileData);
       if (!parsedSlides.length) {
         setInlineStatus('', false);
-        showError('Could not read slide content from this PPT.');
+        showError(isPdf
+          ? 'Could not read any text or images from this PDF.'
+          : 'Could not read slide content from this PPT.');
         return;
       }
 
@@ -1800,7 +2237,7 @@
     const titleIn = document.getElementById('presTitle');
     const subtitleIn = document.getElementById('presSubtitle');
     // Don't overwrite if the user has typed a real value other than the filename placeholder
-    const filenameGuess = pptFileName.replace(/\.pptx$/i, '').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const filenameGuess = pptFileName.replace(/\.(pptx|pdf)$/i, '').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     if (autoTitle && (!titleIn.value || titleIn.value === filenameGuess || titleIn.dataset.auto === '1')) {
       titleIn.value = autoTitle;
       titleIn.dataset.auto = '1';
@@ -1852,9 +2289,10 @@
     logoDataUrl = pick.dataUrl;
     autoLogoFromPpt = true;
     document.getElementById('logoImg').src = logoDataUrl;
-    document.getElementById('logoName').textContent = 'Auto-detected from PPT (' + pick.ext.toUpperCase() + ', ' + Math.round(pick.size/1024) + ' KB)';
+    document.getElementById('logoName').textContent = 'Auto-detected from ' + (sourceDocKind === 'pdf' ? 'PDF' : 'PPT') + ' (' + pick.ext.toUpperCase() + ', ' + Math.round(pick.size/1024) + ' KB)';
     document.getElementById('logoPreview').style.display = 'flex';
     document.getElementById('logoAutoBadge')?.classList.add('show');
+    _autoExtractBrandFromLogo();
   }
 
   document.getElementById('logoFile').addEventListener('change', (e) => {
@@ -1868,6 +2306,9 @@
       document.getElementById('logoName').textContent = f.name;
       document.getElementById('logoPreview').style.display = 'flex';
       document.getElementById('logoAutoBadge')?.classList.remove('show');
+      // Auto-extract dominant accent color from the logo (only if the user
+      // hasn't manually picked colors via the Page options panel).
+      _autoExtractBrandFromLogo();
     };
     r.readAsDataURL(f);
   });
@@ -1878,6 +2319,10 @@
     document.getElementById('logoFile').value = '';
     document.getElementById('logoPreview').style.display = 'none';
     document.getElementById('logoAutoBadge')?.classList.remove('show');
+    // If the brand color came from the logo, drop it
+    if (brandColors && brandColors.source === 'logo') {
+      setBrandColors(null);
+    }
   }
 
   // ── Unified image gallery (PPT + Website sources) ─────
@@ -2052,7 +2497,7 @@
       }
       const slideKeys = [...bySlide.keys()].sort((a, b) => a - b);
       html += '<div class="gal-section">';
-      html += '<div class="gal-section-title"><strong><span class="gst-tag">PPT</span> From your PowerPoint</strong>'
+      html += '<div class="gal-section-title"><strong><span class="gst-tag">' + (sourceDocKind === 'pdf' ? 'PDF' : 'PPT') + '</span> From your ' + (sourceDocKind === 'pdf' ? 'PDF' : 'PowerPoint') + '</strong>'
             + '<div class="gal-section-actions">'
             + '<button type="button" class="btn-ghost" onclick="_toggleSourceSelection(\'ppt\',true)">Select all</button>'
             + '<button type="button" class="btn-ghost" onclick="_toggleSourceSelection(\'ppt\',false)">Clear</button>'
@@ -2461,6 +2906,174 @@
     return s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'");
   }
 
+  // ── PDF parsing ────────────────────────────────────────
+  // Extracts per-page text AND embedded images using PDF.js. Returns the same
+  // shape as extractPptData so the rest of the pipeline can stay agnostic
+  // about whether the source was a PowerPoint or a PDF: an array of
+  //   { n: 1-based page index, text: '...', images: [{ ext, size, dataUrl }] }
+  async function extractPdfData(arrayBuffer) {
+    const pdfjs = window['pdfjsLib'];
+    if (!pdfjs) {
+      throw new Error('PDF.js failed to load');
+    }
+    // PDF.js mutates the input buffer, so pass a fresh copy of it. This is
+    // important because we keep the original `pptFileData` around for re-runs.
+    const data = arrayBuffer.slice(0);
+    const loadingTask = pdfjs.getDocument({ data, disableFontFace: true });
+    const pdf = await loadingTask.promise;
+    const slides = [];
+    // Track which image XObjects we've already exported on this page so we
+    // don't emit the same logo or background image dozens of times when it's
+    // referenced repeatedly via paintImageXObject.
+    for (let i = 1; i <= pdf.numPages; i++) {
+      let page;
+      try { page = await pdf.getPage(i); } catch { continue; }
+
+      // Text — concatenate every glyph run, inserting newlines on hard breaks
+      let text = '';
+      try {
+        const tc = await page.getTextContent();
+        const lines = [];
+        let buf = '';
+        let prevY = null;
+        for (const it of (tc.items || [])) {
+          const s = (it && it.str) || '';
+          // Heuristic line break: when the y position drops by more than ~3px
+          // we treat it as a new line; otherwise we just join with spaces.
+          const y = it && it.transform ? it.transform[5] : null;
+          if (prevY != null && y != null && Math.abs(prevY - y) > 3) {
+            if (buf.trim()) lines.push(buf.trim());
+            buf = s;
+          } else {
+            buf += (buf && !buf.endsWith(' ') ? ' ' : '') + s;
+          }
+          prevY = y;
+          if (it && it.hasEOL) {
+            if (buf.trim()) lines.push(buf.trim());
+            buf = '';
+            prevY = null;
+          }
+        }
+        if (buf.trim()) lines.push(buf.trim());
+        text = lines.join('\n');
+      } catch (err) {
+        console.warn('PDF text extraction failed on page ' + i + ':', err);
+      }
+
+      // Images — walk the page's operator list, collect every image XObject
+      // name (paintImageXObject / paintInlineImageXObject), then resolve it
+      // via page.objs. This reaches embedded raster images regardless of how
+      // the PDF arranged them.
+      const images = [];
+      try {
+        const ops = await page.getOperatorList();
+        const OPS = pdfjs.OPS;
+        const wantedNames = [];
+        const seen = new Set();
+        for (let j = 0; j < ops.fnArray.length; j++) {
+          const fn = ops.fnArray[j];
+          const args = ops.argsArray[j];
+          if (fn === OPS.paintImageXObject || fn === OPS.paintImageXObjectRepeat) {
+            const name = args && args[0];
+            if (name && !seen.has(name)) { seen.add(name); wantedNames.push({ name, inline: false }); }
+          } else if (fn === OPS.paintInlineImageXObject) {
+            // Inline images come with their data already bundled in args[0]
+            const obj = args && args[0];
+            if (obj) wantedNames.push({ inline: true, obj });
+          }
+        }
+        for (const item of wantedNames) {
+          try {
+            const obj = item.inline
+              ? item.obj
+              : await new Promise((resolve) => {
+                  // page.objs.get is async — its callback fires once the
+                  // referenced XObject is resolved. Some builds also expose a
+                  // synchronous .has() helper which we use as a fast path.
+                  if (page.objs.has && page.objs.has(item.name)) {
+                    resolve(page.objs.get(item.name));
+                  } else {
+                    page.objs.get(item.name, resolve);
+                  }
+                });
+            const enc = await _pdfImageToDataUrl(obj);
+            if (enc && enc.dataUrl) {
+              images.push({ ext: enc.ext, size: enc.size, dataUrl: enc.dataUrl });
+            }
+          } catch (err) {
+            console.warn('PDF image decode failed on page ' + i + ':', err);
+          }
+        }
+      } catch (err) {
+        console.warn('PDF op-list failed on page ' + i + ':', err);
+      }
+
+      // Free the page resources so big PDFs don't blow memory.
+      try { page.cleanup(); } catch {}
+
+      if (text || images.length) {
+        slides.push({ n: slides.length + 1, text, images });
+      }
+    }
+    try { pdf.destroy(); } catch {}
+    return slides;
+  }
+
+  // Convert a PDF.js image object (raw RGBA buffer OR ImageBitmap) into a
+  // browser-friendly data URL. Returns null when the object can't be decoded.
+  async function _pdfImageToDataUrl(obj) {
+    if (!obj) return null;
+    try {
+      // Newer PDF.js versions hand back an ImageBitmap directly
+      if (obj.bitmap) {
+        const bm = obj.bitmap;
+        const c = document.createElement('canvas');
+        c.width = bm.width; c.height = bm.height;
+        c.getContext('2d').drawImage(bm, 0, 0);
+        const dataUrl = c.toDataURL('image/png');
+        return { dataUrl, ext: 'png', size: Math.round(dataUrl.length * 3 / 4) };
+      }
+      // Older versions expose { width, height, kind, data } where data is
+      // either RGB (3 bytes/pixel) or RGBA (4 bytes/pixel).
+      if (obj.data && obj.width && obj.height) {
+        const w = obj.width, h = obj.height;
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        const imgData = ctx.createImageData(w, h);
+        const dst = imgData.data;
+        const src = obj.data;
+        const total = w * h;
+        if (src.length >= total * 4) {
+          // RGBA already
+          for (let p = 0; p < total * 4; p++) dst[p] = src[p];
+        } else if (src.length >= total * 3) {
+          // RGB → RGBA
+          for (let p = 0, s = 0, d = 0; p < total; p++) {
+            dst[d++] = src[s++];
+            dst[d++] = src[s++];
+            dst[d++] = src[s++];
+            dst[d++] = 255;
+          }
+        } else if (src.length >= total) {
+          // Grayscale → RGBA
+          for (let p = 0, d = 0; p < total; p++) {
+            const v = src[p];
+            dst[d++] = v; dst[d++] = v; dst[d++] = v; dst[d++] = 255;
+          }
+        } else {
+          return null;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        const dataUrl = c.toDataURL('image/png');
+        return { dataUrl, ext: 'png', size: Math.round(dataUrl.length * 3 / 4) };
+      }
+    } catch (err) {
+      console.warn('Failed to convert PDF image:', err);
+    }
+    return null;
+  }
+
   // ── OpenAI Responses API helper ─────────────────────────
   // Uses the new /v1/responses endpoint (recommended for all new integrations
   // since late 2025) with the latest GPT-5.4 family. Falls back to GPT-4.1-mini
@@ -2552,7 +3165,7 @@
   async function detectCompanyMeta(key, slides) {
     const sample = slides.slice(0, 3).map(s => `--- Slide ${s.n} ---\n${s.text}`).join('\n\n').slice(0, 3000);
     if (!sample.trim()) return null;
-    const sys = 'You extract presentation metadata from the first slides of a PowerPoint. Respond with JSON only: { "title": "<company name or main title, short, max 60 chars, in the same language as the source>", "subtitle": "<1-line description for a sidebar, max 100 chars, in the same language>" }. Use the strongest signal for the title (company name if present, otherwise the cover slide title).';
+    const sys = 'You extract presentation metadata from the first pages of a document (PowerPoint or PDF). Respond with JSON only: { "title": "<company name or main title, short, max 60 chars, in the same language as the source>", "subtitle": "<1-line description for a sidebar, max 100 chars, in the same language>" }. Use the strongest signal for the title (company name if present, otherwise the cover/first-page title).';
     try {
       return await openaiJson(key, {
         model: OPENAI_MODEL_QUICK,
@@ -2572,7 +3185,7 @@
   // matching the AVAILABLE_IMAGES order.
   // sources = { pptSlides?: [{n,text}], webPages?: [{url,markdown}] }
   async function gptStructure(key, sources, title, subtitle, availableImages) {
-    const sys = `You convert source content (PowerPoint slides and/or a website) into a structured single-screen "website presentation" in JSON.
+    const sys = `You convert source content (PowerPoint slides, PDF pages and/or a website) into a structured single-screen "website presentation" in JSON.
 
 The output must match the Csaba Metál reference style: 4–6 topic sections, each fitting one screen without scrolling. Sections have a short eyebrow tag, a big heading, optional lead paragraph, and 2–4 content blocks.
 
@@ -2677,8 +3290,11 @@ Rules:
         remaining -= text.length;
       }
       if (truncated.length) {
-        pptBlock = '\n=== POWERPOINT SOURCE ===\n'
-          + truncated.map(s => `--- Slide ${s.n} ---\n${s.text}`).join('\n\n');
+        const isPdf = sourceDocKind === 'pdf';
+        const header = isPdf ? '\n=== PDF SOURCE ===\n' : '\n=== POWERPOINT SOURCE ===\n';
+        const unit = isPdf ? 'Page' : 'Slide';
+        pptBlock = header
+          + truncated.map(s => `--- ${unit} ${s.n} ---\n${s.text}`).join('\n\n');
       }
     }
 
@@ -2779,9 +3395,15 @@ ${pptBlock}${webBlock}`;
     try {
       let slides = [];
       if (hasPpt) {
-        setProgress(10, 'Reading slide content…');
-        slides = parsedSlides || await extractPptData(pptFileData);
-        if (!parsedSlides) parsedSlides = slides;
+        setProgress(10, sourceDocKind === 'pdf' ? 'Reading PDF content…' : 'Reading slide content…');
+        if (parsedSlides) {
+          slides = parsedSlides;
+        } else {
+          slides = sourceDocKind === 'pdf'
+            ? await extractPdfData(pptFileData)
+            : await extractPptData(pptFileData);
+          parsedSlides = slides;
+        }
       }
 
       // If we have a key but haven't auto-detected metadata yet, do it now
@@ -2830,10 +3452,12 @@ ${pptBlock}${webBlock}`;
         });
       }
 
+      const docNoun = sourceDocKind === 'pdf' ? 'PDF' : 'PPT';
+      const unitNoun = sourceDocKind === 'pdf' ? 'page' : 'slide';
       setProgress(40, hasPpt && hasWeb
-          ? `Analyzing PPT + website with AI…`
+          ? `Analyzing ${docNoun} + website with AI…`
           : hasPpt
-            ? `Analyzing ${slides.length} slide(s) with AI…`
+            ? `Analyzing ${slides.length} ${unitNoun}(s) with AI…`
             : 'Analyzing website with AI…');
 
       const structured = await gptStructure(
@@ -2888,13 +3512,14 @@ ${pptBlock}${webBlock}`;
       const finalTitle = document.getElementById('presTitle').value.trim();
       const finalSubtitle = document.getElementById('presSubtitle').value.trim();
       const fallbackTitle = hasPpt
-        ? pptFileName.replace(/\.pptx$/i, '')
+        ? pptFileName.replace(/\.(pptx|pdf)$/i, '')
         : (() => { try { return new URL(webPages[0].url).host; } catch { return 'Presentation'; } })();
       generated = {
         type: 'web',
         title: finalTitle || structured.title || fallbackTitle,
         subtitle: finalSubtitle || structured.subtitle || '',
         logoDataUrl: logoDataUrl || null,
+        brand: brandColors ? { ...brandColors } : null,
         sections: structured.sections,
         images: compressedImages,
         createdAt: new Date().toISOString(),
@@ -3018,6 +3643,7 @@ ${pptBlock}${webBlock}`;
     closeFontPanel();
     closeAddCardMenu();
     closeActionsPanel();
+    closePageOptionsPanel();
     _lastEditFocusPath = null;
     _lastSelBlockPath = null;
     const fbtn = document.getElementById('editorFontBtn');
@@ -3056,6 +3682,7 @@ ${pptBlock}${webBlock}`;
       generated.sections    = cloned.sections;
       generated.images      = cloned.images;
       generated._styles     = cloned._styles || {};
+      generated.brand       = cloned.brand || null;
     } catch (e) {
       showError('Failed to apply edits: ' + (e.message || e));
       return;
@@ -3091,6 +3718,124 @@ ${pptBlock}${webBlock}`;
     if (saveBtn) saveBtn.classList.toggle('has-changes', !!on);
   }
 
+  // ── Page options panel (parent side) ──────────────────
+  function togglePageOptionsPanel(ev) {
+    if (ev) ev.stopPropagation();
+    const panel = document.getElementById('pageOptionsPanel');
+    if (!panel) return;
+    if (panel.classList.contains('open')) closePageOptionsPanel();
+    else openPageOptionsPanel();
+  }
+  function openPageOptionsPanel() {
+    closeAddCardMenu();
+    closeFontPanel();
+    closeActionsPanel();
+    _populatePageOptionsPanel();
+    document.getElementById('pageOptionsPanel').classList.add('open');
+  }
+  function closePageOptionsPanel() {
+    const p = document.getElementById('pageOptionsPanel');
+    if (p) p.classList.remove('open');
+  }
+  function _populatePageOptionsPanel() {
+    const accent  = (brandColors && brandColors.accent)  || '#4472C4';
+    const accent2 = (brandColors && brandColors.accent2) || '#ED7D31';
+    const aIn  = document.getElementById('poAccent');
+    const a2In = document.getElementById('poAccent2');
+    const aHex = document.getElementById('poAccentHex');
+    const a2Hex= document.getElementById('poAccent2Hex');
+    if (aIn)  aIn.value  = accent;
+    if (a2In) a2In.value = accent2;
+    if (aHex) aHex.value = accent.toUpperCase();
+    if (a2Hex)a2Hex.value= accent2.toUpperCase();
+    const tag = document.getElementById('poSourceTag');
+    if (tag) {
+      tag.classList.remove('logo','manual');
+      if (brandColors && brandColors.source) {
+        tag.textContent = brandColors.source === 'logo' ? 'From logo' : 'Manual';
+        tag.classList.add(brandColors.source);
+      } else {
+        tag.textContent = 'Default theme';
+      }
+    }
+  }
+  function _isHex(v){ return /^#?[0-9a-fA-F]{6}$/.test(v); }
+  function _normHex(v){
+    const s = v.startsWith('#') ? v : '#' + v;
+    return s.toUpperCase();
+  }
+  function onPageColorChange(which, value){
+    if (!_isHex(value)) return;
+    const hex = _normHex(value);
+    const accent  = which === 'accent'  ? hex : ((brandColors && brandColors.accent)  || '#4472C4');
+    const accent2 = which === 'accent2' ? hex : ((brandColors && brandColors.accent2) || _deriveAccent2(accent));
+    setBrandColors(accent, accent2, 'manual');
+    _populatePageOptionsPanel();
+  }
+  function onPageColorTyped(which, value){
+    if (!_isHex(value)) return;
+    const hex = _normHex(value);
+    const inputId = which === 'accent' ? 'poAccent' : 'poAccent2';
+    const inp = document.getElementById(inputId);
+    if (inp) inp.value = hex;
+    onPageColorChange(which, hex);
+  }
+  async function extractColorFromLogoBtn(){
+    if (!logoDataUrl) {
+      _showEditorToast('No logo uploaded yet — upload a logo first.');
+      return;
+    }
+    const accent = await extractDominantColorFromImage(logoDataUrl);
+    if (!accent) {
+      _showEditorToast('Could not detect a brand color in the logo.');
+      return;
+    }
+    setBrandColors(accent, _deriveAccent2(accent), 'logo');
+    _populatePageOptionsPanel();
+    _showEditorToast('Brand color picked from logo.');
+  }
+  function resetPageOptions(){
+    setBrandColors(null);
+    _populatePageOptionsPanel();
+    _showEditorToast('Theme reset to default.');
+  }
+
+  // Toolbar "Fix layout" button — runs auto-grow + de-overlap inside the iframe
+  // for the currently active slide.
+  function fixSlideLayout() {
+    const win = _frameWin();
+    if (!win || typeof win.__autoFixLayout !== 'function') {
+      console.warn('[fix layout] iframe API not ready');
+      return;
+    }
+    const result = win.__autoFixLayout();
+    if (result && typeof result === 'object') {
+      const parts = [];
+      if (result.headShrunk) parts.push('shrunk slide title');
+      if (result.resized)    parts.push('resized ' + result.resized + ' card' + (result.resized === 1 ? '' : 's') + ' to fit content');
+      if (result.shrunk)     parts.push('shrunk text in ' + result.shrunk + ' card' + (result.shrunk === 1 ? '' : 's'));
+      if (result.moved)      parts.push('moved ' + result.moved + ' to remove overlaps');
+      const msg = parts.length ? 'Layout fixed: ' + parts.join(', ') + '.' : 'Layout already looks good — nothing to fix.';
+      _setEditorDirtyIndicator(true);
+      _editorDirty = true;
+      _showEditorToast(msg);
+    }
+  }
+  // Tiny non-blocking toast inside the editor overlay
+  function _showEditorToast(text){
+    let t = document.getElementById('editorToast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'editorToast';
+      t.className = 'editor-toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(_showEditorToast._h);
+    _showEditorToast._h = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
   function openEditorGalleryFromToolbar() {
     const frame = document.getElementById('editorFrame');
     try {
@@ -3118,6 +3863,8 @@ ${pptBlock}${webBlock}`;
     if (fwrap && !fwrap.contains(e.target)) closeFontPanel();
     const awrap = document.getElementById('editorActionsWrap');
     if (awrap && !awrap.contains(e.target)) closeActionsPanel();
+    const pwrap = document.getElementById('editorPageWrap');
+    if (pwrap && !pwrap.contains(e.target)) closePageOptionsPanel();
   });
 
   // ── Font panel (parent side) ─────────────────────────
@@ -3357,37 +4104,70 @@ ${pptBlock}${webBlock}`;
   }
 
   function _renderActionGalleryGrid() {
-    const grid = document.getElementById('apGalleryGrid');
-    if (!grid) return;
+    // Render the small "summary" preview inside the actions panel.
+    const thumbsHost = document.getElementById('apGalleryThumbs');
+    const sumText    = document.getElementById('apGallerySumText');
+    const pickLabel  = document.getElementById('apGalleryPickBtnLabel');
+    if (!thumbsHost) return;
     const win = _frameWin();
     const imgs = (win && win.__editorData && Array.isArray(win.__editorData.images))
       ? win.__editorData.images : [];
-    if (!imgs.length) {
-      grid.innerHTML = '<p class="ap-empty">No images yet. Open the gallery and add some first.</p>';
-      _updateGalleryCounter();
-      return;
+
+    const max = 8;
+    const ids = _apGallerySelected.slice(0, max);
+    thumbsHost.innerHTML = ids.map((idx, ord) => {
+      const im = imgs[idx];
+      if (!im) return '';
+      return '<div class="ap-picker-thumb"><img src="'+im.dataUrl.replace(/"/g,'&quot;')+'" alt=""/><span class="ap-picker-thumb-num">'+(ord+1)+'</span></div>';
+    }).filter(Boolean).join('');
+    if (_apGallerySelected.length > max) {
+      thumbsHost.insertAdjacentHTML('beforeend', '<div class="ap-picker-thumb-extra">+'+(_apGallerySelected.length - max)+'</div>');
     }
-    grid.innerHTML = imgs.map((im, i) => {
-      const sel = _apGallerySelected.indexOf(i);
-      const num = sel >= 0 ? '<span class="ap-img-tile-num">'+(sel+1)+'</span>' : '';
-      return '<button type="button" class="ap-img-tile'+(sel>=0?' selected':'')+'" data-idx="'+i+'" onclick="toggleGalleryImage('+i+')">'
-           +   '<img src="'+im.dataUrl.replace(/"/g,'&quot;')+'" alt=""/>'
-           +   num
-           + '</button>';
-    }).join('');
+
+    if (!imgs.length) {
+      sumText.textContent = 'No images in the gallery yet. Open Gallery from the toolbar to add some first.';
+    } else if (_apGallerySelected.length === 0) {
+      sumText.textContent = 'No images selected yet. Click "Choose images…" to pick from your '+imgs.length+' image'+(imgs.length===1?'':'s')+'.';
+    } else {
+      sumText.textContent = _apGallerySelected.length + ' image' + (_apGallerySelected.length===1?'':'s') + ' selected · numbers show the play order';
+    }
+    if (pickLabel) pickLabel.textContent = _apGallerySelected.length ? 'Edit selection…' : 'Choose images…';
     _updateGalleryCounter();
   }
-  function toggleGalleryImage(idx) {
-    const at = _apGallerySelected.indexOf(idx);
-    if (at >= 0) _apGallerySelected.splice(at, 1);
-    else         _apGallerySelected.push(idx);
-    _renderActionGalleryGrid();
-  }
+
   function _updateGalleryCounter() {
     const el = document.getElementById('apGalleryCounter');
     const btn = document.getElementById('apGalleryApply');
     if (el) el.textContent = _apGallerySelected.length + ' selected';
     if (btn) btn.disabled = _apGallerySelected.length === 0;
+  }
+
+  // Open the big picker modal for selecting gallery action images.
+  function openGalleryActionPicker() {
+    const win = _frameWin();
+    const imgs = (win && win.__editorData && Array.isArray(win.__editorData.images))
+      ? win.__editorData.images : [];
+    if (!imgs.length) {
+      alert('No images in the gallery yet. Open Gallery from the toolbar and add some first.');
+      return;
+    }
+    openActionImagePicker({
+      title: 'Select images for gallery action',
+      subtitle: 'Click images to add them. Numbers show the play order. Click again to remove.',
+      multiple: true,
+      selected: _apGallerySelected.slice(),
+      onDone: (newSelection) => {
+        _apGallerySelected = newSelection.slice();
+        _renderActionGalleryGrid();
+        // Auto-apply the action to the selected card so the user doesn't
+        // have to click a separate Apply button afterwards. If they cancelled
+        // (empty selection), don't change the existing action.
+        if (_apGallerySelected.length > 0) {
+          applyGalleryAction();
+          _showEditorToast('Gallery action saved to card.');
+        }
+      },
+    });
   }
   function applyGalleryAction() {
     if (!_lastSelBlockPath || !_apGallerySelected.length) return;
@@ -3404,22 +4184,20 @@ ${pptBlock}${webBlock}`;
   }
 
   function openPageImagePicker() {
-    // Open a tiny inline picker (reuse the gallery grid)
-    const grid = document.getElementById('apGalleryGrid'); // borrow grid markup
     const win = _frameWin();
     const imgs = (win && win.__editorData && Array.isArray(win.__editorData.images))
       ? win.__editorData.images : [];
-    if (!imgs.length) { alert('No images in the gallery yet. Open the gallery and add some first.'); return; }
-    // Lightweight modal: a horizontal scrolling row inside a prompt is overkill;
-    // instead we open the existing gallery host inside the iframe in "manage" mode
-    // and the user picks one — too much glue. Simplest: open a small select dialog.
-    const choices = imgs.map((_im, i) => i + 1);
-    const idxStr = prompt('Enter the image number to use as background (1 — ' + imgs.length + ').\nOpen the Gallery from the toolbar to see them numbered.', _apPageImageIdx != null ? String(_apPageImageIdx + 1) : '1');
-    if (idxStr == null) return;
-    const idx = parseInt(idxStr, 10) - 1;
-    if (!choices.includes(idx + 1)) { alert('Invalid number.'); return; }
-    _apPageImageIdx = idx;
-    _renderApPageImagePreview();
+    if (!imgs.length) { alert('No images in the gallery yet. Open Gallery from the toolbar and add some first.'); return; }
+    openActionImagePicker({
+      title: 'Select background image',
+      subtitle: 'Click an image to use it as the background of the detail page.',
+      multiple: false,
+      selected: _apPageImageIdx != null ? [_apPageImageIdx] : [],
+      onDone: (newSelection) => {
+        _apPageImageIdx = newSelection.length ? newSelection[0] : null;
+        _renderApPageImagePreview();
+      },
+    });
   }
   function clearPageImage() {
     _apPageImageIdx = null;
@@ -3472,6 +4250,100 @@ ${pptBlock}${webBlock}`;
     _refreshActionsBtnVisual();
     _populateActionsPanel();
   }
+
+  // ── Action image picker modal ──────────────────────
+  // Public API: openActionImagePicker({ title, subtitle, multiple, selected, onDone })
+  // The picker is shared between the gallery action (multiple=true) and the
+  // page action's background image picker (multiple=false).
+  let _aipState = { open: false, selected: [], multiple: true, onDone: null };
+
+  function openActionImagePicker({ title, subtitle, multiple, selected, onDone }) {
+    _aipState.open = true;
+    _aipState.multiple = !!multiple;
+    _aipState.selected = Array.isArray(selected) ? selected.slice() : [];
+    _aipState.onDone = (typeof onDone === 'function') ? onDone : null;
+
+    const titleEl = document.getElementById('aipTitle');
+    const subEl   = document.getElementById('aipSubtitle');
+    if (titleEl) titleEl.textContent = title || 'Select images';
+    if (subEl)   subEl.textContent   = subtitle || (multiple
+      ? 'Click to add or remove images. The number shows the play order.'
+      : 'Click an image to select it.');
+    const clearBtn = document.getElementById('aipClearBtn');
+    if (clearBtn) clearBtn.style.display = multiple ? '' : 'none';
+
+    _renderActionImagePickerBody();
+    _updateActionImagePickerFooter();
+    document.getElementById('actionImagePickerModal').classList.add('open');
+  }
+
+  function _renderActionImagePickerBody() {
+    const body = document.getElementById('aipBody');
+    if (!body) return;
+    const win = _frameWin();
+    const imgs = (win && win.__editorData && Array.isArray(win.__editorData.images))
+      ? win.__editorData.images : [];
+    if (!imgs.length) {
+      body.innerHTML = '<div class="aip-empty"><strong>No images yet</strong>Open the Gallery from the toolbar and add some images first.</div>';
+      return;
+    }
+    body.innerHTML = '<div class="aip-grid">' + imgs.map((im, i) => {
+      const ord = _aipState.selected.indexOf(i);
+      const sel = ord >= 0;
+      const num = (sel && _aipState.multiple) ? '<span class="aip-tile-num">'+(ord+1)+'</span>' : (sel ? '<span class="aip-tile-num"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>' : '');
+      const cap = im.caption ? '<div class="aip-tile-caption">'+escapeHtml(im.caption)+'</div>' : '';
+      return '<button type="button" class="aip-tile'+(sel?' selected':'')+'" data-idx="'+i+'" onclick="toggleActionImagePickerSelection('+i+')">'
+           +   '<img src="'+im.dataUrl.replace(/"/g,'&quot;')+'" alt=""/>'
+           +   num
+           +   cap
+           + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function toggleActionImagePickerSelection(idx) {
+    if (_aipState.multiple) {
+      const at = _aipState.selected.indexOf(idx);
+      if (at >= 0) _aipState.selected.splice(at, 1);
+      else         _aipState.selected.push(idx);
+    } else {
+      _aipState.selected = (_aipState.selected[0] === idx) ? [] : [idx];
+    }
+    _renderActionImagePickerBody();
+    _updateActionImagePickerFooter();
+  }
+
+  function _updateActionImagePickerFooter() {
+    const c = document.getElementById('aipFootCount');
+    if (c) c.textContent = String(_aipState.selected.length);
+  }
+
+  function clearActionImagePickerSelection() {
+    _aipState.selected = [];
+    _renderActionImagePickerBody();
+    _updateActionImagePickerFooter();
+  }
+
+  function doneActionImagePicker() {
+    if (typeof _aipState.onDone === 'function') {
+      _aipState.onDone(_aipState.selected.slice());
+    }
+    _closeActionImagePicker();
+  }
+
+  function cancelActionImagePicker() {
+    _closeActionImagePicker();
+  }
+
+  function _closeActionImagePicker() {
+    document.getElementById('actionImagePickerModal').classList.remove('open');
+    _aipState.open = false;
+    _aipState.onDone = null;
+  }
+
+  // Esc closes the picker (without committing) when it's open
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && _aipState.open) { e.preventDefault(); cancelActionImagePicker(); }
+  });
 
   function addCardFromToolbar(kind) {
     closeAddCardMenu();
@@ -3624,6 +4496,7 @@ ${pptBlock}${webBlock}`;
       --accent:#4472C4;
       --accent-soft:#eaf1fb;
       --accent-2:#ED7D31;
+      --accent-light:#5b8cdd;
       --shadow:0 16px 44px rgba(68,84,106,.10);
       --navw:280px;
       --max:1500px;
@@ -3646,7 +4519,7 @@ ${pptBlock}${webBlock}`;
     .nav{display:flex;flex-direction:column;gap:10px;margin-top:2px}
     .navbtn{border:1px solid transparent;background:#f5f7fb;color:var(--text);text-align:left;border-radius:20px;padding:16px 18px;font-size:clamp(16px,1.15vw,20px);font-weight:600;cursor:pointer;transition:.18s ease;font-family:inherit}
     .navbtn:hover{background:#fff;border-color:var(--line)}
-    .navbtn.active{background:linear-gradient(135deg,var(--accent) 0%,#5b8cdd 100%);color:#fff;box-shadow:0 12px 28px rgba(68,114,196,.25)}
+    .navbtn.active{background:linear-gradient(135deg,var(--accent) 0%,var(--accent-light) 100%);color:#fff;box-shadow:0 12px 28px rgba(68,114,196,.25)}
     .sidebar-foot{margin-top:auto;border:1px solid var(--line);border-radius:20px;padding:14px 16px;background:#fff;font-size:13px;line-height:1.45;color:var(--muted)}
     .content{min-height:0;position:relative}
     .section{position:absolute;inset:0;display:none;animation:fade .22s ease}.section.active{display:block}
@@ -3676,8 +4549,8 @@ ${pptBlock}${webBlock}`;
     .card{padding:22px}
     .card p,.card li,.muted{color:var(--muted);font-size:clamp(14px,0.95vw,16px);line-height:1.48}
     ul.clean{list-style:none;padding:0;margin:0;display:grid;gap:8px}
-    .pillrow{display:flex;flex-wrap:wrap;gap:10px}
-    .pill{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700}
+    .pillrow{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;align-content:flex-start}
+    .pill{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700;line-height:1.2;flex:0 0 auto;align-self:flex-start}
     .timeline{display:grid;gap:12px}
     .timeline.cols-3{grid-template-columns:repeat(3,1fr)}
     .timeline.cols-4{grid-template-columns:repeat(4,1fr)}
@@ -3860,6 +4733,59 @@ ${pptBlock}${webBlock}`;
 
   const WEB_VIEWER_JS = `
     function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+    // ── Brand colors (--accent / --accent-2) ─────────────────
+    function _hexToRgb(hex){
+      if (!hex) return null;
+      const v = hex.replace('#','');
+      const s = v.length===3 ? v.split('').map(c=>c+c).join('') : v;
+      if (s.length!==6) return null;
+      const n = parseInt(s,16);
+      return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+    }
+    function _rgbToHsl(r,g,b){r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b);let h,s;const l=(max+min)/2;if(max===min){h=s=0;}else{const d=max-min;s=l>0.5?d/(2-max-min):d/(max+min);switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;case b:h=(r-g)/d+4;break;}h/=6;}return{h:h*360,s,l};}
+    function _hslToRgb(h,s,l){h=(h%360+360)%360/360;let r,g,b;if(s===0){r=g=b=l;}else{const q=l<0.5?l*(1+s):l+s-l*s;const p=2*l-q;const f=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};r=f(p,q,h+1/3);g=f(p,q,h);b=f(p,q,h-1/3);}return{r:r*255,g:g*255,b:b*255};}
+    function _hexFromRgb(r,g,b){return '#'+[r,g,b].map(v=>Math.min(255,Math.max(0,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+    function _softFromAccent(hex){
+      const rgb = _hexToRgb(hex); if (!rgb) return null;
+      const hsl = _rgbToHsl(rgb.r,rgb.g,rgb.b);
+      const out = _hslToRgb(hsl.h, Math.min(0.55, Math.max(0.25, hsl.s)), 0.93);
+      return _hexFromRgb(out.r,out.g,out.b);
+    }
+    function _accentLighter(hex, amt){
+      const rgb = _hexToRgb(hex); if (!rgb) return hex;
+      const hsl = _rgbToHsl(rgb.r,rgb.g,rgb.b);
+      const out = _hslToRgb(hsl.h, hsl.s, Math.min(0.85, hsl.l + amt));
+      return _hexFromRgb(out.r,out.g,out.b);
+    }
+    // Apply brand colors as CSS custom properties. Pass null/undefined to
+    // restore the default theme (just removes the overrides).
+    window.__applyBrand = function(brand){
+      const root = document.documentElement;
+      if (!brand || !brand.accent) {
+        root.style.removeProperty('--accent');
+        root.style.removeProperty('--accent-soft');
+        root.style.removeProperty('--accent-2');
+        root.style.removeProperty('--accent-light');
+        DATA.brand = null;
+        return;
+      }
+      const accent  = brand.accent;
+      const accent2 = brand.accent2 || accent;
+      const soft    = _softFromAccent(accent) || '#eaf1fb';
+      const light   = _accentLighter(accent, 0.18);
+      root.style.setProperty('--accent',       accent);
+      root.style.setProperty('--accent-soft',  soft);
+      root.style.setProperty('--accent-2',     accent2);
+      root.style.setProperty('--accent-light', light);
+      DATA.brand = { accent, accent2, source: brand.source || 'manual' };
+    };
+
+    // Apply on initial load
+    if (DATA && DATA.brand && DATA.brand.accent) {
+      try { window.__applyBrand(DATA.brand); } catch(_) {}
+    }
+
     // Build a CSS style string from a stored font-style object (DATA._styles[path]).
     // Returns '' when nothing is set.
     function _textStyleString(path){
@@ -4370,6 +5296,228 @@ ${pptBlock}${webBlock}`;
         _refreshActionBadge(el.dataset.blockPath);
       });
     }
+
+    // Measure the natural ("fit-content") pixel height a card would occupy
+    // if its height constraint were removed. Briefly toggles styles and
+    // restores them afterwards.
+    function _measureNaturalHeight(cardEl){
+      const prev = {
+        h:        cardEl.style.height,
+        mh:       cardEl.style.minHeight,
+        overflow: cardEl.style.overflow,
+      };
+      cardEl.style.height    = 'auto';
+      cardEl.style.minHeight = '0';
+      cardEl.style.overflow  = 'visible';
+      // offsetHeight includes border + padding (border-box / content-box agnostic)
+      const h = cardEl.offsetHeight;
+      cardEl.style.height    = prev.h;
+      cardEl.style.minHeight = prev.mh;
+      cardEl.style.overflow  = prev.overflow;
+      return h;
+    }
+
+    // Iteratively shrink the font size of every editable text inside a card
+    // until its content fits within the card's clientHeight. Used as a
+    // fallback when the card cannot be grown enough to fit naturally
+    // (e.g. it would extend off the bottom of the canvas).
+    function _shrinkCardTextToFit(cardEl, maxIterations){
+      const max = maxIterations || 6;
+      let didShrink = false;
+      for (let it = 0; it < max; it++) {
+        const overflow = cardEl.scrollHeight - cardEl.clientHeight;
+        if (overflow <= 3) return didShrink;
+        const rawFactor = cardEl.clientHeight / cardEl.scrollHeight;
+        const factor = Math.max(0.82, rawFactor);
+        const textEls = cardEl.querySelectorAll('[data-edit]');
+        let changed = 0;
+        textEls.forEach(t => {
+          const path = t.dataset.edit;
+          if (!path) return;
+          const cs = window.getComputedStyle(t);
+          const currentSize = parseFloat(cs.fontSize) || 16;
+          const newSize = Math.max(8, Math.round(currentSize * factor * 10) / 10);
+          if (Math.abs(newSize - currentSize) < 0.2) return;
+          setFontStyle(path, 'fontSize', newSize + 'px');
+          changed++;
+        });
+        if (!changed) return didShrink;
+        didShrink = true;
+      }
+      return didShrink;
+    }
+
+    // Iteratively shrink the slide's head (eyebrow + heading + lead) so it
+    // doesn't dominate the slide. Target: head occupies at most ~32% of the
+    // section's vertical space, leaving the body (cards canvas) ~68% to work
+    // with. Uses individual font-size floors so each element type stays
+    // readable. Returns true if any shrink happened.
+    function _fitSlideHead(activeSec){
+      const head  = activeSec.querySelector('.head');
+      const panel = activeSec.querySelector('.panel');
+      if (!head || !panel) return false;
+      const sectionH = panel.clientHeight;
+      if (!sectionH) return false;
+
+      const TARGET_RATIO = 0.32;
+      const maxIter = 8;
+      // Per-element minimum font size (px). Headings stay readable at 18px,
+      // leads at 13px, eyebrows at 10px.
+      function floorForEl(el){
+        if (el.tagName === 'H1' || el.tagName === 'H2' || el.classList.contains('heading')) return 18;
+        if (el.classList.contains('lead')) return 13;
+        if (el.classList.contains('eyebrow')) return 10;
+        return 11;
+      }
+
+      let didShrink = false;
+      for (let i = 0; i < maxIter; i++) {
+        const headH = head.clientHeight;
+        const ratio = headH / sectionH;
+        if (ratio <= TARGET_RATIO) break;
+        // Shrink at most ~22% per iteration to avoid overshoot
+        const factor = Math.max(0.78, TARGET_RATIO / ratio);
+        const textEls = head.querySelectorAll('[data-edit]');
+        let changed = 0;
+        textEls.forEach(t => {
+          const path = t.dataset.edit;
+          if (!path) return;
+          const cs = window.getComputedStyle(t);
+          const currentSize = parseFloat(cs.fontSize) || 16;
+          const minSize = floorForEl(t);
+          const newSize = Math.max(minSize, Math.round(currentSize * factor * 10) / 10);
+          if (Math.abs(newSize - currentSize) < 0.2) return;
+          setFontStyle(path, 'fontSize', newSize + 'px');
+          changed++;
+        });
+        if (!changed) break;
+        didShrink = true;
+      }
+      return didShrink;
+    }
+
+    // ── Auto fix layout (toolbar "Fix layout" button) ─────
+    // 0) Shrink the slide head (title/eyebrow/lead) if it eats more than
+    //    ~32% of the section, freeing vertical room for the cards.
+    // 1) Auto-size each card's height to match its natural content (no empty
+    //    space, no clipped text). Fallback: shrink text only if even the
+    //    available canvas room isn't enough.
+    // 2) De-overlap pass: rect-based overlap test; push offenders down.
+    //    Only applies to the currently active slide.
+    window.__autoFixLayout = function(){
+      const activeSec = document.querySelector('.section.active');
+      if (!activeSec) return null;
+      const canvas = activeSec.querySelector('.body.canvas-mode');
+      if (!canvas) return null;
+
+      let resized = 0, shrunk = 0, moved = 0, headShrunk = false;
+
+      // 0) Slide head: shrink title/eyebrow/lead so the body has room
+      headShrunk = _fitSlideHead(activeSec);
+
+      // Re-measure after the head shrink — the body (canvas) may now be taller
+      const canvasH = canvas.clientHeight;
+      const canvasW = canvas.clientWidth;
+      if (!canvasH || !canvasW) return { resized, shrunk, moved, headShrunk };
+
+      const blocks = Array.from(canvas.querySelectorAll(':scope > [data-block-path]'));
+      const items = blocks.map(el => {
+        const path = el.dataset.blockPath;
+        const block = _getBlockByPathDeep(path);
+        if (!block || !block._layout) return null;
+        return { el, path, block, layout: { ...block._layout } };
+      }).filter(Boolean);
+      if (!items.length) {
+        if (headShrunk) markEditorDirty();
+        return { resized, shrunk, moved, headShrunk };
+      }
+
+      // 1) Auto-size each card to its natural content height.
+      // Skip pure-image blocks (figure-only) — they should keep their aspect.
+      const MIN_H = 6;   // never shrink below 6% of canvas
+      items.forEach(it => {
+        const el = it.el;
+        // If the block is a figure-only block (just an image), leave its size
+        // alone — images typically should keep their authored dimensions.
+        if (el.classList.contains('figure') || el.classList.contains('media')) return;
+
+        const naturalH = _measureNaturalHeight(el);
+        if (!naturalH) return;
+        const idealH_pct = (naturalH / canvasH) * 100;
+        const room = 100 - it.layout.y;        // space available below current y
+        let newH_pct;
+        let needsTextShrink = false;
+
+        if (idealH_pct > room) {
+          // Card content wouldn't fit — clamp height to available room and
+          // then shrink the text inside to fit the constrained box.
+          newH_pct = Math.max(MIN_H, room);
+          needsTextShrink = true;
+        } else {
+          // Card fits naturally — set its height to the content size.
+          newH_pct = Math.max(MIN_H, idealH_pct);
+        }
+
+        if (Math.abs(newH_pct - it.layout.h) > 0.4) {
+          it.layout.h = newH_pct;
+          it.block._layout.h = newH_pct;
+          el.style.height = newH_pct + '%';
+          resized++;
+        }
+        if (needsTextShrink) {
+          if (_shrinkCardTextToFit(el)) shrunk++;
+        }
+      });
+
+      // 2) De-overlap pass — sort by Y position, push down any overlapper.
+      // We use the freshly updated layout values from step 1.
+      const sorted = items.slice().sort((a, b) => {
+        if (Math.abs(a.layout.y - b.layout.y) < 0.5) return a.layout.x - b.layout.x;
+        return a.layout.y - b.layout.y;
+      });
+      const placed = [];
+      // Try multiple passes since pushing one card down can create new overlaps.
+      for (let pass = 0; pass < 3; pass++) {
+        let movedThisPass = 0;
+        placed.length = 0;
+        for (let i = 0; i < sorted.length; i++) {
+          const cur = sorted[i];
+          let pushTo = cur.layout.y;
+          for (const prev of placed) {
+            const aRight = cur.layout.x + cur.layout.w;
+            const bRight = prev.layout.x + prev.layout.w;
+            // Use a small inset (0.4%) so cards just touching aren't flagged.
+            const xOverlap = (cur.layout.x + 0.4 < bRight) && (prev.layout.x + 0.4 < aRight);
+            if (!xOverlap) continue;
+            const curBottom  = pushTo + cur.layout.h;
+            const prevBottom = prev.layout.y + prev.layout.h;
+            const yOverlap = (pushTo + 0.4 < prevBottom) && (prev.layout.y + 0.4 < curBottom);
+            if (!yOverlap) continue;
+            pushTo = Math.max(pushTo, prevBottom + 1.5);
+          }
+          if (Math.abs(pushTo - cur.layout.y) > 0.3) {
+            if (pushTo + cur.layout.h > 100) {
+              pushTo = Math.max(0, 100 - cur.layout.h);
+            }
+            cur.layout.y = pushTo;
+            cur.block._layout.y = pushTo;
+            cur.el.style.top = pushTo + '%';
+            if (pass === 0) moved++;       // count distinct cards moved (first pass only)
+            movedThisPass++;
+          }
+          placed.push(cur);
+        }
+        // Re-sort because Y positions may have changed
+        sorted.sort((a, b) => {
+          if (Math.abs(a.layout.y - b.layout.y) < 0.5) return a.layout.x - b.layout.x;
+          return a.layout.y - b.layout.y;
+        });
+        if (!movedThisPass) break;
+      }
+
+      markEditorDirty();
+      return { resized, shrunk, moved, headShrunk };
+    };
 
     // ── Flatten multi-item blocks into per-card blocks ───
     // We render once with the original (grid) layout, measure each inner card's

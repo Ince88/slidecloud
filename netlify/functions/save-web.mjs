@@ -57,6 +57,21 @@ export default async (req) => {
       .filter(Boolean);
   }
 
+  // Validate brand colors (DATA.brand). Keep only well-formed hex values.
+  let brandClean = null;
+  if (data.brand && typeof data.brand === 'object') {
+    const isHex = (v) => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v);
+    const accent  = isHex(data.brand.accent)  ? data.brand.accent  : null;
+    const accent2 = isHex(data.brand.accent2) ? data.brand.accent2 : null;
+    if (accent) {
+      brandClean = {
+        accent,
+        accent2: accent2 || accent,
+        source: (data.brand.source === 'logo' || data.brand.source === 'manual') ? data.brand.source : 'manual',
+      };
+    }
+  }
+
   // Sanitize per-block actions (block._action). Keep only the supported
   // shapes: gallery (image indices) or page (eyebrow/heading/lead/body/imageIndex).
   if (Array.isArray(data.sections)) {
@@ -137,6 +152,7 @@ export default async (req) => {
         title: String(data.title ?? '').slice(0, 200),
         subtitle: String(data.subtitle ?? '').slice(0, 280),
         logoDataUrl: typeof data.logoDataUrl === 'string' ? data.logoDataUrl : null,
+        brand: brandClean,
         sections: data.sections,
         images,
         _styles: stylesMap,
