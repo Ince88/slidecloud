@@ -72,7 +72,6 @@ export default async (req) => {
           b._action = {
             type: 'gallery',
             images: valid,
-            intervalMs: Math.max(1500, Math.min(60000, Number(a.intervalMs) || 4000)),
           };
         } else if (a.type === 'page' && a.page && typeof a.page === 'object') {
           const p = a.page;

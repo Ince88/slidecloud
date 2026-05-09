@@ -1610,11 +1610,7 @@
             <p class="ap-help">When the audience taps this card during a presentation, nothing extra happens. Choose <strong>Gallery</strong> or <strong>Page</strong> above to assign an action.</p>
           </div>
           <div class="ap-tab-pane ap-pane-gallery" data-pane="gallery">
-            <p class="ap-help">Pick one or more images from the gallery. When the presenter taps this card, the chosen images appear full-screen and rotate automatically.</p>
-            <div class="ap-row">
-              <label>Auto-rotate every <span class="ap-val" id="apIntervalVal">4 s</span></label>
-              <input type="range" id="apInterval" min="2" max="15" step="1" value="4" oninput="onActionIntervalInput(this.value)"/>
-            </div>
+            <p class="ap-help">Pick one or more images from the gallery. When the presenter taps this card, the chosen images appear full-screen — the presenter swipes through them with on-screen arrows.</p>
             <div class="ap-grid" id="apGalleryGrid">
               <p class="ap-empty">No images yet. Open the gallery and add some first.</p>
             </div>
@@ -3332,10 +3328,6 @@ ${pptBlock}${webBlock}`;
     // Pre-fill gallery selection
     _apGallerySelected = (action && action.type === 'gallery' && Array.isArray(action.images))
       ? action.images.slice() : [];
-    const intervalSec = (action && action.type === 'gallery' && action.intervalMs)
-      ? Math.max(2, Math.min(15, Math.round(action.intervalMs/1000))) : 4;
-    document.getElementById('apInterval').value = intervalSec;
-    document.getElementById('apIntervalVal').textContent = intervalSec + ' s';
     _renderActionGalleryGrid();
 
     // Pre-fill page form
@@ -3397,19 +3389,13 @@ ${pptBlock}${webBlock}`;
     if (el) el.textContent = _apGallerySelected.length + ' selected';
     if (btn) btn.disabled = _apGallerySelected.length === 0;
   }
-  function onActionIntervalInput(value) {
-    const sec = parseInt(value, 10);
-    document.getElementById('apIntervalVal').textContent = sec + ' s';
-  }
   function applyGalleryAction() {
     if (!_lastSelBlockPath || !_apGallerySelected.length) return;
     const win = _frameWin();
     if (!win || typeof win.setActionForBlock !== 'function') return;
-    const interval = parseInt(document.getElementById('apInterval').value, 10) || 4;
     win.setActionForBlock(_lastSelBlockPath, {
       type: 'gallery',
       images: _apGallerySelected.slice(),
-      intervalMs: interval * 1000,
     });
     _editorDirty = true;
     _setEditorDirtyIndicator(true);

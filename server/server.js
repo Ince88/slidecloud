@@ -152,6 +152,12 @@ wss.on('connection', (ws) => {
       }
       broadcast(room.viewers, out);
     }
+    if (msg.type === 'action-nav' && role === 'presenter' && Number.isFinite(msg.index)) {
+      const room = rooms.get(slug);
+      if (!room) return;
+      const idx = Math.max(0, Math.min(199, Number(msg.index)));
+      broadcast(room.viewers, { type: 'action-nav', index: idx });
+    }
     if (msg.type === 'action-close' && role === 'presenter') {
       const room = rooms.get(slug);
       if (!room) return;

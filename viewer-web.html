@@ -341,31 +341,67 @@
   }
 
   /* ───────────── Action overlay ───────────── */
+  /* Always rendered (display:flex), but hidden via opacity+visibility so
+     keyframe animations on the inner stage run reliably each time we open. */
   .action-overlay {
     position: fixed; inset: 0; z-index: 9999;
-    display: none; align-items: center; justify-content: center;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(8, 12, 24, 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+    visibility: hidden;
+    overflow: hidden;
+    transition: background .28s ease-out, backdrop-filter .28s ease-out,
+                -webkit-backdrop-filter .28s ease-out, visibility 0s linear .42s;
+  }
+  .action-overlay.open {
+    visibility: visible;
     background: rgba(8, 12, 24, 0.92);
     backdrop-filter: blur(8px);
-    overflow: hidden;
+    -webkit-backdrop-filter: blur(8px);
+    transition: background .28s ease-out, backdrop-filter .28s ease-out,
+                -webkit-backdrop-filter .28s ease-out, visibility 0s;
   }
-  .action-overlay.open { display: flex; }
   .action-stage {
     position: relative;
     width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
     transform-origin: center center;
-    transform: scale(0.7);
+    transform: scale(0.55);
     opacity: 0;
-    transition: transform .42s cubic-bezier(.2,.9,.25,1.05),
-                opacity .32s ease-out;
+    will-change: transform, opacity;
   }
+  /* Punchy zoom-in with a tiny overshoot for a "pop" feel */
   .action-overlay.open .action-stage {
-    transform: scale(1);
-    opacity: 1;
+    animation: actionZoomIn .50s cubic-bezier(.18, 1.05, .32, 1.1) forwards;
   }
   .action-overlay.zooming-out .action-stage {
-    transform: scale(0.65);
+    animation: actionZoomOut .32s cubic-bezier(.4, 0, .7, .8) forwards;
+  }
+  /* Close-button entrance fade-in slightly delayed so it doesn't compete with
+     the zoom of the content. */
+  .action-overlay .action-close-btn {
     opacity: 0;
+    transform: scale(0.8);
+    transition: opacity .25s ease-out .15s, transform .25s ease-out .15s;
+  }
+  .action-overlay.open .action-close-btn {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .action-overlay.zooming-out .action-close-btn {
+    opacity: 0;
+    transition: opacity .15s ease-out;
+  }
+
+  @keyframes actionZoomIn {
+    0%   { transform: scale(0.55); opacity: 0; }
+    55%  { transform: scale(1.04); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes actionZoomOut {
+    0%   { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.55); opacity: 0; }
   }
 
   .action-close-btn {
@@ -381,7 +417,7 @@
   }
   .action-close-btn:hover { background: rgba(255,255,255,0.22); transform: scale(1.06); }
 
-  /* Gallery action: full-screen rotating image */
+  /* Gallery action: full-screen image, presenter-controlled */
   .action-gallery {
     position: relative;
     width: 96vw; height: 92vh;
@@ -392,30 +428,51 @@
     width: 100%; height: 100%;
     object-fit: contain;
     opacity: 0;
-    transition: opacity .55s ease-in-out;
+    transition: opacity .35s ease-in-out;
     border-radius: 14px;
   }
   .action-gallery-img.active { opacity: 1; }
-  .action-gallery-dots {
-    position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
-    display: flex; gap: 8px; z-index: 5;
-    padding: 8px 14px; border-radius: 999px;
-    background: rgba(0,0,0,0.4); backdrop-filter: blur(6px);
+
+  /* Image counter pill (visible to everyone) */
+  .action-gallery-counter {
+    position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+    z-index: 5;
+    padding: 6px 14px; border-radius: 999px;
+    background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+    color: #fff; font-size: 13px; font-weight: 600;
+    letter-spacing: 0.04em;
+    pointer-events: none;
   }
-  .action-gallery-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: rgba(255,255,255,0.4);
-    transition: background .25s, transform .25s;
-  }
-  .action-gallery-dot.active {
-    background: #fff; transform: scale(1.35);
-  }
-  .action-gallery-progress {
-    position: absolute; top: 0; left: 0; height: 3px;
-    background: linear-gradient(90deg, #3696f0, #8654ab);
+
+  /* Big nav arrows — only the presenter sees + uses them */
+  .action-gallery-nav {
+    display: none;
+    position: absolute; top: 50%; transform: translateY(-50%);
     z-index: 6;
-    width: 0%;
-    transition: width linear;
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; cursor: pointer;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    transition: background .15s, transform .12s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.is-presenter .action-overlay.open .action-gallery-nav { display: flex; }
+  .action-gallery-nav:hover { background: rgba(255,255,255,0.28); }
+  .action-gallery-nav:active { transform: translateY(-50%) scale(0.92); }
+  .action-gallery-nav:disabled {
+    opacity: 0.35; cursor: not-allowed;
+    background: rgba(255,255,255,0.08);
+  }
+  .action-gallery-nav.prev { left: 22px; }
+  .action-gallery-nav.next { right: 22px; }
+  .action-gallery-nav svg { width: 28px; height: 28px; }
+  @media (max-width: 760px) {
+    .action-gallery-nav { width: 56px; height: 56px; }
+    .action-gallery-nav.prev { left: 12px; }
+    .action-gallery-nav.next { right: 12px; }
+    .action-gallery-counter { top: 14px; font-size: 12px; padding: 5px 12px; }
   }
 
   /* Page action: a styled centered slide */
@@ -521,6 +578,7 @@
   // Detect phone screen for presenter mode
   const isPhone = matchMedia('(max-width: 820px)').matches;
   if (presentMode && isPhone) document.body.classList.add('phone');
+  if (presentMode) document.body.classList.add('is-presenter');
 
   // ── Helpers ────────────────────────────────────────────
   function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -797,8 +855,7 @@
     if (!action) return '';
     if (action.type === 'gallery') {
       const n = (action.images || []).length;
-      const sec = Math.round((action.intervalMs || 4000) / 1000);
-      return n + ' image' + (n === 1 ? '' : 's') + ' · ' + sec + 's each';
+      return n + ' image' + (n === 1 ? '' : 's') + ' · swipe with arrows';
     }
     if (action.type === 'page' && action.page) {
       return action.page.heading || 'Detail page';
@@ -883,7 +940,9 @@
   window.fireCloseAction = fireCloseAction;
 
   // ── Action overlay ──────────────────────────────────────
-  let _actionState = { open: false, timer: null, idx: 0, total: 0 };
+  // type/cardPath let us know what's currently playing so navigation events
+  // know whether to advance images or do nothing.
+  let _actionState = { open: false, idx: 0, total: 0, type: null, cardPath: null };
 
   function _getActionByPath(path) {
     const m = path && path.match(/^sections\.(\d+)\.blocks\.(\d+)$/);
@@ -909,8 +968,8 @@
     const stage   = document.getElementById('actionStage');
     if (!overlay || !stage) return;
 
-    // Reset any in-flight timers / state from a previous action
-    _resetActionTimers();
+    _actionState.type = action.type;
+    _actionState.cardPath = path;
 
     if (action.type === 'gallery') {
       _renderGalleryAction(stage, action);
@@ -918,8 +977,16 @@
       _renderPageAction(stage, action);
     }
 
-    overlay.classList.remove('zooming-out');
-    overlay.classList.add('open');
+    // Reset state and force a reflow so the zoom-in animation always re-runs
+    // (otherwise re-opening the same element won't restart the keyframes).
+    overlay.classList.remove('open', 'zooming-out');
+    stage.style.animation = 'none';
+    void stage.offsetWidth; // force reflow
+    stage.style.animation = '';
+    requestAnimationFrame(() => {
+      overlay.classList.add('open');
+    });
+
     _actionState.open = true;
     document.body.style.overflow = 'hidden';
   }
@@ -928,7 +995,6 @@
     if (!_actionState.open) return;
     const overlay = document.getElementById('actionOverlay');
     if (!overlay) return;
-    _resetActionTimers();
     overlay.classList.add('zooming-out');
     setTimeout(() => {
       overlay.classList.remove('open', 'zooming-out');
@@ -936,18 +1002,13 @@
       if (stage) stage.innerHTML = '';
       document.body.style.overflow = '';
       _actionState.open = false;
+      _actionState.type = null;
+      _actionState.cardPath = null;
     }, 320);
     // Clear phone-action firing state
     document.querySelectorAll('.phone-action-btn.firing').forEach(b => b.classList.remove('firing'));
     const closeBtn = document.getElementById('phoneActionsClose');
     if (closeBtn) closeBtn.classList.remove('visible');
-  }
-
-  function _resetActionTimers() {
-    if (_actionState.timer) {
-      clearInterval(_actionState.timer);
-      _actionState.timer = null;
-    }
   }
 
   function _renderGalleryAction(stage, action) {
@@ -956,51 +1017,66 @@
       .filter(Boolean);
     if (!imgs.length) {
       stage.innerHTML = '<div style="color:#fff;font-size:18px;opacity:.7;">No images in this gallery action.</div>';
+      _actionState.idx = 0; _actionState.total = 0;
       return;
     }
-    const intervalMs = Math.max(1500, Math.min(60000, action.intervalMs || 4000));
     _actionState.idx = 0;
     _actionState.total = imgs.length;
 
+    const counterHtml = imgs.length > 1
+      ? '<div class="action-gallery-counter" id="agCounter">1 / '+imgs.length+'</div>'
+      : '';
+    const navHtml = imgs.length > 1
+      ? '<button type="button" class="action-gallery-nav prev" id="agPrev" aria-label="Previous image" onclick="navActionImage(-1)">'
+      +   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>'
+      + '</button>'
+      + '<button type="button" class="action-gallery-nav next" id="agNext" aria-label="Next image" onclick="navActionImage(1)">'
+      +   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'
+      + '</button>'
+      : '';
     const html = ''
       + '<div class="action-gallery">'
-      +   '<div class="action-gallery-progress" id="agProgress"></div>'
+      +   counterHtml
       +   imgs.map((src, i) => '<img class="action-gallery-img'+(i===0?' active':'')+'" src="'+esc(src)+'" data-idx="'+i+'" alt=""/>').join('')
-      +   (imgs.length > 1 ? '<div class="action-gallery-dots">' + imgs.map((_, i) => '<div class="action-gallery-dot'+(i===0?' active':'')+'" data-i="'+i+'"></div>').join('') + '</div>' : '')
+      +   navHtml
       + '</div>';
     stage.innerHTML = html;
-
-    if (imgs.length > 1) {
-      _startProgressBar(intervalMs);
-      _actionState.timer = setInterval(() => {
-        _advanceGallery(intervalMs);
-      }, intervalMs);
-    }
+    _updateGalleryNavDisabled();
   }
 
-  function _advanceGallery(intervalMs) {
+  function _showGalleryImage(newIdx) {
     const total = _actionState.total;
     if (total <= 1) return;
-    _actionState.idx = (_actionState.idx + 1) % total;
+    if (newIdx < 0) newIdx = 0;
+    if (newIdx > total - 1) newIdx = total - 1;
+    if (newIdx === _actionState.idx) return;
+    _actionState.idx = newIdx;
     document.querySelectorAll('.action-gallery-img').forEach((img, i) => {
-      img.classList.toggle('active', i === _actionState.idx);
+      img.classList.toggle('active', i === newIdx);
     });
-    document.querySelectorAll('.action-gallery-dot').forEach((d, i) => {
-      d.classList.toggle('active', i === _actionState.idx);
-    });
-    _startProgressBar(intervalMs);
+    const counter = document.getElementById('agCounter');
+    if (counter) counter.textContent = (newIdx + 1) + ' / ' + total;
+    _updateGalleryNavDisabled();
   }
 
-  function _startProgressBar(intervalMs) {
-    const bar = document.getElementById('agProgress');
-    if (!bar) return;
-    bar.style.transition = 'none';
-    bar.style.width = '0%';
-    // Force reflow so the next transition takes effect
-    void bar.offsetWidth;
-    bar.style.transition = 'width ' + intervalMs + 'ms linear';
-    bar.style.width = '100%';
+  function _updateGalleryNavDisabled() {
+    const prev = document.getElementById('agPrev');
+    const next = document.getElementById('agNext');
+    if (prev) prev.disabled = (_actionState.idx <= 0);
+    if (next) next.disabled = (_actionState.idx >= _actionState.total - 1);
   }
+
+  // Called by the presenter (via arrow buttons or keyboard).
+  // Updates locally + broadcasts the new index to viewers via WS.
+  window.navActionImage = function(delta) {
+    if (!_actionState.open || _actionState.type !== 'gallery') return;
+    const newIdx = _actionState.idx + delta;
+    if (newIdx < 0 || newIdx > _actionState.total - 1) return;
+    _showGalleryImage(newIdx);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'action-nav', index: newIdx }));
+    }
+  };
 
   function _renderPageAction(stage, action) {
     const p = action.page || {};
@@ -1051,6 +1127,11 @@
   document.addEventListener('keydown', (e) => {
     // Escape closes the action overlay first if it's open
     if (e.key === 'Escape' && _actionState.open) { e.preventDefault(); fireCloseAction(); return; }
+    // While a gallery action is open on the presenter, arrow keys advance images
+    if (_actionState.open && _actionState.type === 'gallery' && presentMode) {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); navActionImage(1); return; }
+      if (e.key === 'ArrowLeft'  || e.key === 'PageUp')                    { e.preventDefault(); navActionImage(-1); return; }
+    }
     // Don't navigate slides while the overlay is open
     if (_actionState.open) return;
     if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); goNext(); }
@@ -1088,6 +1169,9 @@
         }
         if (msg.type === 'action' && typeof msg.cardPath === 'string' && !presentMode) {
           showActionOverlay(msg.cardPath, msg.action);
+        }
+        if (msg.type === 'action-nav' && typeof msg.index === 'number' && !presentMode) {
+          _showGalleryImage(msg.index);
         }
         if (msg.type === 'action-close' && !presentMode) {
           closeActionOverlay();
